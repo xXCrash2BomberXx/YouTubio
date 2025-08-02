@@ -1,6 +1,6 @@
 # Use an official Node.js runtime as a parent image
 # Using the Long-Term Support (LTS) version is a good practice
-FROM node:18-slim
+FROM node:22-slim
 
 # Set the working directory in the container
 WORKDIR /usr/src/app

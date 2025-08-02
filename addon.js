@@ -4,7 +4,7 @@ const { google } = require('googleapis');
 const { OAuth2Client } = require('google-auth-library');
 const express = require('express');
 const qs = require('querystring');
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 
 const PORT = process.env.PORT || 7000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
