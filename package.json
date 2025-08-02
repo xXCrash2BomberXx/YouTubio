@@ -1,0 +1,15 @@
+{
+  "name": "stremio-youtube-addon",
+  "version": "6.0.0",
+  "description": "A Stremio addon for YouTube, deployable on Hugging Face.",
+  "main": "addon.js",
+  "scripts": {
+    "start": "node addon.js"
+  },
+  "dependencies": {
+    "googleapis": "^126.0.1",
+    "google-auth-library": "^9.0.0",
+    "express": "^4.18.2",
+    "ytdl-core": "^4.11.5"
+  }
+}
