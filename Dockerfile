@@ -2,13 +2,12 @@
 # Using the Long-Term Support (LTS) version is a good practice
 FROM node:22-slim
 
-# Download the latest yt-dlp binary, make it executable, and move it to a directory in the PATH
+# Install Python and yt-dlp
 # We switch to root to perform these operations and then switch back to the node user.
 USER root
 RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp && \
+    apt-get install -y python3 python3-pip && \
+    pip3 install yt-dlp && \
     rm -rf /var/lib/apt/lists/*
 USER node
 
