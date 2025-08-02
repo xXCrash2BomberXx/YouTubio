@@ -2,6 +2,16 @@
 # Using the Long-Term Support (LTS) version is a good practice
 FROM node:22-slim
 
+# Download the latest yt-dlp binary, make it executable, and move it to a directory in the PATH
+# We switch to root to perform these operations and then switch back to the node user.
+USER root
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    rm -rf /var/lib/apt/lists/*
+USER node
+
 # Set the working directory in the container
 WORKDIR /usr/src/app
 

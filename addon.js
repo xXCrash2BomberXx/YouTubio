@@ -4,7 +4,10 @@ const { google } = require('googleapis');
 const { OAuth2Client } = require('google-auth-library');
 const express = require('express');
 const qs = require('querystring');
-const ytdl = require('@distube/ytdl-core');
+const YTDlpWrap = require('yt-dlp-wrap').default;
+
+const ytDlpWrap = new YTDlpWrap();
+
 
 const PORT = process.env.PORT || 7000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -202,8 +205,8 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
     if (args.id.startsWith('yt:')) {
         const videoId = args.id.slice(3);
         try {
-            const videoInfo = await ytdl.getInfo(videoId);
-            const format = ytdl.chooseFormat(videoInfo.formats, { quality: 'highest', filter: 'videoandaudio' });
+            const videoInfo = await ytDlpWrap.getVideoInfo(`https://www.youtube.com/watch?v=${videoId}`);
+            const format = videoInfo.formats.find(f => f.format_id === 'best' || (f.acodec !== 'none' && f.vcodec !== 'none'));
             if (format) {
                 res.json({
                     streams: [{
