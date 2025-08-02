@@ -20,7 +20,7 @@ const REDIRECT_URI = `https://${SPACE_HOST}/oauth2callback`;
 
 const manifest = {
     id: 'xxcrashbomberxx-youtube.hf.space',
-    version: '0.1.2', // Incremented version
+    version: '0.1.0',
     name: 'YouTube',
     description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
     logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
@@ -30,6 +30,8 @@ const manifest = {
     catalogs: [
         { type: 'channel', id: 'youtube.discover', name: 'Discover' },
         { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
+        { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
+        { type: 'channel', id: 'youtube.history', name: 'History' },
         { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
     ],
     config: {
@@ -153,6 +155,87 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 });
             } else {
                 return res.json({ metas: [] });
+            }
+        }
+        // Handle watch later catalog
+        else if (args.id === 'youtube.watchlater') {
+            if (!userConfig.cookies) {
+                return res.json({ metas: [] });
+            }
+        
+            let cookieFile = null;
+            try {
+                const tempDir = os.tmpdir();
+                cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+                await fs.writeFile(cookieFile, userConfig.cookies);
+                const playlistInfo = await ytDlpWrap.getVideoInfo([
+                    'https://www.youtube.com/playlist?list=WL',
+                    '--cookies', cookieFile,
+                    '-J'
+                ]);
+                const playlistData = JSON.parse(playlistInfo);
+                const metas = playlistData.entries.map(video => {
+                    if (!video) return null;
+                    const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
+                    const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
+                    return {
+                        id: `yt:${video.id}`,
+                        type: 'channel',
+                        name: video.title || 'Unknown Title',
+                        poster: posterUrl,
+                        posterShape: 'landscape',
+                        description: video.description || '',
+                        releaseInfo: releaseYear
+                    };
+                }).filter(meta => meta !== null);
+                return res.json({ metas });
+            } catch (err) {
+                console.error('Error in watchlater handler:', err.message);
+                return res.json({ metas: [] });
+            } finally {
+                if (cookieFile) {
+                    await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
+                }
+            }
+        }
+        // Handle Watch History catalog
+        else if (args.id === 'youtube.history') {
+            if (!userConfig.cookies) {
+                return res.json({ metas: [] });
+            }
+            let cookieFile = null;
+            try {
+                const tempDir = os.tmpdir();
+                cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+                await fs.writeFile(cookieFile, userConfig.cookies);
+                const historyInfo = await ytDlpWrap.getVideoInfo([
+                    'https://www.youtube.com/feed/history',
+                    '--cookies', cookieFile,
+                    '-J'
+                ]);
+                const historyData = JSON.parse(historyInfo);
+                const metas = historyData.entries.map(video => {
+                    if (!video) return null;
+                    const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
+                    const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
+                    return {
+                        id: `yt:${video.id}`,
+                        type: 'channel',
+                        name: video.title || 'Unknown Title',
+                        poster: posterUrl,
+                        posterShape: 'landscape',
+                        description: video.description || '',
+                        releaseInfo: releaseYear
+                    };
+                }).filter(meta => meta !== null);
+                return res.json({ metas });
+            } catch (err) {
+                console.error('Error in history handler:', err.message);
+                return res.json({ metas: [] });
+            } finally {
+                if (cookieFile) {
+                    await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
+                }
             }
         }
     } catch (err) {
