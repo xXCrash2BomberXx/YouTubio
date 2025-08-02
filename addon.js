@@ -93,32 +93,62 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         extra: (req.params.extra ? qs.parse(req.params.extra) : {})
     };
     try {
-        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-        const userConfig = JSON.parse(jsonString);
-        const youtube = getYouTubeClient(userConfig);
         // Handle search catalogs
-        if (args.id === 'youtube.search' && args.extra && args.extra.search) {
-            const response = await youtube.search.list({ 
-                part: 'snippet', 
-                q: args.extra.search, 
-                type: 'video', 
-                maxResults: 50 
-            });
-            return res.json({metas: response.data.items
-                .map(toMeta)
-                .filter(meta => meta !== null)});
+        if (args.id === 'Youtube' && args.extra && args.extra.search) {
+            try {
+                const searchQuery = `ytsearch50:${args.extra.search}`;
+                const searchInfo = await ytDlpWrap.getVideoInfo([
+                    searchQuery,
+                    '-J'
+                ]);
+                const searchData = JSON.parse(searchInfo);
+                const metas = searchData.entries.map(video => {
+                    if (!video) return null;
+                    const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
+                    const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
+                    return {
+                        id: `yt:${video.id}`,
+                        type: 'channel',
+                        name: video.title || 'Unknown Title',
+                        poster: posterUrl,
+                        posterShape: 'landscape',
+                        description: video.description || '',
+                        releaseInfo: releaseYear
+                    };
+                }).filter(meta => meta !== null);
+                return res.json({ metas });
+            } catch (err) {
+                console.error('Error in search handler:', err.message);
+                return res.json({ metas: [] });
+            }
         }
         // Handle discover catalog
         else if (args.id === 'youtube.discover') {
-            const popular = await youtube.videos.list({ 
-                part: 'snippet,contentDetails', 
-                chart: 'mostPopular', 
-                regionCode: 'US', 
-                maxResults: 50 
-            });
-            return res.json({metas: popular.data.items
-                .map(toMeta)
-                .filter(meta => meta !== null)});
+            try {
+                const trendingInfo = await ytDlpWrap.getVideoInfo([
+                    'https://www.youtube.com/feed/trending',
+                    '-J'
+                ]);
+                const trendingData = JSON.parse(trendingInfo);
+                const metas = trendingData.entries.map(video => {
+                    if (!video) return null;
+                    const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
+                    const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
+                    return {
+                        id: `yt:${video.id}`,
+                        type: 'channel',
+                        name: video.title || 'Unknown Title',
+                        poster: posterUrl,
+                        posterShape: 'landscape',
+                        description: video.description || '',
+                        releaseInfo: releaseYear
+                    };
+                }).filter(meta => meta !== null);
+                return res.json({ metas });
+            } catch (err) {
+                console.error('Error in discover handler:', err.message);
+                return res.json({ metas: [] });
+            }
         }
         // Handle subscriptions catalog
         else if (args.id === 'youtube.subscriptions') {
@@ -165,7 +195,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             if (!userConfig.cookies) {
                 return res.json({ metas: [] });
             }
-        
             let cookieFile = null;
             try {
                 const tempDir = os.tmpdir();
