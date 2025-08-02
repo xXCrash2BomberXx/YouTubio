@@ -122,39 +122,42 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         }
         // Handle subscriptions catalog
         else if (args.id === 'youtube.subscriptions') {
-            const subscriptionsResponse = await youtube.subscriptions.list({
-                part: 'snippet',
-                mine: true,
-                maxResults: 50 // Number of subscriptions
-            });
-            if (subscriptionsResponse.data.items.length > 0) {
-                const videoPromises = subscriptionsResponse.data.items.map(async (sub) => {
-                    const channelId = sub.snippet.resourceId.channelId;
-                    const channelDetails = await youtube.channels.list({
-                        part: 'contentDetails',
-                        id: channelId
-                    });
-                    const uploadsPlaylistId = channelDetails.data.items[0]?.contentDetails?.relatedPlaylists?.uploads;
-                    if (uploadsPlaylistId) {
-                        const videosResponse = await youtube.playlistItems.list({
-                            part: 'snippet',
-                            playlistId: uploadsPlaylistId,
-                            maxResults: 10 // Number of recent videos per subscription
-                        });
-                        return videosResponse.data.items;
-                    }
-                    return [];
-                });
-                const videoArrays = await Promise.all(videoPromises);
-                const allVideos = videoArrays.flat();
-                allVideos.sort((a, b) => new Date(b.snippet.publishedAt) - new Date(a.snippet.publishedAt));
-                return res.json({
-                    metas: allVideos
-                        .map(toMeta)
-                        .filter(meta => meta !== null)
-                });
-            } else {
+            if (!userConfig.cookies) {
                 return res.json({ metas: [] });
+            }
+            let cookieFile = null;
+            try {
+                const tempDir = os.tmpdir();
+                cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+                await fs.writeFile(cookieFile, userConfig.cookies);
+                const subsInfo = await ytDlpWrap.getVideoInfo([
+                    'https://www.youtube.com/feed/subscriptions',
+                    '--cookies', cookieFile,
+                    '-J'
+                ]);
+                const subsData = JSON.parse(subsInfo);
+                const metas = subsData.entries.map(video => {
+                    if (!video) return null;
+                    const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
+                    const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
+                    return {
+                        id: `yt:${video.id}`,
+                        type: 'channel',
+                        name: video.title || 'Unknown Title',
+                        poster: posterUrl,
+                        posterShape: 'landscape',
+                        description: video.description || '',
+                        releaseInfo: releaseYear
+                    };
+                }).filter(meta => meta !== null);
+                return res.json({ metas });
+            } catch (err) {
+                console.error('Error in subscriptions handler:', err.message);
+                return res.json({ metas: [] });
+            } finally {
+                if (cookieFile) {
+                    await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
+                }
             }
         }
         // Handle watch later catalog
