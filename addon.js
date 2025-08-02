@@ -8,8 +8,6 @@ const os = require('os');
 const path = require('path');
 
 const ytDlpWrap = new YTDlpWrap();
-
-
 const PORT = process.env.PORT || 7000;
 
 const manifest = {
@@ -26,7 +24,7 @@ const manifest = {
         { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
         { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
         { type: 'channel', id: 'youtube.history', name: 'History' },
-        { type: 'channel', id: 'Youtube', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
+        { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
     ],
     config: {
         "type": "url",
@@ -57,7 +55,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     };
     try {
         // Handle search catalogs
-        if (args.id === 'Youtube' && args.extra && args.extra.search) {
+        if (args.id === 'youtube.search' && args.extra && args.extra.search) {
             try {
                 const searchQuery = `ytsearch50:${args.extra.search}`;
                 const searchInfo = await ytDlpWrap.getVideoInfo([
@@ -273,7 +271,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     }
     return res.json({ meta: {} });
 });
-
 
 // Stremio Addon Stream Route
 app.get('/:config/stream/:type/:id.json', async (req, res) => {
