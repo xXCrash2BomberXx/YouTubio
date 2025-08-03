@@ -23,8 +23,8 @@ const manifest = {
         { type: 'channel', id: 'youtube.discover', name: 'Discover' },
         { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
         { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
-        { type: 'channel', id: 'youtube.history', name: 'History' }
-        { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
+        { type: 'channel', id: 'youtube.history', name: 'History' },
+        { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }
     ],
 };
 
@@ -122,11 +122,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     if (args.id.startsWith('yt:')) {
         const videoId = args.id.slice(3);
         try {
-            const videoInfo = await ytDlpWrap.getVideoInfo([
+            const videoData = await ytDlpWrap.getVideoInfo([
                 `https://www.youtube.com/watch?v=${videoId}`,
                 '-J'
             ]);
-            const videoData = JSON.parse(videoInfo);
             const posterUrl = videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null);
             const releaseYear = videoData.upload_date ? videoData.upload_date.substring(0, 4) : null;
             const meta = {
