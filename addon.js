@@ -159,7 +159,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             await fs.writeFile(cookieFile, userConfig.cookies);
             const videoInfo = await ytDlpWrap.getVideoInfo([
                 `https://www.youtube.com/watch?v=${videoId}`,
-                '-J'
+                '-J',
                 '--no-cache-dir',
                 '--cookies', cookieFile
             ]);
