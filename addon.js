@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 7000;
 
 const manifest = {
     id: 'xxcrashbomberxx-youtube.hf.space',
-    version: '0.1.1',
+    version: '0.1.0',
     name: 'YouTube',
     description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
     logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
