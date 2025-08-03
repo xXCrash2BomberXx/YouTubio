@@ -10,35 +10,23 @@ const path = require('path');
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 
-// Function to generate the manifest dynamically
-function getManifest(config) {
-    const baseManifest = {
-        id: 'xxcrashbomberxx-youtube.hf.space',
-        version: '0.1.1',
-        name: 'YouTube',
-        description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
-        logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
-        resources: ['catalog', 'stream', 'meta'],
-        types: ['channel'],
-        idPrefixes: ['yt:'],
-        catalogs: [
-            { type: 'channel', id: 'youtube.discover', name: 'Discover' },
-            { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
-        ],
-    };
-
-    // Add personalized catalogs only if cookies are provided
-    if (config && config.cookies) {
-        baseManifest.catalogs.push(
-            { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
-            { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
-            { type: 'channel', id: 'youtube.history', name: 'History' }
-        );
-    }
-
-    return baseManifest;
-}
-
+const manifest = {
+    id: 'xxcrashbomberxx-youtube.hf.space',
+    version: '0.1.1',
+    name: 'YouTube',
+    description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
+    logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
+    resources: ['catalog', 'stream', 'meta'],
+    types: ['channel'],
+    idPrefixes: ['yt:'],
+    catalogs: [
+        { type: 'channel', id: 'youtube.discover', name: 'Discover' },
+        { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
+        { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
+        { type: 'channel', id: 'youtube.history', name: 'History' }
+        { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] },
+    ],
+};
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -52,17 +40,6 @@ app.use((err, req, res, next) => {
 
 // Stremio Addon Manifest Route
 app.get('/:config?/manifest.json', (req, res) => {
-    let userConfig = {};
-    if (req.params.config) {
-        try {
-            const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-            userConfig = JSON.parse(jsonString);
-        } catch (e) {
-            console.error("Error parsing config:", e);
-            // Serve a default manifest if config is invalid
-        }
-    }
-    const manifest = getManifest(userConfig);
     res.json(manifest);
 });
 
@@ -82,16 +59,15 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         console.error("Error parsing config for catalog:", e);
         return res.status(400).json({ metas: [] });
     }
+    if (!userConfig.cookies) return res.json({ metas: [] });
 
     let cookieFile = null;
     try {
         const ytDlpArgs = [];
-        if (userConfig.cookies) {
-            const tempDir = os.tmpdir();
-            cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-            await fs.writeFile(cookieFile, userConfig.cookies);
-            ytDlpArgs.push('--cookies', cookieFile);
-        }
+        const tempDir = os.tmpdir();
+        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+        await fs.writeFile(cookieFile, userConfig.cookies);
+        ytDlpArgs.push('--cookies', cookieFile);
 
         let command;
         if (args.id === 'youtube.search' && args.extra && args.extra.search) {
@@ -99,25 +75,21 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         } else if (args.id === 'youtube.discover') {
             command = 'https://www.youtube.com/feed/trending';
         } else if (args.id === 'youtube.subscriptions') {
-            if (!userConfig.cookies) return res.json({ metas: [] });
             command = 'https://www.youtube.com/feed/subscriptions';
         } else if (args.id === 'youtube.watchlater') {
-            if (!userConfig.cookies) return res.json({ metas: [] });
             command = 'https://www.youtube.com/playlist?list=WL';
         } else if (args.id === 'youtube.history') {
-            if (!userConfig.cookies) return res.json({ metas: [] });
             command = 'https://www.youtube.com/feed/history';
         } else {
             return res.json({ metas: [] });
         }
 
-        const dataInfo = await ytDlpWrap.getVideoInfo([
+        const data = await ytDlpWrap.getVideoInfo([
             command,
             '-J',
             ...ytDlpArgs
         ]);
 
-        const data = JSON.parse(dataInfo);
         const metas = data.entries.map(video => {
             if (!video) return null;
             const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
@@ -133,14 +105,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             };
         }).filter(meta => meta !== null);
         return res.json({ metas });
-
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
         return res.json({ metas: [] });
     } finally {
-        if (cookieFile) {
-            await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
-        }
+        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
 });
 
