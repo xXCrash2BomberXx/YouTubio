@@ -90,7 +90,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             ...ytDlpArgs
         ]);
 
-        const metas = data.entries.map(video => {
+        const metas = (data.entries || []).map(video => {
             if (!video) return null;
             const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
             const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
