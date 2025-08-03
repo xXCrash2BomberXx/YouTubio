@@ -31,7 +31,6 @@ const manifest = {
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Express error:', err);
@@ -42,7 +41,6 @@ app.use((err, req, res, next) => {
 app.get('/:config?/manifest.json', (req, res) => {
     res.json(manifest);
 });
-
 
 // Stremio Addon Resource Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
@@ -60,7 +58,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.status(400).json({ metas: [] });
     }
     if (!userConfig.cookies) return res.json({ metas: [] });
-
     let cookieFile = null;
     try {
         const ytDlpArgs = [];
@@ -68,7 +65,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
         await fs.writeFile(cookieFile, userConfig.cookies);
         ytDlpArgs.push('--cookies', cookieFile);
-
         let command;
         if (args.id === 'youtube.search' && args.extra && args.extra.search) {
             command = `ytsearch50:${args.extra.search}`;
@@ -83,13 +79,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         } else {
             return res.json({ metas: [] });
         }
-
         const data = await ytDlpWrap.getVideoInfo([
             command,
             '-J',
             ...ytDlpArgs
         ]);
-
         const metas = (data.entries || []).map(video => {
             if (!video) return null;
             const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
@@ -226,15 +220,13 @@ app.get('/', (req, res) => {
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                     <button type="submit" class="install-button">Generate Install Link</button>
                 </form>
-
-                 <div id="results" style="display:none;">
+                <div id="results" style="display:none;">
                     <p>Click the button below to install the addon in Stremio:</p>
                     <a href="#" id="install-link" class="install-button">Install Addon</a>
                     <p>If that doesn't work, copy the URL and paste it into the Stremio search bar:</p>
                     <input type="text" id="install-url" readonly class="url-input">
                     <button id="copy-btn">Copy URL</button>
                 </div>
-
                 <details class="instructions">
                     <summary>How to get your cookies.txt file</summary>
                     <ol>
@@ -255,7 +247,6 @@ app.get('/', (req, res) => {
             <script>
                 const host = '${host}';
                 const protocol = '${protocol}';
-
                 document.getElementById('config-form').addEventListener('submit', function(event) {
                     event.preventDefault();
                     const cookies = document.getElementById('cookie-data').value;
@@ -263,16 +254,12 @@ app.get('/', (req, res) => {
                     if (cookies && cookies.trim()) {
                         userConfig.cookies = cookies;
                     }
-
                     const configString = btoa(JSON.stringify(userConfig));
                     const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
-
                     const installLink = document.getElementById('install-link');
                     installLink.href = \`stremio://installaddon/\${installUrl}\`;
-
                     const installUrlInput = document.getElementById('install-url');
                     installUrlInput.value = installUrl;
-
                     document.getElementById('results').style.display = 'block';
                 });
 
