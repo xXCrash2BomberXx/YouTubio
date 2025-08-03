@@ -166,7 +166,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
                 ytDlpArgs.push('--cookies', cookieFile);
             }
             const videoInfo = await ytDlpWrap.getVideoInfo([`https://www.youtube.com/watch?v=${videoId}`].concat(ytDlpArgs));
-            const format = videoInfo.formats.find(f => f.format_id === 'best' || (f.acodec !== 'none' && f.vcodec !== 'none'));
+            const format = (videoInfo.formats || []).find(f => f.format_id === 'best' || (f.acodec !== 'none' && f.vcodec !== 'none'));
             if (format) {
                 res.json({
                     streams: [{
