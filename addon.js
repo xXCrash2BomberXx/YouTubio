@@ -60,11 +60,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!userConfig.cookies) return res.json({ metas: [] });
     let cookieFile = null;
     try {
-        const ytDlpArgs = [];
         const tempDir = os.tmpdir();
         cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
         await fs.writeFile(cookieFile, userConfig.cookies);
-        ytDlpArgs.push('--cookies', cookieFile);
         let command;
         if (args.id === 'youtube.search' && args.extra && args.extra.search) {
             command = `ytsearch50:${args.extra.search}`;
@@ -82,7 +80,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const data = await ytDlpWrap.getVideoInfo([
             command,
             '-J',
-            ...ytDlpArgs
+            '--no-cache-dir',
+            '--cookies', cookieFile
         ]);
         const metas = (data.entries || []).map(video => {
             if (!video) return null;
@@ -118,7 +117,9 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         try {
             const videoData = await ytDlpWrap.getVideoInfo([
                 `https://www.youtube.com/watch?v=${videoId}`,
-                '-J'
+                '-J',
+                '--no-cache-dir',
+                '--cookies', cookieFile
             ]);
             if (!videoData.id) return res.json({ meta: {} });
             const posterUrl = videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null);
@@ -153,14 +154,15 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         try {
             const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
             const userConfig = JSON.parse(jsonString);
-            const ytDlpArgs = [];
-            if (userConfig.cookies) {
-                const tempDir = os.tmpdir();
-                cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-                await fs.writeFile(cookieFile, userConfig.cookies);
-                ytDlpArgs.push('--cookies', cookieFile);
-            }
-            const videoInfo = await ytDlpWrap.getVideoInfo([`https://www.youtube.com/watch?v=${videoId}`].concat(ytDlpArgs));
+            const tempDir = os.tmpdir();
+            cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+            await fs.writeFile(cookieFile, userConfig.cookies);
+            const videoInfo = await ytDlpWrap.getVideoInfo([
+                `https://www.youtube.com/watch?v=${videoId}`,
+                '-J'
+                '--no-cache-dir',
+                '--cookies', cookieFile
+            ].concat(ytDlpArgs));
             const format = (videoInfo.formats || []).find(f => f.format_id === 'best' || (f.acodec !== 'none' && f.vcodec !== 'none'));
             if (format) {
                 res.json({
