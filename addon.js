@@ -162,7 +162,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
                 '-J'
                 '--no-cache-dir',
                 '--cookies', cookieFile
-            ].concat(ytDlpArgs));
+            ]);
             const format = (videoInfo.formats || []).find(f => f.format_id === 'best' || (f.acodec !== 'none' && f.vcodec !== 'none'));
             if (format) {
                 res.json({
