@@ -84,6 +84,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--no-cache-dir',
             '--cookies', cookieFile
         ]);
+        console.log(data);
         const metas = (data.entries || []).map(video => {
             if (!video) return null;
             const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
@@ -115,7 +116,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     };
     if (args.id.startsWith('yt:')) {
         const videoId = args.id.slice(3);
+        let cookieFile = null;
         try {
+            cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+            await fs.writeFile(cookieFile, userConfig.cookies);
             const videoData = await ytDlpWrap.execPromise([
                 `https://www.youtube.com/watch?v=${videoId}`,
                 '-J',
@@ -123,6 +127,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 '--no-cache-dir',
                 '--cookies', cookieFile
             ]);
+            console.log(videoData);
             if (!videoData.id) return res.json({ meta: {} });
             const posterUrl = videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null);
             const releaseYear = videoData.upload_date ? videoData.upload_date.substring(0, 4) : null;
@@ -139,6 +144,8 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         } catch (err) {
             console.error('Error in meta handler:', err.message);
             return res.json({ meta: {} });
+        } finally {
+            await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
         }
     }
     return res.json({ meta: {} });
@@ -166,6 +173,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
                 '--no-cache-dir',
                 '--cookies', cookieFile
             ]);
+            console.log(videoInfo);
             const format = (videoInfo.formats || []).find(f => f.acodec !== 'none' && f.vcodec !== 'none');
             if (format) {
                 res.json({
@@ -182,9 +190,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             console.error('Error getting video info:', err.message);
             res.json({ streams: [] });
         } finally {
-            if (cookieFile) {
-                await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
-            }
+            await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
         }
     } else {
         res.json({ streams: [] });
