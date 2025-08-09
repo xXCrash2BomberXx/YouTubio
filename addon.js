@@ -87,6 +87,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const data = await ytDlpWrap.execPromise([
             command,
             '-J',
+            '--flat-playlist',
             '--ignore-errors',
             '--no-cache-dir',
             '--cookies', cookieFile
@@ -97,7 +98,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 id: `yt:${video.id}`,
                 type: 'channel',
                 name: video.title || 'Unknown Title',
-                poster: video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null),
+                poster: video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
                 description: video.description || '',
                 releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null
@@ -147,7 +148,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 id: `yt:${videoData.id}`,
                 type: 'channel',
                 name: videoData.title || 'Unknown Title',
-                poster: videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null),
+                poster: videoData.thumbnail || `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
                 description: videoData.description || '',
                 releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null
