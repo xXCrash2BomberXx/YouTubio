@@ -123,6 +123,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             console.error("Error parsing config for meta:", e);
             return res.status(400).json({ meta: {} });
         }
+        if (!userConfig.cookies) return res.json({ meta: {} });
         let cookieFile = null;
         const videoId = args.id.slice(3);
         try {
@@ -175,6 +176,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             console.error("Error parsing config for stream:", e);
             return res.status(400).json({ streams: [] });
         }
+        if (!userConfig.cookies) return res.json({ streams: [] });
         let cookieFile = null;
         const videoId = args.id.slice(3);
         try {
