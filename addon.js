@@ -92,20 +92,17 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--cookies', cookieFile
         ]);
         console.log(data);
-        const metas = (data.entries || []).map(video => {
-            if (!video) return null;
-            const posterUrl = video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null);
-            const releaseYear = video.upload_date ? video.upload_date.substring(0, 4) : null;
-            return {
+        const metas = (data.entries || []).map(video => 
+            video.id ? {
                 id: `yt:${video.id}`,
                 type: 'channel',
                 name: video.title || 'Unknown Title',
-                poster: posterUrl,
+                poster: video.thumbnail || (video.thumbnails && video.thumbnails[0] ? video.thumbnails[0].url : null),
                 posterShape: 'landscape',
                 description: video.description || '',
-                releaseInfo: releaseYear
-            };
-        }).filter(meta => meta !== null);
+                releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null
+            } : null
+        ).filter(meta => meta !== null);
         return res.json({ metas });
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
