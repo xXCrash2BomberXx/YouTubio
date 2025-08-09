@@ -49,6 +49,27 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         id: req.params.id,
         extra: (req.params.extra ? qs.parse(req.params.extra) : {})
     };
+    let command;
+    switch (args.id) {
+        case 'youtube.search':
+            if (!args.extra || !args.extra.search) return res.json({ metas: [] });
+            command = `ytsearch50:${args.extra.search}`;
+            break;
+        case 'youtube.discover':
+            command = 'https://www.youtube.com/feed/trending';
+            break;
+        case 'youtube.subscriptions':
+            command = 'https://www.youtube.com/feed/subscriptions';
+            break;
+        case 'youtube.watchlater':
+            command = 'https://www.youtube.com/playlist?list=WL';
+            break;
+        case 'youtube.history':
+            command = 'https://www.youtube.com/feed/history';
+            break;
+        default:
+            return res.json({ metas: [] });
+    }
     let userConfig = {};
     try {
         const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
@@ -63,20 +84,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const tempDir = os.tmpdir();
         cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
         await fs.writeFile(cookieFile, userConfig.cookies);
-        let command;
-        if (args.id === 'youtube.search' && args.extra && args.extra.search) {
-            command = `ytsearch50:${args.extra.search}`;
-        } else if (args.id === 'youtube.discover') {
-            command = 'https://www.youtube.com/feed/trending';
-        } else if (args.id === 'youtube.subscriptions') {
-            command = 'https://www.youtube.com/feed/subscriptions';
-        } else if (args.id === 'youtube.watchlater') {
-            command = 'https://www.youtube.com/playlist?list=WL';
-        } else if (args.id === 'youtube.history') {
-            command = 'https://www.youtube.com/feed/history';
-        } else {
-            return res.json({ metas: [] });
-        }
         const data = await ytDlpWrap.execPromise([
             command,
             '-J',
@@ -106,6 +113,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } finally {
         await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
+    return res.json({ metas: [] });
 });
 
 // Stremio Addon Meta Route
@@ -114,49 +122,45 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    if (args.id.startsWith('yt:')) {
-        let userConfig = {};
-        try {
-            const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-            userConfig = JSON.parse(jsonString);
-        } catch (e) {
-            console.error("Error parsing config for meta:", e);
-            return res.status(400).json({ meta: {} });
-        }
-        if (!userConfig.cookies) return res.json({ meta: {} });
-        let cookieFile = null;
-        const videoId = args.id.slice(3);
-        try {
-            const tempDir = os.tmpdir();
-            cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-            await fs.writeFile(cookieFile, userConfig.cookies);
-            const videoData = await ytDlpWrap.execPromise([
-                `https://www.youtube.com/watch?v=${videoId}`,
-                '-j',
-                '--ignore-errors',
-                '--no-cache-dir',
-                '--cookies', cookieFile
-            ]);
-            console.log(videoData);
-            if (!videoData.id) return res.json({ meta: {} });
-            const posterUrl = videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null);
-            const releaseYear = videoData.upload_date ? videoData.upload_date.substring(0, 4) : null;
-            const meta = {
+    if (!args.id.startsWith('yt:')) return res.json({ meta: {} });
+    let userConfig = {};
+    try {
+        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
+        userConfig = JSON.parse(jsonString);
+    } catch (e) {
+        console.error("Error parsing config for meta:", e);
+        return res.status(400).json({ meta: {} });
+    }
+    if (!userConfig.cookies) return res.json({ meta: {} });
+    let cookieFile = null;
+    const videoId = args.id.slice(3);
+    try {
+        const tempDir = os.tmpdir();
+        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+        await fs.writeFile(cookieFile, userConfig.cookies);
+        const videoData = await ytDlpWrap.execPromise([
+            `https://www.youtube.com/watch?v=${videoId}`,
+            '-j',
+            '--ignore-errors',
+            '--no-cache-dir',
+            '--cookies', cookieFile
+        ]);
+        return res.json({
+            meta: videoData.id ? {
                 id: `yt:${videoData.id}`,
                 type: 'channel',
                 name: videoData.title || 'Unknown Title',
-                poster: posterUrl,
+                poster: videoData.thumbnail || (videoData.thumbnails && videoData.thumbnails[0] ? videoData.thumbnails[0].url : null),
                 posterShape: 'landscape',
                 description: videoData.description || '',
-                releaseInfo: releaseYear
-            };
-            return res.json({ meta });
-        } catch (err) {
-            console.error('Error in meta handler:', err.message);
-            return res.json({ meta: {} });
-        } finally {
-            await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
-        }
+                releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null
+            } : {}
+        });
+    } catch (err) {
+        console.error('Error in meta handler:', err.message);
+        return res.json({ meta: {} });
+    } finally {
+        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
     return res.json({ meta: {} });
 });
@@ -167,47 +171,45 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    if (args.id.startsWith('yt:')) {
-        let userConfig = {};
-        try {
-            const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-            userConfig = JSON.parse(jsonString);
-        } catch (e) {
-            console.error("Error parsing config for stream:", e);
-            return res.status(400).json({ streams: [] });
-        }
-        if (!userConfig.cookies) return res.json({ streams: [] });
-        let cookieFile = null;
-        const videoId = args.id.slice(3);
-        try {
-            const tempDir = os.tmpdir();
-            cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-            await fs.writeFile(cookieFile, userConfig.cookies);
-            const directUrl = await ytDlpWrap.execPromise([
-                `https://www.youtube.com/watch?v=${videoId}`,
-                '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
-                '--skip-download',
-                '--get-url',
-                '--ignore-errors',
-                '--no-cache-dir',
-                '--cookies', cookieFile
-            ]);
-            return res.json({
-                streams: directUrl ? [{
-                    title: 'YouTube Stream',
-                    url: directUrl,
-                    description: 'Click to watch on YouTube'
-                }] : []
-            });
-        } catch (err) {
-            console.error('Error getting video info:', err.message);
-            res.json({ streams: [] });
-        } finally {
-            await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
-        }
-    } else {
-        res.json({ streams: [] });
+    if (!args.id.startsWith('yt:')) return res.json({ streams: [] });
+    let userConfig = {};
+    try {
+        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
+        userConfig = JSON.parse(jsonString);
+    } catch (e) {
+        console.error("Error parsing config for stream:", e);
+        return res.status(400).json({ streams: [] });
     }
+    if (!userConfig.cookies) return res.json({ streams: [] });
+    let cookieFile = null;
+    const videoId = args.id.slice(3);
+    try {
+        const tempDir = os.tmpdir();
+        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
+        await fs.writeFile(cookieFile, userConfig.cookies);
+        const directUrl = await ytDlpWrap.execPromise([
+            `https://www.youtube.com/watch?v=${videoId}`,
+            '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
+            '--skip-download',
+            '--get-url',
+            '--ignore-errors',
+            '--no-cache-dir',
+            '--cookies', cookieFile
+        ]);
+        return res.json({
+            streams: directUrl ? [{
+                title: 'YouTube Stream',
+                url: directUrl,
+                description: 'Click to watch on YouTube'
+            }] : []
+        });
+    } catch (err) {
+        console.error('Error getting video info:', err.message);
+        return res.json({ streams: [] });
+    } finally {
+        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
+    }
+    return res.json({ streams: [] });
 });
 
 // Serve the configuration page at the root
