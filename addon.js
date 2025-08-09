@@ -132,7 +132,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             await fs.writeFile(cookieFile, userConfig.cookies);
             const videoData = await ytDlpWrap.execPromise([
                 `https://www.youtube.com/watch?v=${videoId}`,
-                '-J',
+                '-j',
                 '--ignore-errors',
                 '--no-cache-dir',
                 '--cookies', cookieFile
@@ -183,26 +183,22 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             const tempDir = os.tmpdir();
             cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
             await fs.writeFile(cookieFile, userConfig.cookies);
-            const videoInfo = await ytDlpWrap.execPromise([
+            const directUrl = await ytDlpWrap.execPromise([
                 `https://www.youtube.com/watch?v=${videoId}`,
-                '-J',
+                '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
+                '--skip-download',
+                '--get-url',
                 '--ignore-errors',
                 '--no-cache-dir',
                 '--cookies', cookieFile
             ]);
-            console.log(videoInfo);
-            const format = (videoInfo.formats || []).find(f => f.acodec !== 'none' && f.vcodec !== 'none');
-            if (format) {
-                res.json({
-                    streams: [{
-                        title: 'YouTube Stream',
-                        url: format.url,
-                        description: 'Click to watch on YouTube'
-                    }]
-                });
-            } else {
-                 res.json({ streams: [] });
-            }
+            return res.json({
+                streams: directUrl ? [{
+                    title: 'YouTube Stream',
+                    url: directUrl,
+                    description: 'Click to watch on YouTube'
+                }] : []
+            });
         } catch (err) {
             console.error('Error getting video info:', err.message);
             res.json({ streams: [] });
