@@ -28,6 +28,14 @@ const manifest = {
     ],
 };
 
+const flags = [
+    '--no-check-certificate',
+    '--skip-download',
+    '--ignore-errors',
+    '--no-warnings',
+    '--no-cache-dir'
+];
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
@@ -86,10 +94,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         await fs.writeFile(cookieFile, userConfig.cookies);
         const data = await ytDlpWrap.execPromise([
             command,
-            '-J',
             '--flat-playlist',
-            '--ignore-errors',
-            '--no-cache-dir',
+            '--dump-single-json',
+            '--playlist-end 50',
+            ...flags,
             '--cookies', cookieFile
         ]);
         console.log(data);
@@ -139,10 +147,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         const videoData = await ytDlpWrap.execPromise([
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j',
-            '--ignore-errors',
-            '--no-cache-dir',
+            ...flags,
             '--cookies', cookieFile
         ]);
+        console.log(videoData);
         return res.json({
             meta: videoData.id ? {
                 id: `yt:${videoData.id}`,
@@ -188,12 +196,11 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         const directUrl = await ytDlpWrap.execPromise([
             `https://www.youtube.com/watch?v=${videoId}`,
             '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
-            '--skip-download',
             '--get-url',
-            '--ignore-errors',
-            '--no-cache-dir',
+            ...flags,
             '--cookies', cookieFile
         ]);
+        console.log(directUrl);
         return res.json({
             streams: directUrl ? [{
                 title: 'YouTube Stream',
