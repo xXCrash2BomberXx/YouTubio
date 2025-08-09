@@ -115,9 +115,18 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         id: req.params.id,
     };
     if (args.id.startsWith('yt:')) {
-        const videoId = args.id.slice(3);
-        let cookieFile = null;
+        let userConfig = {};
         try {
+            const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
+            userConfig = JSON.parse(jsonString);
+        } catch (e) {
+            console.error("Error parsing config for meta:", e);
+            return res.status(400).json({ meta: {} });
+        }
+        let cookieFile = null;
+        const videoId = args.id.slice(3);
+        try {
+            const tempDir = os.tmpdir();
             cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
             await fs.writeFile(cookieFile, userConfig.cookies);
             const videoData = await ytDlpWrap.execPromise([
@@ -158,11 +167,17 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         id: req.params.id,
     };
     if (args.id.startsWith('yt:')) {
-        const videoId = args.id.slice(3);
-        let cookieFile = null;
+        let userConfig = {};
         try {
             const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-            const userConfig = JSON.parse(jsonString);
+            userConfig = JSON.parse(jsonString);
+        } catch (e) {
+            console.error("Error parsing config for stream:", e);
+            return res.status(400).json({ streams: [] });
+        }
+        let cookieFile = null;
+        const videoId = args.id.slice(3);
+        try {
             const tempDir = os.tmpdir();
             cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
             await fs.writeFile(cookieFile, userConfig.cookies);
