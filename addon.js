@@ -161,7 +161,27 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 poster: videoData.thumbnails?.at(-1)?.url ?? videoData.thumbnail ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
                 description: videoData.description || '',
-                releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null
+                releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null,
+                videos: [{
+                    id: `${prefix}${videoData.id}`,
+                    title: videoData.title || 'Unknown Title',
+                    released: new Date(videoData.timestamp * 1000).toISOString(),
+                    runtime: videoData.duration_string,
+                    websiste: `https://www.youtube.com/watch?v=${videoId}`,
+                    streams: [{
+                        name: 'YT-DLP Player',
+                        url: videoData.url,
+                        description: 'Click to watch the scraped video from YT-DLP'
+                    }, {
+                        name: 'Stremio Player',
+                        ytId: videoId,
+                        description: 'Click to watch using Stremio\'s builtin YouTube Player'
+                    }, {
+                        name: 'YouTube Player',
+                        externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                        description: 'Click to watch in the official YouTube Player'
+                    }]
+                }]
             } : {}
         });
     } catch (err) {
