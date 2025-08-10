@@ -80,16 +80,16 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             command = `ytsearch50:${args.extra.search}`;
             break;
         case 'youtube.discover':
-            command = 'https://www.youtube.com/feed/trending';
+            command = ':ytrec';
             break;
         case 'youtube.subscriptions':
-            command = 'https://www.youtube.com/feed/subscriptions';
+            command = ':ytsubs';
             break;
         case 'youtube.watchlater':
-            command = 'https://www.youtube.com/playlist?list=WL';
+            command = ':ytwatchlater';
             break;
         case 'youtube.history':
-            command = 'https://www.youtube.com/feed/history';
+            command = ':ythistory';
             break;
         default:
             return res.json({ metas: [] });
