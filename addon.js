@@ -105,12 +105,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!userConfig.cookies) return res.json({ metas: [] });
     let cookieFile = null;
     try {
-        const data = await runYtDlpWithCookies(userConfig.cookies, [
+        const data = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
             '--playlist-end', '50'
-        ]);
+        ]));
         console.log(data);
         const metas = (data.entries || []).map(video => 
             video.id ? {
@@ -149,10 +149,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     let cookieFile = null;
     const videoId = args.id.slice(3);
     try {
-        const videoData = await runYtDlpWithCookies(userConfig.cookies, [
+        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
-        ]);
+        ]));
         console.log(videoData);
         return res.json({
             meta: videoData.id ? {
@@ -190,11 +190,11 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
     let cookieFile = null;
     const videoId = args.id.slice(3);
     try {
-        const directUrl = await runYtDlpWithCookies(userConfig.cookies, [
+        const directUrl = (await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
             '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
             '--get-url'
-        ]);
+        ])).trim().split('\n')[0].trim();
         console.log(directUrl);
         return res.json({
             streams: directUrl ? [{
