@@ -155,7 +155,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 id: `yt:${videoData.id}`,
                 type: 'movie',
                 name: videoData.title || 'Unknown Title',
-                poster: video.thumbnails?.at(-1)?.url ?? video.thumbnail ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+                poster: videoData.thumbnails?.at(-1)?.url ?? videoData.thumbnail ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
                 description: videoData.description || '',
                 releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null
