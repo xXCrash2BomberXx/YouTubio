@@ -196,9 +196,18 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         console.log(directUrl);
         return res.json({
             streams: directUrl ? [{
-                name: 'YouTube Stream',
+                name: 'YT-DLP Player',
                 url: directUrl,
-                description: 'Click to watch on YouTube'
+                description: 'Click to watch the scraped MP3 from YT-DLP',
+                notWebReady: true
+            }, {
+                name: 'Stremio Player',
+                ytId: videoId,
+                description: 'Click to watch using Stremio\'s builtin YouTube Player'
+            }, {
+                name: 'YouTube Player',
+                externalUrl: `https://www.youtube.com/watch?v=${videoId}`.
+                description: 'Click to watch in the official YouTube Player'
             }] : []
         });
     } catch (err) {
