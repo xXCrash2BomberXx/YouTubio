@@ -9,6 +9,8 @@ const tmp = require('tmp');
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 
+const prefix = 'yt_id:';
+
 const manifest = {
     id: 'xxcrashbomberxx-youtube.hf.space',
     version: '0.1.0',
@@ -17,7 +19,7 @@ const manifest = {
     logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
     resources: ['catalog', 'stream', 'meta'],
     types: ['movie'],
-    idPrefixes: ['yt:'],
+    idPrefixes: [prefix],
     catalogs: [
         { type: 'movie', id: 'youtube.discover', name: 'Discover' },
         { type: 'movie', id: 'youtube.subscriptions', name: 'Subscriptions' },
@@ -112,7 +114,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         ]));
         const metas = (data.entries || []).map(video => 
             video.id ? {
-                id: `yt:${video.id}`,
+                id: `${prefix}${video.id}`,
                 type: 'movie',
                 name: video.title || 'Unknown Title',
                 poster: video.thumbnails?.at(-1)?.url ?? video.thumbnail ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
@@ -134,8 +136,8 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    if (!args.id.startsWith('yt:')) return res.json({ meta: {} });
-    const videoId = args.id.slice(3);
+    if (!args.id.startsWith(prefix)) return res.json({ meta: {} });
+    const videoId = args.id.slice(prefix.length);
     let userConfig = {};
     try {
         const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
@@ -152,7 +154,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         ]));
         return res.json({
             meta: videoData.id ? {
-                id: `yt:${videoData.id}`,
+                id: `${prefix}${videoData.id}`,
                 type: 'movie',
                 name: videoData.title || 'Unknown Title',
                 poster: videoData.thumbnails?.at(-1)?.url ?? videoData.thumbnail ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
@@ -173,8 +175,8 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    if (!args.id.startsWith('yt:')) return res.json({ streams: [] });
-    const videoId = args.id.slice(3);
+    if (!args.id.startsWith(prefix)) return res.json({ streams: [] });
+    const videoId = args.id.slice(prefix.length);
     let userConfig = {};
     try {
         const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
