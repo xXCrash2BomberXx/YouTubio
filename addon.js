@@ -126,7 +126,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.json({ metas });
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
-        return res.json({ metas: [] });
+        return res.status(400).json({ metas: [] });
     }
 });
 
@@ -167,7 +167,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         });
     } catch (err) {
         console.error('Error in meta handler:', err.message);
-        return res.json({ meta: {} });
+        return res.status(400).json({ meta: {} });
     }
 });
 
@@ -205,7 +205,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         });
     } catch (err) {
         console.error('Error getting video info:', err.message);
-        return res.json({ streams: [] });
+        return res.status(400).json({ streams: [] });
     }
 });
 
