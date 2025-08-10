@@ -111,7 +111,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--dump-single-json',
             '--playlist-end', '50'
         ]));
-        console.log(data);
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `yt:${video.id}`,
@@ -153,7 +152,6 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
         ]));
-        console.log(videoData);
         return res.json({
             meta: videoData.id ? {
                 id: `yt:${videoData.id}`,
@@ -198,7 +196,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         console.log(directUrl);
         return res.json({
             streams: directUrl ? [{
-                title: 'YouTube Stream',
+                name: 'YouTube Stream',
                 url: directUrl,
                 description: 'Click to watch on YouTube'
             }] : []
