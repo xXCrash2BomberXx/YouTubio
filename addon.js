@@ -4,8 +4,7 @@ const express = require('express');
 const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
-const os = require('os');
-const path = require('path');
+const tmp = require('tmp');
 
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
@@ -28,13 +27,30 @@ const manifest = {
     ],
 };
 
-const flags = [
-    '--no-check-certificate',
-    '--skip-download',
-    '--ignore-errors',
-    '--no-warnings',
-    '--no-cache-dir'
-];
+async function runYtDlpWithCookies(cookiesContent, argsArray) {
+    return new Promise((resolve, reject) => {
+        tmp.file({ prefix: 'cookies-', postfix: '.txt', discardDescriptor: true, keep: false }, async (err, path, fd, cleanup) => {
+            if (err) return reject(err);
+            try {
+                await fs.writeFile(path, cookiesContent);
+                const fullArgs = [
+                    ...argsArray,
+                    '--no-check-certificate',
+                    '--skip-download',
+                    '--ignore-errors',
+                    '--no-warnings',
+                    '--no-cache-dir',
+                    '--cookies', path];
+                const output = await ytDlpWrap.execPromise(fullArgs);
+                cleanup();
+                resolve(output);
+            } catch (error) {
+                cleanup();
+                reject(error);
+            }
+        });
+    });
+}
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -89,16 +105,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!userConfig.cookies) return res.json({ metas: [] });
     let cookieFile = null;
     try {
-        const tempDir = os.tmpdir();
-        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-        await fs.writeFile(cookieFile, userConfig.cookies);
-        const data = await ytDlpWrap.execPromise([
+        const data = await runYtDlpWithCookies(userConfig.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
-            '--playlist-end 50',
-            ...flags,
-            '--cookies', cookieFile
+            '--playlist-end', '50'
         ]);
         console.log(data);
         const metas = (data.entries || []).map(video => 
@@ -116,10 +127,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
         return res.json({ metas: [] });
-    } finally {
-        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
-    return res.json({ metas: [] });
 });
 
 // Stremio Addon Meta Route
@@ -141,14 +149,9 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     let cookieFile = null;
     const videoId = args.id.slice(3);
     try {
-        const tempDir = os.tmpdir();
-        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-        await fs.writeFile(cookieFile, userConfig.cookies);
-        const videoData = await ytDlpWrap.execPromise([
+        const videoData = await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
-            '-j',
-            ...flags,
-            '--cookies', cookieFile
+            '-j'
         ]);
         console.log(videoData);
         return res.json({
@@ -165,10 +168,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     } catch (err) {
         console.error('Error in meta handler:', err.message);
         return res.json({ meta: {} });
-    } finally {
-        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
-    return res.json({ meta: {} });
 });
 
 // Stremio Addon Stream Route
@@ -190,15 +190,10 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
     let cookieFile = null;
     const videoId = args.id.slice(3);
     try {
-        const tempDir = os.tmpdir();
-        cookieFile = path.join(tempDir, `cookies_${Date.now()}.txt`);
-        await fs.writeFile(cookieFile, userConfig.cookies);
-        const directUrl = await ytDlpWrap.execPromise([
+        const directUrl = await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
             '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
-            '--get-url',
-            ...flags,
-            '--cookies', cookieFile
+            '--get-url'
         ]);
         console.log(directUrl);
         return res.json({
@@ -211,10 +206,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
     } catch (err) {
         console.error('Error getting video info:', err.message);
         return res.json({ streams: [] });
-    } finally {
-        await fs.unlink(cookieFile).catch(err => console.error('Error deleting temp cookie file:', err));
     }
-    return res.json({ streams: [] });
 });
 
 // Serve the configuration page at the root
