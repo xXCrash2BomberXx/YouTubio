@@ -103,7 +103,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.status(400).json({ metas: [] });
     }
     if (!userConfig.cookies) return res.json({ metas: [] });
-    let cookieFile = null;
     try {
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             command,
@@ -136,6 +135,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         id: req.params.id,
     };
     if (!args.id.startsWith('yt:')) return res.json({ meta: {} });
+    const videoId = args.id.slice(3);
     let userConfig = {};
     try {
         const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
@@ -145,8 +145,6 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         return res.status(400).json({ meta: {} });
     }
     if (!userConfig.cookies) return res.json({ meta: {} });
-    let cookieFile = null;
-    const videoId = args.id.slice(3);
     try {
         const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
@@ -176,6 +174,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         id: req.params.id,
     };
     if (!args.id.startsWith('yt:')) return res.json({ streams: [] });
+    const videoId = args.id.slice(3);
     let userConfig = {};
     try {
         const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
@@ -185,8 +184,6 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         return res.status(400).json({ streams: [] });
     }
     if (!userConfig.cookies) return res.json({ streams: [] });
-    let cookieFile = null;
-    const videoId = args.id.slice(3);
     try {
         const directUrl = (await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
