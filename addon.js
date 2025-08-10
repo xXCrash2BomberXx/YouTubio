@@ -152,6 +152,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
         ]));
+        console.log(videoData);
         return res.json({
             meta: videoData.id ? {
                 id: `${prefix}${videoData.id}`,
