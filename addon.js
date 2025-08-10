@@ -194,11 +194,11 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             streams: directUrl ? [{
                 name: 'YT-DLP Player (MP4)',
                 url: directUrl,
-                description: 'Click to watch the scraped MP3 from YT-DLP'
+                description: 'Click to watch the scraped MP4 from YT-DLP',
             }, {
                 name: 'YT-DLP Player (Non-MP4)',
                 url: directUrl,
-                description: 'Click to watch the scraped MP3 from YT-DLP',
+                description: 'Click to watch the scraped Non-MP4 from YT-DLP',
                 notWebReady: true
             }, {
                 name: 'Stremio Player',
