@@ -209,7 +209,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
                 description: 'Click to watch using Stremio\'s builtin YouTube Player'
             }, {
                 name: 'YouTube Player',
-                externalUrl: `https://www.youtube.com/watch?v=${videoId}`.
+                externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
                 description: 'Click to watch in the official YouTube Player'
             }] : []
         });
