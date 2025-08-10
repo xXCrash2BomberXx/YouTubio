@@ -16,14 +16,14 @@ const manifest = {
     description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
     logo: 'https://www.youtube.com/s/desktop/d743f786/img/favicon_144x144.png',
     resources: ['catalog', 'stream', 'meta'],
-    types: ['channel'],
+    types: ['movie'],
     idPrefixes: ['yt:'],
     catalogs: [
-        { type: 'channel', id: 'youtube.discover', name: 'Discover' },
-        { type: 'channel', id: 'youtube.subscriptions', name: 'Subscriptions' },
-        { type: 'channel', id: 'youtube.watchlater', name: 'Watch Later' },
-        { type: 'channel', id: 'youtube.history', name: 'History' },
-        { type: 'channel', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }
+        { type: 'movie', id: 'youtube.discover', name: 'Discover' },
+        { type: 'movie', id: 'youtube.subscriptions', name: 'Subscriptions' },
+        { type: 'movie', id: 'youtube.watchlater', name: 'Watch Later' },
+        { type: 'movie', id: 'youtube.history', name: 'History' },
+        { type: 'movie', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }
     ],
 };
 
@@ -115,7 +115,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `yt:${video.id}`,
-                type: 'channel',
+                type: 'movie',
                 name: video.title || 'Unknown Title',
                 poster: video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
@@ -157,7 +157,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         return res.json({
             meta: videoData.id ? {
                 id: `yt:${videoData.id}`,
-                type: 'channel',
+                type: 'movie',
                 name: videoData.title || 'Unknown Title',
                 poster: videoData.thumbnail || `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
