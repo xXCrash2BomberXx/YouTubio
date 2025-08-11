@@ -191,7 +191,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                     }],
                     overview: description
                 }],
-                runtime: `${Math.floor(videoData.duration / 60} min`,
+                runtime: `${Math.floor(videoData.duration / 60)} min`,
                 language: videoData.language,
                 website: videoData.original_url,
                 defaultVideoId: args.id
