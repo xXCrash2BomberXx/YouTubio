@@ -3,7 +3,7 @@
 const express = require('express');
 const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
-const fs = require('fs').promises;
+const fs = require('fs');
 const tmp = require('tmp');
 
 const ytDlpWrap = new YTDlpWrap();
@@ -33,8 +33,8 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         tmp.file({ prefix: 'cookies-', postfix: '.txt', detachDescriptor: true, keep: false }, async (err, path, fd, cleanup) => {
             if (err) return reject(err);
             try {
-                await fs.write(fd, cookiesContent);
-                await fs.close(fd);
+                fs.writeSync(fd, cookiesContent);
+                fs.closeSync(fd);
                 const fullArgs = [
                     ...argsArray,
                     '--no-check-certificate',
