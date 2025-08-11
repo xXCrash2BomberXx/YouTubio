@@ -31,10 +31,11 @@ const manifest = {
 
 async function runYtDlpWithCookies(cookiesContent, argsArray) {
     return new Promise((resolve, reject) => {
-        tmp.file({ prefix: 'cookies-', postfix: '.txt', discardDescriptor: true, keep: false }, async (err, path, fd, cleanup) => {
+        tmp.file({ prefix: 'cookies-', postfix: '.txt', detachDescriptor: true, keep: false }, async (err, path, fd, cleanup) => {
             if (err) return reject(err);
             try {
-                await fs.writeFile(path, cookiesContent);
+                await fs.write(fd, cookiesContent);
+                await fs.close(fd);
                 const fullArgs = [
                     ...argsArray,
                     '--no-check-certificate',
