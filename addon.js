@@ -43,12 +43,11 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
                     '--no-warnings',
                     '--no-cache-dir',
                     '--cookies', path];
-                const output = await ytDlpWrap.execPromise(fullArgs);
-                cleanup();
-                resolve(output);
+                resolve(await ytDlpWrap.execPromise(fullArgs));
             } catch (error) {
-                cleanup();
                 reject(error);
+            } finally {
+                cleanup();
             }
         });
     });
@@ -56,12 +55,6 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Express error:', err);
-    res.status(500).json({ error: 'Internal server error', message: err.message });
-});
 
 // Stremio Addon Manifest Route
 app.get('/:config?/manifest.json', (req, res) => {
@@ -299,6 +292,12 @@ app.get('/', (req, res) => {
         </body>
         </html>
     `);
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Express error:', err);
+    res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 // Start the server
