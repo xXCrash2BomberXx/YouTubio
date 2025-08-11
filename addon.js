@@ -157,6 +157,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 genres: videoData.tags,
                 poster: thumbnail,
                 posterShape: 'landscape',
+                background: thumbnail,
                 description: description,
                 releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null,
                 released: released,
