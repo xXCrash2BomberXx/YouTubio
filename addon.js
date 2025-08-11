@@ -110,7 +110,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 id: `${prefix}${video.id}`,
                 type: 'movie',
                 name: video.title || 'Unknown Title',
-                poster: video.thumbnails?.at(-1)?.url ?? video.thumbnail ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+                poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: 'landscape',
                 description: video.description || '',
                 releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null
@@ -145,7 +145,6 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
         ]));
-        console.log(videoData);
         const title = videoData.title || 'Unknown Title';
         const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
         const description = videoData.description || '';
@@ -170,9 +169,11 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                         name: 'YT-DLP Player',
                         url: videoData.url,
                         description: 'Click to watch the scraped video from YT-DLP',
-                        ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                        videoSize: videoData.filesize_approx,
-                        filename: videoData.filename
+                        behaviorHints: {
+                            ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                            videoSize: videoData.filesize_approx,
+                            filename: videoData.filename
+                        }
                     }, {
                         name: 'Stremio Player',
                         ytId: videoId,
@@ -187,7 +188,9 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                 runtime: `${Math.floor(videoData.duration / 60)} min`,
                 language: videoData.language,
                 website: videoData.original_url,
-                defaultVideoId: args.id
+                behaviorHints: {
+                    defaultVideoId: args.id
+                }
             } : {}
         });
     } catch (err) {
