@@ -16,7 +16,6 @@ const manifest = {
     version: '0.1.0',
     name: 'YouTube',
     description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
-    logo: 'https://img.icons8.com/?size=100&id=37326&format=png&color=000000',
     resources: ['catalog', 'stream', 'meta'],
     types: ['movie'],
     idPrefixes: [prefix],
