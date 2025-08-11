@@ -153,84 +153,53 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             '-j'
         ]));
         console.log(videoData);
+        const title = videoData.title || 'Unknown Title';
+        const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
+        const description = videoData.description || '';
+        const released = new Date(videoData.timestamp * 1000).toISOString();
         return res.json({
             meta: videoData.id ? {
-                id: `${prefix}${videoData.id}`,
+                id: args.id,
                 type: 'movie',
-                name: videoData.title || 'Unknown Title',
-                poster: videoData.thumbnails?.at(-1)?.url ?? videoData.thumbnail ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`,
+                name: title,
+                genres: videoData.tags,
+                poster: thumbnail,
                 posterShape: 'landscape',
-                description: videoData.description || '',
+                description: description,
                 releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null,
+                released: released,
                 videos: [{
-                    id: `${prefix}${videoData.id}`,
-                    title: videoData.title || 'Unknown Title',
-                    released: new Date(videoData.timestamp * 1000).toISOString(),
-                    runtime: videoData.duration_string,
-                    websiste: `https://www.youtube.com/watch?v=${videoId}`,
+                    id: args.id,
+                    title: title,
+                    released: released,
+                    thumbnail: thumbnail,
                     streams: [{
                         name: 'YT-DLP Player',
                         url: videoData.url,
-                        description: 'Click to watch the scraped video from YT-DLP'
+                        description: 'Click to watch the scraped video from YT-DLP',
+                        ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                        videoSize: videoData.filesize_approx,
+                        filename: videoData.filename
                     }, {
                         name: 'Stremio Player',
                         ytId: videoId,
                         description: 'Click to watch using Stremio\'s builtin YouTube Player'
                     }, {
                         name: 'YouTube Player',
-                        externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                        externalUrl: videoData.original_url,
                         description: 'Click to watch in the official YouTube Player'
-                    }]
-                }]
+                    }],
+                    overview: description
+                }],
+                runtime: `${Math.floor(videoData.duration / 60} min`,
+                language: videoData.language,
+                website: videoData.original_url,
+                defaultVideoId: args.id
             } : {}
         });
     } catch (err) {
         console.error('Error in meta handler:', err.message);
         return res.status(400).json({ meta: {} });
-    }
-});
-
-// Stremio Addon Stream Route
-app.get('/:config/stream/:type/:id.json', async (req, res) => {
-    const args = {
-        type: req.params.type,
-        id: req.params.id,
-    };
-    if (!args.id.startsWith(prefix)) return res.json({ streams: [] });
-    const videoId = args.id.slice(prefix.length);
-    let userConfig = {};
-    try {
-        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-        userConfig = JSON.parse(jsonString);
-    } catch (e) {
-        console.error("Error parsing config for stream:", e);
-        return res.status(400).json({ streams: [] });
-    }
-    if (!userConfig.cookies) return res.json({ streams: [] });
-    try {
-        const directUrl = (await runYtDlpWithCookies(userConfig.cookies, [
-            `https://www.youtube.com/watch?v=${videoId}`,
-            '-f', 'best[acodec!=none][vcodec!=none][ext=mp4]/best[acodec!=none][vcodec!=none]',
-            '--get-url'
-        ])).trim().split('\n')[0].trim();
-        return res.json({
-            streams: directUrl ? [{
-                name: 'YT-DLP Player',
-                url: directUrl,
-                description: 'Click to watch the scraped video from YT-DLP'
-            }, {
-                name: 'Stremio Player',
-                ytId: videoId,
-                description: 'Click to watch using Stremio\'s builtin YouTube Player'
-            }, {
-                name: 'YouTube Player',
-                externalUrl: `https://www.youtube.com/watch?v=${videoId}`,
-                description: 'Click to watch in the official YouTube Player'
-            }] : []
-        });
-    } catch (err) {
-        console.error('Error getting video info:', err.message);
-        return res.status(400).json({ streams: [] });
     }
 });
 
