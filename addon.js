@@ -10,7 +10,6 @@ const crypto = require('crypto');
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
-const cookieLimit = 7500;
 const prefix = 'yt_id:';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
@@ -19,12 +18,9 @@ const ALGORITHM = 'aes-256-gcm';
 function encrypt(text) {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
-    
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
     const authTag = cipher.getAuthTag();
-    
     return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
@@ -33,17 +29,13 @@ function decrypt(encryptedData) {
     if (parts.length !== 3) {
         throw new Error('Invalid encrypted data format');
     }
-    
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
-    
     const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
     decipher.setAuthTag(authTag);
-    
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
     return decrypted;
 }
 
@@ -56,10 +48,10 @@ const manifest = {
     types: ['movie'],
     idPrefixes: [prefix],
     catalogs: [
-        { type: 'movie', id: 'youtube.discover', name: 'Discover' },
-        { type: 'movie', id: 'youtube.subscriptions', name: 'Subscriptions' },
-        { type: 'movie', id: 'youtube.watchlater', name: 'Watch Later' },
-        { type: 'movie', id: 'youtube.history', name: 'History' },
+        { type: 'movie', id: ':ytrec', name: 'Discover' },
+        { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
+        { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
+        { type: 'movie', id: ':ythistory', name: 'History' },
         { type: 'movie', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }
     ],
 };
@@ -93,25 +85,15 @@ app.use(express.json());
 // Config encryption endpoint
 app.post('/encrypt', (req, res) => {
     try {
-        const configData = req.body;
-        
-        if (!configData.cookies || !configData.cookies.trim()) {
-            return res.status(400).json({ error: 'Cookies data is required' });
+        const inputData = req.body;
+        if (!inputData || typeof inputData !== 'object') {
+            return res.status(400).json({ error: 'Valid data object is required' });
         }
-        
-        if (configData.cookies.length > cookieLimit) {
-            return res.status(400).json({ 
-                error: `Cookie data length ${configData.cookies.length} exceeds limit of ${cookieLimit}` 
-            });
-        }
-        
-        const configJson = JSON.stringify(configData);
-        const encryptedData = encrypt(configJson);
-        const configString = Buffer.from(encryptedData).toString('base64');
-        
+        const dataString = JSON.stringify(inputData);
+        const encryptedData = encrypt(dataString);
         res.json({ 
             success: true, 
-            config: configString 
+            encrypted: encryptedData 
         });
     } catch (error) {
         console.error('Encryption error:', error);
@@ -123,15 +105,15 @@ function decryptConfig(configParam) {
     if (!configParam) {
         throw new Error('No config provided');
     }
-    
-    if (configParam.length > cookieLimit * 2) { // Account for encryption overhead
-        throw new Error(`Config data too large`);
-    }
-    
     try {
-        const encryptedData = Buffer.from(configParam, 'base64').toString('utf-8');
-        const decryptedJson = decrypt(encryptedData);
-        return JSON.parse(decryptedJson);
+        const configJson = Buffer.from(configParam, 'base64').toString('utf-8');
+        const config = JSON.parse(configJson);
+        if (config.encrypted) {
+            const decryptedJson = decrypt(config.encrypted);
+            const decryptedData = JSON.parse(decryptedJson);
+            config.encrypted = decryptedData;
+        }
+        return config;
     } catch (error) {
         throw new Error('Failed to decrypt config: ' + error.message);
     }
@@ -149,29 +131,15 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         id: req.params.id,
         extra: (req.params.extra ? qs.parse(req.params.extra) : {})
     };
-    
+
     let command;
-    switch (args.id) {
-        case 'youtube.search':
-            if (!args.extra || !args.extra.search) return res.json({ metas: [] });
-            command = `ytsearch50:${args.extra.search}`;
-            break;
-        case 'youtube.discover':
-            command = ':ytrec';
-            break;
-        case 'youtube.subscriptions':
-            command = ':ytsubs';
-            break;
-        case 'youtube.watchlater':
-            command = ':ytwatchlater';
-            break;
-        case 'youtube.history':
-            command = ':ythistory';
-            break;
-        default:
-            return res.json({ metas: [] });
+    if (args.id === 'ytsearch50:') {
+        if (!args.extra || !args.extra.search) return res.json({ metas: [] });
+        command = `ytsearch50:${args.extra.search}`;
+    } else {
+        command = args.id;
     }
-    
+
     let userConfig;
     try {
         userConfig = decryptConfig(req.params.config);
@@ -179,11 +147,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         console.error(`Error decrypting config for ${args.id}:`, error.message);
         return res.status(400).json({ metas: [] });
     }
-    
-    if (!userConfig.cookies) return res.json({ metas: [] });
-    
+
+    if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ metas: [] });
+
     try {
-        const data = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
+        const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
@@ -213,10 +181,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    
+
     if (!args.id.startsWith(prefix)) return res.json({ meta: {} });
     const videoId = args.id.slice(prefix.length);
-    
+
     let userConfig;
     try {
         userConfig = decryptConfig(req.params.config);
@@ -224,11 +192,11 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         console.error('Error decrypting config for meta:', error.message);
         return res.status(400).json({ meta: {} });
     }
-    
-    if (!userConfig.cookies) return res.json({ meta: {} });
-    
+
+    if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ meta: {} });
+
     try {
-        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
+        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
         ]));
@@ -372,26 +340,22 @@ app.get('/', (req, res) => {
             <script>
                 const host = '${host}';
                 const protocol = '${protocol}';
-                
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    
                     const cookies = document.getElementById('cookie-data').value;
                     const submitBtn = document.getElementById('submit-btn');
                     const errorDiv = document.getElementById('error-message');
-                    
                     if (!cookies || !cookies.trim()) {
                         errorDiv.textContent = "You must provide cookies to use this addon";
                         errorDiv.style.display = 'block';
                         return;
                     }
-                    
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
-                    
                     try {
-                        const response = await fetch('/encrypt', {
+                        // Encrypt the sensitive data
+                        const encryptResponse = await fetch('/encrypt', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -400,22 +364,20 @@ app.get('/', (req, res) => {
                                 cookies: cookies,
                             })
                         });
-                        
-                        const data = await response.json();
-                        
-                        if (!response.ok || !data.success) {
-                            throw new Error(data.error || 'Encryption failed');
+                        const encryptData = await encryptResponse.json();
+                        if (!encryptResponse.ok || !encryptData.success) {
+                            throw new Error(encryptData.error || 'Encryption failed');
                         }
-                        
-                        const installUrl = \`\${protocol}://\${host}/\${data.config}/manifest.json\`;
+                        const configObject = {
+                            encrypted: encryptData.encrypted
+                        };
+                        const configString = btoa(JSON.stringify(configObject));
+                        const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
                         const installLink = document.getElementById('install-link');
                         installLink.href = \`stremio://installaddon/\${installUrl}\`;
-                        
                         const installUrlInput = document.getElementById('install-url');
                         installUrlInput.value = installUrl;
-                        
                         document.getElementById('results').style.display = 'block';
-                        
                     } catch (error) {
                         errorDiv.textContent = error.message;
                         errorDiv.style.display = 'block';
@@ -424,7 +386,6 @@ app.get('/', (req, res) => {
                         submitBtn.textContent = 'Generate Install Link';
                     }
                 });
-
                 document.getElementById('copy-btn').addEventListener('click', function() {
                     const urlInput = document.getElementById('install-url');
                     urlInput.select();
