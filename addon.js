@@ -24,7 +24,7 @@ function encrypt(text) {
     encrypted += cipher.final('hex');
     
     const authTag = cipher.getAuthTag();
-
+    
     return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
@@ -40,13 +40,12 @@ function decrypt(encryptedData) {
     
     const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
     decipher.setAuthTag(authTag);
-
+    
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     
     return decrypted;
 }
-
 
 const manifest = {
     id: 'youtubio.elfhosted.com',
