@@ -6,7 +6,6 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
-const util = require('util');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
@@ -233,7 +232,6 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
             `https://www.youtube.com/watch?v=${videoId}`,
             '-j'
         ]));
-        console.log(util.inspect(videoData, false, null, true))
         const title = videoData.title || 'Unknown Title';
         const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
         const description = videoData.description || '';
@@ -284,7 +282,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                     }, {
                         name: 'Stremio Player',
                         ytId: videoId,
-                        description: 'Click to watch using Stremio\'s builtin YouTube Player'
+                        description: 'Click to watch using Stremio\'s built-in YouTube Player'
                     }, {
                         name: 'YouTube Player',
                         externalUrl: videoData.original_url,
