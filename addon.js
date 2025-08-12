@@ -295,14 +295,6 @@ app.get('/', (req, res) => {
                     this.textContent = 'Copied!';
                     setTimeout(() => { this.textContent = 'Copy URL'; }, 2000);
                 });
-
-                // Generate a default install link on page load for users who don't want to log in
-                const defaultConfigString = btoa(JSON.stringify({}));
-                const defaultInstallUrl = \`stremio://installaddon/\${protocol}://\${host}/\${defaultConfigString}/manifest.json\`;
-                const installLink = document.getElementById('install-link');
-                const installUrlInput = document.getElementById('install-url');
-                installLink.href = defaultInstallUrl;
-                installUrlInput.value = \`\${protocol}://\${host}/\${defaultConfigString}/manifest.json\`;
             </script>
         </body>
         </html>
