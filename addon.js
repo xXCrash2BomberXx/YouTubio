@@ -214,7 +214,7 @@ app.get('/', (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>YouTube Addon Configuration</title>
+            <title>YouTubio | ElfHosted</title>
             <style>
                 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px; background: #f4f4f8; color: #333; }
                 .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -234,7 +234,7 @@ app.get('/', (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h1>YouTube Addon for Stremio</h1>
+                <h1>YouTubio | ElfHosted</h1>
                 <p>To see your subscriptions, watch history, and watch later playlists, paste the content of your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
@@ -258,8 +258,10 @@ app.get('/', (req, res) => {
                         </li>
                         <li>Go to <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">youtube.com</a> and make sure you are logged into your account.</li>
                         <li>Click the extension's icon in your browser's toolbar.</li>
-                        <li>Click "Export" or "Download" to save the <strong>cookies.txt</strong> file.</li>
-                        <li>Open the file and copy its entire content.</li>
+                        <li>Click "Export", "Download", or "Copy" to save the <strong>cookies.txt</strong> file or contents.</li>
+                            <ul>
+                                <li>If you used "Export" or "Download", Open the file and copy its entire content.</li>
+                            </ul>
                         <li>Paste the content into the text area above.</li>
                     </ol>
                 </details>
@@ -273,6 +275,9 @@ app.get('/', (req, res) => {
                     const userConfig = {};
                     if (cookies && cookies.trim()) {
                         userConfig.cookies = cookies;
+                    } else {
+                        alert("You must provide cookies to use this addon");
+                        return;
                     }
                     const configString = btoa(JSON.stringify(userConfig));
                     const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
