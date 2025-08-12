@@ -198,7 +198,8 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
     try {
         const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
-            '-j'
+            '-j',
+            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
         const title = videoData.title || 'Unknown Title';
         const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
@@ -299,6 +300,11 @@ app.get('/', (req, res) => {
                 #results { margin-top: 20px; }
                 .error { color: #d92323; margin-top: 10px; }
                 .loading { color: #666; font-style: italic; }
+                .settings-section { text-align: left; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                .toggle-container { display: flex; align-items: center; margin: 10px 0; }
+                .toggle-container input[type="checkbox"] { margin-right: 10px; }
+                .toggle-container label { font-weight: normal; cursor: pointer; }
+                .setting-description { font-size: 0.9em; color: #666; margin-top: 5px; line-height: 1.4; }
             </style>
         </head>
         <body>
@@ -308,6 +314,18 @@ app.get('/', (req, res) => {
                 <p>To see your subscriptions, watch history, and watch later playlists, paste the content of your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
+                    
+                    <div class="settings-section">
+                        <h3>Settings</h3>
+                        <div class="toggle-container">
+                            <input type="checkbox" id="mark-watched-toggle" name="markWatchedOnLoad">
+                            <label for="mark-watched-toggle">Mark watched on load</label>
+                        </div>
+                        <div class="setting-description">
+                            When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
                     <div id="error-message" class="error" style="display:none;"></div>
                 </form>
@@ -343,6 +361,7 @@ app.get('/', (req, res) => {
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
                     const cookies = document.getElementById('cookie-data').value;
+                    const markWatchedOnLoad = document.getElementById('mark-watched-toggle').checked;
                     const submitBtn = document.getElementById('submit-btn');
                     const errorDiv = document.getElementById('error-message');
                     if (!cookies || !cookies.trim()) {
@@ -369,7 +388,8 @@ app.get('/', (req, res) => {
                             throw new Error(encryptData.error || 'Encryption failed');
                         }
                         const configObject = {
-                            encrypted: encryptData.encrypted
+                            encrypted: encryptData.encrypted,
+                            markWatchedOnLoad: markWatchedOnLoad
                         };
                         const configString = btoa(JSON.stringify(configObject));
                         const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
