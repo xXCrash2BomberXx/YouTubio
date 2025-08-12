@@ -5,16 +5,15 @@ const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
-const tmpdir = require('os').tmpdir();
 
+const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const cookieLimit = 7500;
-
 const prefix = 'yt_id:';
 
 const manifest = {
-    id: 'xxcrashbomberxx-youtube.hf.space',
+    id: 'youtubio.elfhosted.com',
     version: '0.1.0',
     name: 'YouTube',
     description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
