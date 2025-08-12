@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 7000;
 const cookieLimit = 7500;
 const prefix = 'yt_id:';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
 
 function encrypt(text) {
