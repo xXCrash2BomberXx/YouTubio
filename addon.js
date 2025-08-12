@@ -9,6 +9,7 @@ const tmpdir = require('os').tmpdir();
 
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
+const cookieLimit = 7500;
 
 const prefix = 'yt_id:';
 
@@ -66,6 +67,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         id: req.params.id,
         extra: (req.params.extra ? qs.parse(req.params.extra) : {})
     };
+    if (req.params.config.length > cookieLimit) {
+        console.error(`Error in ${args.id} handler: Cookie data of length ${req.params.config.length} exceeds ${cookieLimit}`);
+        return res.status(400).json({ metas: {} });
+    }
     let command;
     switch (args.id) {
         case 'youtube.search':
@@ -127,6 +132,10 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
+    if (req.params.config.length > cookieLimit) {
+        console.error(`Error in meta handler: Cookie data of length ${req.params.config.length} exceeds ${cookieLimit}`);
+        return res.status(400).json({ meta: {} });
+    }
     if (!args.id.startsWith(prefix)) return res.json({ meta: {} });
     const videoId = args.id.slice(prefix.length);
     let userConfig = {};
