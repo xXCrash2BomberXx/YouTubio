@@ -5,12 +5,49 @@ const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const cookieLimit = 7500;
 const prefix = 'yt_id:';
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32);
+const ALGORITHM = 'aes-256-gcm';
+
+function encrypt(text) {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
+    cipher.setIV(iv);
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    const authTag = cipher.getAuthTag();
+    
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+}
+
+function decrypt(encryptedData) {
+    const parts = encryptedData.split(':');
+    if (parts.length !== 3) {
+        throw new Error('Invalid encrypted data format');
+    }
+    
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encrypted = parts[2];
+    
+    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+    decipher.setIV(iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return decrypted;
+}
 
 const manifest = {
     id: 'youtubio.elfhosted.com',
@@ -53,6 +90,54 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// Config encryption endpoint
+app.post('/encrypt', (req, res) => {
+    try {
+        const configData = req.body;
+        
+        if (!configData.cookies || !configData.cookies.trim()) {
+            return res.status(400).json({ error: 'Cookies data is required' });
+        }
+        
+        if (configData.cookies.length > cookieLimit) {
+            return res.status(400).json({ 
+                error: `Cookie data length ${configData.cookies.length} exceeds limit of ${cookieLimit}` 
+            });
+        }
+        
+        const configJson = JSON.stringify(configData);
+        const encryptedData = encrypt(configJson);
+        const configString = Buffer.from(encryptedData).toString('base64');
+        
+        res.json({ 
+            success: true, 
+            config: configString 
+        });
+    } catch (error) {
+        console.error('Encryption error:', error);
+        res.status(500).json({ error: 'Encryption failed' });
+    }
+});
+
+function decryptConfig(configParam) {
+    if (!configParam) {
+        throw new Error('No config provided');
+    }
+    
+    if (configParam.length > cookieLimit * 2) { // Account for encryption overhead
+        throw new Error(`Config data too large`);
+    }
+    
+    try {
+        const encryptedData = Buffer.from(configParam, 'base64').toString('utf-8');
+        const decryptedJson = decrypt(encryptedData);
+        return JSON.parse(decryptedJson);
+    } catch (error) {
+        throw new Error('Failed to decrypt config: ' + error.message);
+    }
+}
 
 // Stremio Addon Manifest Route
 app.get('/:config?/manifest.json', (req, res) => {
@@ -66,10 +151,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         id: req.params.id,
         extra: (req.params.extra ? qs.parse(req.params.extra) : {})
     };
-    if (req.params.config.length > cookieLimit) {
-        console.error(`Error in ${args.id} handler: Cookie data of length ${req.params.config.length} exceeds ${cookieLimit}`);
-        return res.status(400).json({ metas: {} });
-    }
+    
     let command;
     switch (args.id) {
         case 'youtube.search':
@@ -91,15 +173,17 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         default:
             return res.json({ metas: [] });
     }
-    let userConfig = {};
+    
+    let userConfig;
     try {
-        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-        userConfig = JSON.parse(jsonString);
-    } catch (e) {
-        console.error("Error parsing config for catalog:", e);
+        userConfig = decryptConfig(req.params.config);
+    } catch (error) {
+        console.error(`Error decrypting config for ${args.id}:`, error.message);
         return res.status(400).json({ metas: [] });
     }
+    
     if (!userConfig.cookies) return res.json({ metas: [] });
+    
     try {
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             command,
@@ -131,21 +215,20 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
         type: req.params.type,
         id: req.params.id,
     };
-    if (req.params.config.length > cookieLimit) {
-        console.error(`Error in meta handler: Cookie data of length ${req.params.config.length} exceeds ${cookieLimit}`);
-        return res.status(400).json({ meta: {} });
-    }
+    
     if (!args.id.startsWith(prefix)) return res.json({ meta: {} });
     const videoId = args.id.slice(prefix.length);
-    let userConfig = {};
+    
+    let userConfig;
     try {
-        const jsonString = Buffer.from(req.params.config, 'base64').toString('utf-8');
-        userConfig = JSON.parse(jsonString);
-    } catch (e) {
-        console.error("Error parsing config for meta:", e);
+        userConfig = decryptConfig(req.params.config);
+    } catch (error) {
+        console.error('Error decrypting config for meta:', error.message);
         return res.status(400).json({ meta: {} });
     }
+    
     if (!userConfig.cookies) return res.json({ meta: {} });
+    
     try {
         const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.cookies, [
             `https://www.youtube.com/watch?v=${videoId}`,
@@ -221,8 +304,9 @@ app.get('/', (req, res) => {
                 h1 { color: #d92323; }
                 p { font-size: 1.1em; line-height: 1.6; }
                 textarea { width: 100%; height: 150px; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
-                .install-button { display: inline-block; margin-top: 20px; padding: 15px 30px; background-color: #5835b0; color: white; text-decoration: none; font-size: 1.2em; border-radius: 5px; transition: background-color 0.3s; }
+                .install-button { display: inline-block; margin-top: 20px; padding: 15px 30px; background-color: #5835b0; color: white; text-decoration: none; font-size: 1.2em; border-radius: 5px; transition: background-color 0.3s; border: none; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
+                .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
                 .url-input { width: 100%; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
                 #copy-btn { padding: 10px 15px; margin-top: 10px; border-radius: 4px; border: none; background-color: #007bff; color: white; cursor: pointer; }
                 .instructions { text-align: left; margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
@@ -230,6 +314,8 @@ app.get('/', (req, res) => {
                 .instructions ul { padding-left: 20px; }
                 .instructions li { margin-bottom: 8px; }
                 #results { margin-top: 20px; }
+                .error { color: #d92323; margin-top: 10px; }
+                .loading { color: #666; font-style: italic; }
             </style>
         </head>
         <body>
@@ -239,7 +325,8 @@ app.get('/', (req, res) => {
                 <p>To see your subscriptions, watch history, and watch later playlists, paste the content of your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                    <button type="submit" class="install-button">Generate Install Link</button>
+                    <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
+                    <div id="error-message" class="error" style="display:none;"></div>
                 </form>
                 <div id="results" style="display:none;">
                     <p>Click the button below to install the addon in Stremio:</p>
@@ -270,23 +357,57 @@ app.get('/', (req, res) => {
             <script>
                 const host = '${host}';
                 const protocol = '${protocol}';
-                document.getElementById('config-form').addEventListener('submit', function(event) {
+                
+                document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
+                    
                     const cookies = document.getElementById('cookie-data').value;
-                    const userConfig = {};
-                    if (cookies && cookies.trim()) {
-                        userConfig.cookies = cookies;
-                    } else {
-                        alert("You must provide cookies to use this addon");
+                    const submitBtn = document.getElementById('submit-btn');
+                    const errorDiv = document.getElementById('error-message');
+                    
+                    if (!cookies || !cookies.trim()) {
+                        errorDiv.textContent = "You must provide cookies to use this addon";
+                        errorDiv.style.display = 'block';
                         return;
                     }
-                    const configString = btoa(JSON.stringify(userConfig));
-                    const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
-                    const installLink = document.getElementById('install-link');
-                    installLink.href = \`stremio://installaddon/\${installUrl}\`;
-                    const installUrlInput = document.getElementById('install-url');
-                    installUrlInput.value = installUrl;
-                    document.getElementById('results').style.display = 'block';
+                    
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Encrypting...';
+                    errorDiv.style.display = 'none';
+                    
+                    try {
+                        const response = await fetch('/encrypt', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                cookies: cookies,
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'Encryption failed');
+                        }
+                        
+                        const installUrl = \`\${protocol}://\${host}/\${data.config}/manifest.json\`;
+                        const installLink = document.getElementById('install-link');
+                        installLink.href = \`stremio://installaddon/\${installUrl}\`;
+                        
+                        const installUrlInput = document.getElementById('install-url');
+                        installUrlInput.value = installUrl;
+                        
+                        document.getElementById('results').style.display = 'block';
+                        
+                    } catch (error) {
+                        errorDiv.textContent = error.message;
+                        errorDiv.style.display = 'block';
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Generate Install Link';
+                    }
                 });
 
                 document.getElementById('copy-btn').addEventListener('click', function() {
@@ -311,6 +432,10 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(PORT, () => {
     console.log(`Addon server running on port ${PORT}`);
+    if (!process.env.ENCRYPTION_KEY) {
+        console.warn('WARNING: Using random encryption key. Set ENCRYPTION_KEY environment variable for production.');
+        console.log('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
+    }
     if (process.env.SPACE_HOST) {
         console.log(`Access the configuration page at: https://${process.env.SPACE_HOST}`);
     } else {
