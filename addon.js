@@ -3,8 +3,9 @@
 const express = require('express');
 const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
-const fs = require('fs');
-const tmp = require('tmp');
+const fs = require('fs').promises;
+const path = require('path');
+const tmpdir = require('os').tmpdir();
 
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
@@ -28,29 +29,26 @@ const manifest = {
     ],
 };
 
+let counter = 0;
 async function runYtDlpWithCookies(cookiesContent, argsArray) {
-    return new Promise((resolve, reject) => {
-        tmp.file({ prefix: 'cookies-', postfix: '.txt', detachDescriptor: true, keep: false }, async (err, path, fd, cleanup) => {
-            if (err) return reject(err);
-            try {
-                fs.writeSync(fd, cookiesContent);
-                fs.closeSync(fd);
-                const fullArgs = [
-                    ...argsArray,
-                    '--no-check-certificate',
-                    '--skip-download',
-                    '--ignore-errors',
-                    '--no-warnings',
-                    '--no-cache-dir',
-                    '--cookies', path];
-                resolve(await ytDlpWrap.execPromise(fullArgs));
-            } catch (error) {
-                reject(error);
-            } finally {
-                cleanup();
-            }
-        });
-    });
+    const filename = path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`);
+    counter %= Number.MAX_SAFE_INTEGER;
+    const fullArgs = [
+        ...argsArray,
+        '--no-check-certificate',
+        '--skip-download',
+        '--ignore-errors',
+        '--no-warnings',
+        '--no-cache-dir',
+        '--cookies', filename];
+    try {
+        await fs.writeFile(filename, cookiesContent);
+        return ytDlpWrap.execPromise(fullArgs);
+    } finally {
+        try {
+            await fs.unlink(filename);
+        } catch (error) {}
+    }
 }
 
 const app = express();
