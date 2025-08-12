@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "yt-dlp-wrap": "^2.3.12",
+    "yt-dlp-wrap": "^2.3.12"
   }
 }

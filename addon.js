@@ -43,7 +43,7 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         '--cookies', filename];
     try {
         await fs.writeFile(filename, cookiesContent);
-        return ytDlpWrap.execPromise(fullArgs);
+        return await ytDlpWrap.execPromise(fullArgs);
     } finally {
         try {
             await fs.unlink(filename);
