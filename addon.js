@@ -85,19 +85,10 @@ app.use(express.json());
 // Config encryption endpoint
 app.post('/encrypt', (req, res) => {
     try {
-        const inputData = req.body;
-        if (!inputData || typeof inputData !== 'object') {
-            return res.status(400).json({ error: 'Valid data object is required' });
-        }
-        const dataString = JSON.stringify(inputData);
-        const encryptedData = encrypt(dataString);
-        res.json({ 
-            success: true, 
-            encrypted: encryptedData 
-        });
+        res.text(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         console.error('Encryption error:', error);
-        res.status(500).json({ error: 'Encryption failed' });
+        res.status(500).text('Encryption failed');
     }
 });
 
@@ -360,11 +351,11 @@ app.get('/', (req, res) => {
                 const protocol = '${protocol}';
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    const cookies = document.getElementById('cookie-data').value;
+                    const cookies = document.getElementById('cookie-data');
                     const markWatchedOnLoad = document.getElementById('mark-watched-toggle').checked;
                     const submitBtn = document.getElementById('submit-btn');
                     const errorDiv = document.getElementById('error-message');
-                    if (!cookies || !cookies.trim()) {
+                    if (!cookies.value || !cookies.value.trim()) {
                         errorDiv.textContent = "You must provide cookies to use this addon";
                         errorDiv.style.display = 'block';
                         return;
@@ -373,22 +364,22 @@ app.get('/', (req, res) => {
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
-                        // Encrypt the sensitive data
-                        const encryptResponse = await fetch('/encrypt', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ 
-                                cookies: cookies,
-                            })
-                        });
-                        const encryptData = await encryptResponse.json();
-                        if (!encryptResponse.ok || !encryptData.success) {
-                            throw new Error(encryptData.error || 'Encryption failed');
+                        if (!cookies.disabled) {
+                            // Encrypt the sensitive data
+                            const encryptResponse = await fetch('/encrypt', {
+                                method: 'POST',
+                                body: JSON.stringify({ 
+                                    cookies: cookies,
+                                })
+                            });
+                            if (!encryptResponse.ok) {
+                                throw new Error(encryptData.error || 'Encryption failed');
+                            }
+                            cookies.value = await encryptResponse.text();
+                            cookies.disabled = true;
                         }
                         const configObject = {
-                            encrypted: encryptData.encrypted,
+                            encrypted: cookies.value,
                             markWatchedOnLoad: markWatchedOnLoad
                         };
                         const configString = btoa(JSON.stringify(configObject));
