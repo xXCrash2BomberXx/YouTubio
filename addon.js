@@ -315,14 +315,21 @@ app.get('/', (req, res) => {
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                     
-                    <div class="settings-section">
+                    <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
                         <div class="toggle-container">
-                            <input type="checkbox" id="mark-watched-toggle" name="markWatchedOnLoad">
+                            <input type="checkbox" name="markWatchedOnLoad">
                             <label for="mark-watched-toggle">Mark watched on load</label>
+                            <div class="setting-description">
+                                When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.
+                            </div>
                         </div>
-                        <div class="setting-description">
-                            When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.
+                        <div class="toggle-container">
+                            <input type="checkbox" name="search" checked>
+                            <label for="enableSearch">Allow searching</label>
+                            <div class="setting-description">
+                                When enabled, Stremio's search feature will also return YouTube results.
+                            </div>
                         </div>
                     </div>
                     
@@ -360,7 +367,7 @@ app.get('/', (req, res) => {
                 const protocol = '${protocol}';
                 
                 const cookies = document.getElementById('cookie-data');
-                const markWatchedOnLoad = document.getElementById('mark-watched-toggle');
+                const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
                 const installStremio = document.getElementById('install-stremio');
@@ -398,7 +405,10 @@ app.get('/', (req, res) => {
                         
                         const configString = btoa(JSON.stringify({
                             encrypted: cookies.value,
-                            markWatchedOnLoad: markWatchedOnLoad.checked
+                            ...Object.fromEntries(
+                                Array.from(addonSettings.querySelectorAll("input"))
+                                    .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
+                            )
                         }));
                         
                         installStremio.href = \`stremio://\${host}/\${configString}/manifest.json\`;
