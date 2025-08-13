@@ -348,12 +348,17 @@ app.get('/', (req, res) => {
             <script>
                 const host = '${host}';
                 const protocol = '${protocol}';
+                
+                const cookies = document.getElementById('cookie-data');
+                const markWatchedOnLoad = document.getElementById('mark-watched-toggle');
+                const submitBtn = document.getElementById('submit-btn');
+                const errorDiv = document.getElementById('error-message');
+                const installStremio = document.getElementById('install-stremio');
+                const installUrlInput = document.getElementById('install-url');
+                const installWeb = document.getElementById('install-web');
+                
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    const cookies = document.getElementById('cookie-data');
-                    const markWatchedOnLoad = document.getElementById('mark-watched-toggle').checked;
-                    const submitBtn = document.getElementById('submit-btn');
-                    const errorDiv = document.getElementById('error-message');
                     if (!cookies.value || !cookies.value.trim()) {
                         errorDiv.textContent = "You must provide cookies to use this addon";
                         errorDiv.style.display = 'block';
@@ -377,19 +382,14 @@ app.get('/', (req, res) => {
                             cookies.value = await encryptResponse.text();
                             cookies.disabled = true;
                         }
-                        const configObject = {
+                        
+                        const configString = btoa(JSON.stringify({
                             encrypted: cookies.value,
-                            markWatchedOnLoad: markWatchedOnLoad
-                        };
-                        const configString = btoa(JSON.stringify(configObject));
+                            markWatchedOnLoad: markWatchedOnLoad.checked
+                        }));
                         
-                        const installStremio = document.getElementById('install-stremio');
                         installStremio.href = \`stremio://\${host}/\${configString}/manifest.json\`;
-                        
-                        const installUrlInput = document.getElementById('install-url');
                         installUrlInput.value = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
-                        
-                        const installWeb = document.getElementById('install-web');
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         
                         document.getElementById('results').style.display = 'block';
@@ -402,8 +402,7 @@ app.get('/', (req, res) => {
                     }
                 });
                 document.getElementById('copy-btn').addEventListener('click', function() {
-                    const urlInput = document.getElementById('install-url');
-                    urlInput.select();
+                    installUrlInput.select();
                     document.execCommand('copy');
                     this.textContent = 'Copied!';
                     setTimeout(() => { this.textContent = 'Copy URL'; }, 2000);
