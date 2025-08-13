@@ -142,8 +142,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
     // Other Playlists
-    } else if (pid = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
-        command = `https://www.youtube.com/playlist?list=${pid}`;
+    } else if (command = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
+        command = `https://www.youtube.com/playlist?list=${command}`;
     } else {
         return res.json({ metas: [] });
     }
