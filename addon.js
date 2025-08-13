@@ -39,23 +39,6 @@ function decrypt(encryptedData) {
     return decrypted;
 }
 
-const manifest = {
-    id: 'youtubio.elfhosted.com',
-    version: '0.1.0',
-    name: 'YouTube',
-    description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
-    resources: ['catalog', 'stream', 'meta'],
-    types: ['movie'],
-    idPrefixes: [prefix],
-    catalogs: [
-        { type: 'movie', id: ':ytrec', name: 'Discover' },
-        { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
-        { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
-        { type: 'movie', id: ':ythistory', name: 'History' },
-        { type: 'movie', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }
-    ],
-};
-
 let counter = 0;
 async function runYtDlpWithCookies(cookiesContent, argsArray) {
     const filename = path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`);
@@ -111,8 +94,35 @@ function decryptConfig(configParam) {
 }
 
 // Stremio Addon Manifest Route
-app.get('/:config?/manifest.json', (req, res) => {
-    res.json(manifest);
+app.get('/:config/manifest.json', (req, res) => {
+    let userConfig;
+    try {
+        userConfig = decryptConfig(req.params.config);
+    } catch (error) {
+        console.error(`Error decrypting config for manifest handler:`, error.message);
+        return res.status(400);
+    }
+    
+    res.json({
+        id: 'youtubio.elfhosted.com',
+        version: '0.1.0',
+        name: 'YouTube',
+        description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
+        resources: ['catalog', 'stream', 'meta'],
+        types: ['movie'],
+        idPrefixes: [prefix],
+        catalogs: (userConfig.catalogs || [
+            { type: 'movie', id: ':ytrec', name: 'Discover' },
+            { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
+            { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
+            { type: 'movie', id: ':ythistory', name: 'History' }
+        ]).concat([
+            // Add search unless explicitly disabled
+            ...(userConfig.search || userConfig.search === undefined ? 
+                [{ type: 'movie', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
+                [])
+        ])
+    });
 });
 
 // Stremio Addon Resource Route
