@@ -123,8 +123,7 @@ app.get('/:config/manifest.json', (req, res) => {
                 [])
         ]),
         behaviorHints: {
-            configurable: true,
-            configurationRequired: true
+            configurable: true
         }
     });
 });
@@ -325,7 +324,7 @@ app.get('/', (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
-                <p>To avoid rate-limiting and properly use this addon, past your <code>cookies.txt</code> file below.</p>
+                <p>To avoid rate-limiting and properly use this addon, paste your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                     
@@ -374,7 +373,7 @@ app.get('/', (req, res) => {
                     <h2>Install your addon</h2>
                     <a href="#" target="_blank" id="install-stremio" class="install-button">Stremio</a>
                     <a href="#" target="_blank" id="install-web" class="install-button">Stremio Web</a>
-                    <a href="#" target="_blank" id="copy-btn" class="install-button">Copy URL</a>
+                    <a id="copy-btn" class="install-button">Copy URL</a>
                     <input type="text" id="install-url" style="display: none;" readonly class="url-input">
                 </div>
                 <details class="instructions">
