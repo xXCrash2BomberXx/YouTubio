@@ -121,7 +121,11 @@ app.get('/:config/manifest.json', (req, res) => {
             ...(userConfig.search || userConfig.search === undefined ? 
                 [{ type: 'movie', id: 'ytsearch50:', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
                 [])
-        ])
+        ]),
+        behaviorHints: {
+            configurable: true,
+            configurationRequired: true
+        }
     });
 });
 
