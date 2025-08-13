@@ -372,8 +372,11 @@ app.get('/', (req, res) => {
                             // Encrypt the sensitive data
                             const encryptResponse = await fetch('/encrypt', {
                                 method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
                                 body: JSON.stringify({ 
-                                    cookies: cookies,
+                                    cookies: cookies.value,
                                 })
                             });
                             if (!encryptResponse.ok) {
