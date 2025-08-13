@@ -119,7 +119,7 @@ app.get('/:config/manifest.json', (req, res) => {
         ]).concat([
             // Add search unless explicitly disabled
             ...(userConfig.search || userConfig.search === undefined ? 
-                [{ type: 'movie', id: 'youtube.search', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
+                [{ type: 'movie', id: 'ytsearch50:', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
                 [])
         ])
     });
@@ -134,9 +134,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     };
 
     let command;
-    if (args.id === 'ytsearch50:') {
+    // Handle Prefixes
+    if (['ytsearch50:'].includes(args.id)) {
         if (!args.extra || !args.extra.search) return res.json({ metas: [] });
-        command = `ytsearch50:${args.extra.search}`;
+        command = `${args.id}${args.extra.search}`;
     } else {
         command = args.id;
     }
