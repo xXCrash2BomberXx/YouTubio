@@ -166,7 +166,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             command,
             '--flat-playlist',
             '--dump-single-json',
-            '--playlist-start', `${args.extra?.skip ?? 0}`,
+            '--playlist-start', `${(args.extra?.skip ?? 0) + 1}`,
             '--playlist-end', `${(args.extra?.skip ?? 0) + 100}`
         ]));
         const metas = (data.entries || []).map(video => 
