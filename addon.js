@@ -139,7 +139,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         if (!args.extra || !args.extra.search) return res.json({ metas: [] });
         command = `${args.id}${args.extra.search}`;
     // YT-DLP Commands
-    } else if (args.id.startsWith(":")) {
+    } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
     // Other Playlists
     } else if (pid = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
