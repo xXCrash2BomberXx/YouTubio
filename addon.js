@@ -385,7 +385,7 @@ app.get('/', (req, res) => {
                         const configString = btoa(JSON.stringify(configObject));
                         const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
                         const installLink = document.getElementById('install-link');
-                        installLink.href = \`stremio://installaddon/\${installUrl}\`;
+                        installLink.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrl)}\`
                         const installUrlInput = document.getElementById('install-url');
                         installUrlInput.value = installUrl;
                         document.getElementById('results').style.display = 'block';
