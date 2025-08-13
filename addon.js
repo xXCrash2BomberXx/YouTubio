@@ -139,8 +139,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
     let command;
     // Handle Prefixes
-    if (['ytsearch50:'].includes(args.id)) {
-        if (!args.extra || !args.extra.search) return res.json({ metas: [] });
+    if (['ytsearch:'].includes(args.id)) {
+        if (!args.extra?.search) return res.json({ metas: [] });
         command = `${args.id}${args.extra.search}`;
     // YT-DLP Commands
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
@@ -167,8 +167,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             command,
             '--flat-playlist',
             '--dump-single-json',
-            '--playlist-start', '0',
-            '--playlist-end', '50'
+            '--playlist-start', `${args.extra?.skip ?? 0}`,
+            '--playlist-end', `${(args.extra?.skip ?? 0) + 100}`
         ]));
         const metas = (data.entries || []).map(video => 
             video.id ? {
