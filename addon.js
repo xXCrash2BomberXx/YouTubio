@@ -138,8 +138,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (['ytsearch50:'].includes(args.id)) {
         if (!args.extra || !args.extra.search) return res.json({ metas: [] });
         command = `${args.id}${args.extra.search}`;
-    } else {
+    // YT-DLP Commands
+    } else if (args.id.startsWith(":")) {
         command = args.id;
+    // Other Playlists
+    } else {
+        command = `https://www.youtube.com/playlist?list=${args.id}`;
     }
 
     let userConfig;
@@ -290,6 +294,8 @@ app.get('/', (req, res) => {
                 h1 { color: #d92323; }
                 p { font-size: 1.1em; line-height: 1.6; }
                 textarea { width: 100%; height: 150px; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
+                #playlist-table th, #playlist-table td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+                #playlist-table input { width: 100%; box-sizing: border-box; }
                 .install-button { display: inline-block; margin-top: 20px; padding: 15px 30px; background-color: #5835b0; color: white; text-decoration: none; font-size: 1.2em; border-radius: 5px; transition: background-color 0.3s; border: none; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
@@ -315,6 +321,26 @@ app.get('/', (req, res) => {
                 <p>To see your subscriptions, watch history, and watch later playlists, paste the content of your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
                     <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
+                    
+                    <div class="settings-section" id="playlist-manager">
+                        <h3>Playlists</h3>
+                        <div style="margin-bottom: 10px;">
+                            <button type="button" id="add-defaults" class="install-button" style="padding:5px 10px;font-size:0.9em;">Add Defaults</button>
+                            <button type="button" id="remove-defaults" class="install-button" style="padding:5px 10px;font-size:0.9em;">Remove Defaults</button>
+                            <button type="button" id="add-playlist" class="install-button" style="padding:5px 10px;font-size:0.9em;">Add Playlist</button>
+                        </div>
+                        <table id="playlist-table" style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Playlist ID / URL</th>
+                                    <th>Name</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                     
                     <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
@@ -374,6 +400,105 @@ app.get('/', (req, res) => {
                 const installStremio = document.getElementById('install-stremio');
                 const installUrlInput = document.getElementById('install-url');
                 const installWeb = document.getElementById('install-web');
+                const playlistTableBody = document.querySelector('#playlist-table tbody');
+                
+                const defaultPlaylists = [
+                    { type: 'movie', id: ':ytrec', name: 'Discover' },
+                    { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
+                    { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
+                    { type: 'movie', id: ':ythistory', name: 'History' }
+                ];
+                
+                let playlists = JSON.parse(JSON.stringify(defaultPlaylists));
+                
+                function extractPlaylistId(input) {
+                    try {
+                        let url = new URL(input);
+                        if (url.searchParams.has('list')) return url.searchParams.get('list');
+                    } catch (e) {}
+                    return input.trim();
+                }
+                
+                function renderPlaylists() {
+                    playlistTableBody.innerHTML = '';
+                    playlists.forEach((pl, index) => {
+                        const row = document.createElement('tr');
+                        
+                        // Type
+                        const typeCell = document.createElement('td');
+                        const typeInput = document.createElement('input');
+                        typeInput.value = pl.type;
+                        typeInput.addEventListener('input', () => pl.type = typeInput.value.trim());
+                        typeCell.appendChild(typeInput);
+                        
+                        // ID
+                        const idCell = document.createElement('td');
+                        const idInput = document.createElement('input');
+                        idInput.value = pl.id;
+                        idInput.addEventListener('change', () => pl.id = extractPlaylistId(idInput.value));
+                        idCell.appendChild(idInput);
+                        
+                        // Name
+                        const nameCell = document.createElement('td');
+                        const nameInput = document.createElement('input');
+                        nameInput.value = pl.name;
+                        nameInput.addEventListener('input', () => pl.name = nameInput.value.trim());
+                        nameCell.appendChild(nameInput);
+                        
+                        // Actions
+                        const actionsCell = document.createElement('td');
+                        const upBtn = document.createElement('button');
+                        upBtn.textContent = '↑';
+                        upBtn.addEventListener('click', () => {
+                            if (index > 0) {
+                                [playlists[index - 1], playlists[index]] = [playlists[index], playlists[index - 1]];
+                                renderPlaylists();
+                            }
+                        });
+                        const downBtn = document.createElement('button');
+                        downBtn.textContent = '↓';
+                        downBtn.addEventListener('click', () => {
+                            if (index < playlists.length - 1) {
+                                [playlists[index + 1], playlists[index]] = [playlists[index], playlists[index + 1]];
+                                renderPlaylists();
+                            }
+                        });
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = 'Remove';
+                        removeBtn.addEventListener('click', () => {
+                            playlists.splice(index, 1);
+                            renderPlaylists();
+                        });
+                        
+                        actionsCell.appendChild(upBtn);
+                        actionsCell.appendChild(downBtn);
+                        actionsCell.appendChild(removeBtn);
+                        
+                        row.appendChild(typeCell);
+                        row.appendChild(idCell);
+                        row.appendChild(nameCell);
+                        row.appendChild(actionsCell);
+                        
+                        playlistTableBody.appendChild(row);
+                    });
+                }
+                
+                document.getElementById('add-playlist').addEventListener('click', () => {
+                    playlists.push({ type: 'movie', id: '', name: '' });
+                    renderPlaylists();
+                });
+                
+                document.getElementById('add-defaults').addEventListener('click', () => {
+                    playlists = [...playlists, ...defaultPlaylists];
+                    renderPlaylists();
+                });
+                
+                document.getElementById('remove-defaults').addEventListener('click', () => {
+                    playlists = playlists.filter(pl => !defaultPlaylists.some(def => def.id === pl.id));
+                    renderPlaylists();
+                });
+                
+                renderPlaylists();
                 
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
@@ -406,6 +531,7 @@ app.get('/', (req, res) => {
                         
                         const configString = btoa(JSON.stringify({
                             encrypted: cookies.value,
+                            catalogs: playlists,
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
