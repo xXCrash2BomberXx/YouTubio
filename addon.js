@@ -234,7 +234,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                         name: 'YT-DLP Player',
                         url: videoData.url,
                         description: 'Click to watch the scraped video from YT-DLP',
-                        subtitles: Object.entries(videoData.subtitles).map(([k, v]) => {
+                        subtitles: Object.entries(videoData.subtitles || {}).map(([k, v]) => {
                             const srt = v.find(x => x.ext == 'srt');
                             return {
                                 id: srt.name,
@@ -242,7 +242,7 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
                                 lang: k
                             };
                         }).concat(
-                            Object.entries(videoData.automatic_captions).map(([k, v]) => {
+                            Object.entries(videoData.automatic_captions || {}).map(([k, v]) => {
                                 const srt = v.find(x => x.ext == 'srt');
                                 return {
                                     id: `Auto ${srt.name}`,
