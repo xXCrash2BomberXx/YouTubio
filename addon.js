@@ -322,7 +322,7 @@ app.get('/', (req, res) => {
                 <div id="results" style="display:none;">
                     <h2>Install your addon</h2>
                     <a href="#" id="install-stremio" class="install-button">Stremio</a>
-                    <a href="#" id="install-link" class="install-button">Stremio Web</a>
+                    <a href="#" id="install-web" class="install-button">Stremio Web</a>
                     <input type="text" id="install-url" style="display: none;" readonly class="url-input">
                     <a href="#" id="copy-btn" class="install-button">Copy URL</a>
                 </div>
@@ -389,8 +389,8 @@ app.get('/', (req, res) => {
                         const installUrlInput = document.getElementById('install-url');
                         installUrlInput.value = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
                         
-                        const installLink = document.getElementById('install-link');
-                        installLink.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        const installWeb = document.getElementById('install-web');
+                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
