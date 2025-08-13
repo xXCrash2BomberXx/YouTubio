@@ -324,7 +324,7 @@ app.get('/', (req, res) => {
                     <a href="#" target="_blank" id="install-stremio" class="install-button">Stremio</a>
                     <a href="#" target="_blank" id="install-web" class="install-button">Stremio Web</a>
                     <a href="#" target="_blank" id="copy-btn" class="install-button">Copy URL</a>
-                    <input type="text" id="install-url" readonly class="url-input">
+                    <input type="text" id="install-url" style="display: none;" readonly class="url-input">
                 </div>
                 <details class="instructions">
                     <summary>How to get your cookies.txt file</summary>
