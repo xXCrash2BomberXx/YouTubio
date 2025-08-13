@@ -404,9 +404,8 @@ app.get('/', (req, res) => {
                         submitBtn.textContent = 'Generate Install Link';
                     }
                 });
-                document.getElementById('copy-btn').addEventListener('click', function() {
-                    installUrlInput.select();
-                    document.execCommand('copy');
+                document.getElementById('copy-btn').addEventListener('click', async function() {
+                    await navigator.clipboard.writeText(installUrlInput.value);
                     this.textContent = 'Copied!';
                     setTimeout(() => { this.textContent = 'Copy URL'; }, 2000);
                 });
