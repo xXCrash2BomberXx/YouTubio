@@ -75,14 +75,14 @@ app.post('/encrypt', (req, res) => {
     }
 });
 
-function decryptConfig(configParam) {
+function decryptConfig(configParam, skipDecryption = false) {
     if (!configParam) {
         throw new Error('No config provided');
     }
     try {
         const configJson = Buffer.from(configParam, 'base64').toString('utf-8');
         const config = JSON.parse(configJson);
-        if (config.encrypted) {
+        if (!skipDecryption && config.encrypted) {
             const decryptedJson = decrypt(config.encrypted);
             const decryptedData = JSON.parse(decryptedJson);
             config.encrypted = decryptedData;
