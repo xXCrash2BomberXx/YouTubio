@@ -85,10 +85,10 @@ app.use(express.json());
 // Config encryption endpoint
 app.post('/encrypt', (req, res) => {
     try {
-        res.text(encrypt(JSON.stringify(req.body)));
+        res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         console.error('Encryption error:', error);
-        res.status(500).text('Encryption failed');
+        res.status(500).send('Encryption failed');
     }
 });
 
@@ -372,7 +372,7 @@ app.get('/', (req, res) => {
                                 })
                             });
                             if (!encryptResponse.ok) {
-                                throw new Error(encryptData.error || 'Encryption failed');
+                                throw new Error(await encryptResponse.text() || 'Encryption failed');
                             }
                             cookies.value = await encryptResponse.text();
                             cookies.disabled = true;
