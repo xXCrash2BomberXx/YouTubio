@@ -283,7 +283,6 @@ app.get('/', (req, res) => {
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
                 .url-input { width: 100%; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-                #copy-btn { padding: 10px 15px; margin-top: 10px; border-radius: 4px; border: none; background-color: #007bff; color: white; cursor: pointer; }
                 .instructions { text-align: left; margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
                 .instructions summary { font-weight: bold; cursor: pointer; }
                 .instructions ul { padding-left: 20px; }
@@ -321,11 +320,11 @@ app.get('/', (req, res) => {
                     <div id="error-message" class="error" style="display:none;"></div>
                 </form>
                 <div id="results" style="display:none;">
-                    <p>Click the button below to install the addon in Stremio:</p>
-                    <a href="#" id="install-link" class="install-button">Install Addon</a>
-                    <p>If that doesn't work, copy the URL and paste it into the Stremio search bar:</p>
-                    <input type="text" id="install-url" readonly class="url-input">
-                    <button id="copy-btn">Copy URL</button>
+                    <h2>Install your addon</h2>
+                    <a href="#" id="install-stremio" class="install-button">Stremio</a>
+                    <a href="#" id="install-link" class="install-button">Stremio Web</a>
+                    <input type="text" id="install-url" style="display: none;" readonly class="url-input">
+                    <a href="#" id="copy-btn" class="install-button">Copy URL</a>
                 </div>
                 <details class="instructions">
                     <summary>How to get your cookies.txt file</summary>
@@ -383,11 +382,16 @@ app.get('/', (req, res) => {
                             markWatchedOnLoad: markWatchedOnLoad
                         };
                         const configString = btoa(JSON.stringify(configObject));
-                        const installUrl = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
-                        const installLink = document.getElementById('install-link');
-                        installLink.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrl)}\`
+                        
+                        const installStremio = document.getElementById('install-stremio');
+                        installStremio.href = \`stremio://\${host}/\${configString}/manifest.json\`;
+                        
                         const installUrlInput = document.getElementById('install-url');
-                        installUrlInput.value = installUrl;
+                        installUrlInput.value = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
+                        
+                        const installLink = document.getElementById('install-link');
+                        installLink.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
