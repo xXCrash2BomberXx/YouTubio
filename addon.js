@@ -335,7 +335,24 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 <form id="config-form">
                     <div class="settings-section" id="playlist-manager">
                         <h3>Cookies</h3>
-                        <p>To avoid rate-limiting and properly use this addon, paste your <code>cookies.txt</code> file below.</p>
+                        <details class="instructions">
+                            <summary>How to get your cookies.txt file</summary>
+                            <ol>
+                                <li>Install a browser extension for exporting cookies:
+                                    <ul>
+                                        <li><a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener noreferrer">Get cookies.txt LOCALLY for Chrome</a></li>
+                                        <li><a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank" rel="noopener noreferrer">cookies.txt for Firefox</a></li>
+                                    </ul>
+                                </li>
+                                <li>Go to <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">youtube.com</a> and make sure you are logged into your account.</li>
+                                <li>Click the extension's icon in your browser's toolbar.</li>
+                                <li>Click "Export", "Download", or "Copy" to save the <strong>cookies.txt</strong> file or contents.</li>
+                                    <ul>
+                                        <li>If you used "Export" or "Download", Open the file and copy its entire content.</li>
+                                    </ul>
+                                <li>Paste the content into the text area above.</li>
+                            </ol>
+                        </details>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                         <button type="button" id="clear-cookies" class="install-button action-button">Clear</button>
                     </div>
@@ -381,6 +398,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
                     <div id="error-message" class="error" style="display:none;"></div>
                 </form>
+                
                 <div id="results" style="display:none;">
                     <h2>Install your addon</h2>
                     <a href="#" target="_blank" id="install-stremio" class="install-button">Stremio</a>
@@ -388,24 +406,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     <a id="copy-btn" class="install-button">Copy URL</a>
                     <input type="text" id="install-url" style="display: none;" readonly class="url-input">
                 </div>
-                <details class="instructions">
-                    <summary>How to get your cookies.txt file</summary>
-                    <ol>
-                        <li>Install a browser extension for exporting cookies:
-                            <ul>
-                                <li><a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener noreferrer">Get cookies.txt LOCALLY for Chrome</a></li>
-                                <li><a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank" rel="noopener noreferrer">cookies.txt for Firefox</a></li>
-                            </ul>
-                        </li>
-                        <li>Go to <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">youtube.com</a> and make sure you are logged into your account.</li>
-                        <li>Click the extension's icon in your browser's toolbar.</li>
-                        <li>Click "Export", "Download", or "Copy" to save the <strong>cookies.txt</strong> file or contents.</li>
-                            <ul>
-                                <li>If you used "Export" or "Download", Open the file and copy its entire content.</li>
-                            </ul>
-                        <li>Paste the content into the text area above.</li>
-                    </ol>
-                </details>
             </div>
             <script>
                 const host = '${host}';
