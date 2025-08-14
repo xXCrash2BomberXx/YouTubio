@@ -188,7 +188,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 });
 
 // Stremio Addon Meta Route
-app.get('/:config?/meta/:type/:id.json', async (req, res) => {
+app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const args = {
         type: req.params.type,
         id: req.params.id,
@@ -286,9 +286,16 @@ app.get('/:config?/meta/:type/:id.json', async (req, res) => {
 });
 
 // Serve the configuration page at the root
-app.get('/', (req, res) => {
+app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
+    let userConfig = {};
+    try {
+        if (req.params.config)
+            userConfig = decryptConfig(req.params.config, true);
+    } catch (error) {
+        userConfig = {};
+    }
     res.send(`
         <!DOCTYPE html>
         <html>
@@ -415,7 +422,10 @@ app.get('/', (req, res) => {
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
                 
-                let playlists = JSON.parse(JSON.stringify(defaultPlaylists));
+                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
+                ${userConfig.catalogs ? "cookies.disabled = true;" : ""}
+                document.querySelector('[name="markWatchedOnLoad"]').checked = ${config.markWatchedOnLoad ? 'true' : 'false'};
+                document.querySelector('[name="search"]').checked = ${config.search ? 'true' : 'false'};
                 
                 function extractPlaylistId(input) {
                     try {
