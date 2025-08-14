@@ -428,7 +428,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ];
                 
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
-                ${userConfig.catalogs ? "cookies.disabled = true;" : ""}
+                ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
                 document.querySelector('[name="markWatchedOnLoad"]').checked = ${userConfig.markWatchedOnLoad ? 'true' : 'false'};
                 document.querySelector('[name="search"]').checked = ${userConfig.search ? 'true' : 'false'};
                 
