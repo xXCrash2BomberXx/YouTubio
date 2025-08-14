@@ -312,6 +312,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 .install-button { display: inline-block; margin-top: 20px; padding: 15px 30px; background-color: #5835b0; color: white; text-decoration: none; font-size: 1.2em; border-radius: 5px; transition: background-color 0.3s; border: none; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
+                .action-button { padding: 5px 10px; font-size: 0.9em; }
                 .url-input { width: 100%; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
                 .instructions { text-align: left; margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
                 .instructions summary { font-weight: bold; cursor: pointer; }
@@ -331,16 +332,20 @@ app.get(['/', '/:config?/configure'], (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
-                <p>To avoid rate-limiting and properly use this addon, paste your <code>cookies.txt</code> file below.</p>
                 <form id="config-form">
-                    <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
+                    <div class="settings-section" id="playlist-manager">
+                        <h3>Cookies</h3>
+                        <p>To avoid rate-limiting and properly use this addon, paste your <code>cookies.txt</code> file below.</p>
+                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
+                        <button type="button" id="clear-cookies" class="install-button action-button">Clear</button>
+                    </div>
                     
                     <div class="settings-section" id="playlist-manager">
                         <h3>Playlists</h3>
                         <div style="margin-bottom: 10px;">
-                            <button type="button" id="add-defaults" class="install-button" style="padding:5px 10px;font-size:0.9em;">Add Defaults</button>
-                            <button type="button" id="remove-defaults" class="install-button" style="padding:5px 10px;font-size:0.9em;">Remove Defaults</button>
-                            <button type="button" id="add-playlist" class="install-button" style="padding:5px 10px;font-size:0.9em;">Add Playlist</button>
+                            <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
+                            <button type="button" id="remove-defaults" class="install-button action-button">Remove Defaults</button>
+                            <button type="button" id="add-playlist" class="install-button action-button">Add Playlist</button>
                         </div>
                         <table id="playlist-table" style="width:100%;border-collapse:collapse;">
                             <thead>
@@ -426,6 +431,11 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${userConfig.catalogs ? "cookies.disabled = true;" : ""}
                 document.querySelector('[name="markWatchedOnLoad"]').checked = ${config.markWatchedOnLoad ? 'true' : 'false'};
                 document.querySelector('[name="search"]').checked = ${config.search ? 'true' : 'false'};
+                
+                document.getElementById('clear-cookies').addEventListener('click', () => {
+                    cookies.value = "";
+                    cookies.disabled = false;
+                });
                 
                 function extractPlaylistId(input) {
                     try {
