@@ -119,7 +119,7 @@ app.get('/:config/manifest.json', (req, res) => {
         ]).concat([
             // Add search unless explicitly disabled
             ...(userConfig.search || userConfig.search === undefined ? 
-                [{ type: 'movie', id: 'ytsearch:', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
+                [{ type: 'movie', id: 'ytsearch100:', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
                 [])
         ]),
         behaviorHints: {
@@ -138,7 +138,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
     let command;
     // Handle Prefixes
-    if (['ytsearch:'].includes(args.id)) {
+    if (['ytsearch100:'].includes(args.id)) {
         if (!args.extra?.search) return res.json({ metas: [] });
         command = `${args.id}${args.extra.search}`;
     // YT-DLP Commands
@@ -380,15 +380,15 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
                         <div class="toggle-container">
-                            <input type="checkbox" name="markWatchedOnLoad">
-                            <label for="mark-watched-toggle">Mark watched on load</label>
+                            <input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad">
+                            <label for="markWatchedOnLoad">Mark watched on load</label>
                             <div class="setting-description">
                                 When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.
                             </div>
                         </div>
                         <div class="toggle-container">
-                            <input type="checkbox" name="search" checked>
-                            <label for="enableSearch">Allow searching</label>
+                            <input type="checkbox" id="search" name="search" checked>
+                            <label for="search">Allow searching</label>
                             <div class="setting-description">
                                 When enabled, Stremio's search feature will also return YouTube results.
                             </div>
@@ -429,8 +429,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
                 ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
-                document.querySelector('[name="markWatchedOnLoad"]').checked = ${userConfig.markWatchedOnLoad ? 'true' : 'false'};
-                document.querySelector('[name="search"]').checked = ${userConfig.search || userConfig.search === undefined ? 'true' : 'false'};
+                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad ? 'true' : 'false'};
+                document.getElementById('search').checked = ${userConfig.search || userConfig.search === undefined ? 'true' : 'false'};
                 
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
