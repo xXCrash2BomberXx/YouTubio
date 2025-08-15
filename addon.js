@@ -111,15 +111,21 @@ app.get('/:config/manifest.json', (req, res) => {
         resources: ['catalog', 'stream', 'meta'],
         types: ['movie'],
         idPrefixes: [prefix],
-        catalogs: (userConfig.catalogs || [
-            { type: 'movie', id: ':ytrec', name: 'Discover' },
-            { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
-            { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
-            { type: 'movie', id: ':ythistory', name: 'History' }
+        catalogs: (userConfig.catalogs.map(c => {
+            c.extra = [ { name: 'skip', isRequired: false } ];
+            return c;
+        }) || [
+            { type: 'movie', id: ':ytrec', name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: ':ytsubs', name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: ':ytwatchlater', name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: ':ythistory', name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
         ]).concat([
             // Add search unless explicitly disabled
             ...(userConfig.search || userConfig.search === undefined ? 
-                [{ type: 'movie', id: 'ytsearch100:', name: 'YouTube', extra: [{ name: 'search', isRequired: true }] }] : 
+                [ { type: 'movie', id: 'ytsearch100:', name: 'YouTube', extra: [
+                    { name: 'search', isRequired: true },
+                    { name: 'skip', isRequired: false }
+                ] } ] : 
                 [])
         ]),
         behaviorHints: {
