@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const express = require('express');
-const qs = require('querystring');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
@@ -149,7 +148,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const args = {
         type: req.params.type,
         id: req.params.id,
-        extra: (req.params.extra ? qs.parse(req.params.extra) : {})
+        extra: Object.fromEntries(new URLSearchParams(req.params.extra))
     };
 
     let command;
@@ -160,7 +159,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     // YT-DLP Channel Search
     } else if ([':ytsearch_channel'].includes(args.id)) {
         if (!args.extra?.search) return res.json({ metas: [] });
-        command = `ytsearch100:${args.extra.search}, channel`;
+        command = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.extra.search)}&sp=EgIQAg%253D%253D`;
     // YT-DLP Playlists
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
