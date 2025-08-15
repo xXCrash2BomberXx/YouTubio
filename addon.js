@@ -45,6 +45,7 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
+        '--no-check-certificate',
         '--skip-download',
         '--ignore-errors',
         '--no-warnings',
