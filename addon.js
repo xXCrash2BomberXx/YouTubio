@@ -68,12 +68,12 @@ app.use(express.json());
 app.post('/encrypt', (req, res) => {
     try {
         // Testing
-        console.log(runYtDlpWithCookies(req.body.cookies, [
+        runYtDlpWithCookies(req.body.cookies, [
             'ytsearch100:papa meat, channel',
             '--flat-playlist',
             '--dump-single-json',
             '--playlist-end', '100'
-        ]));
+        ]).then(r => console.log(r));
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         console.error('Encryption error:', error);
@@ -168,7 +168,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if (command = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
         command = `https://www.youtube.com/playlist?list=${command}`;
     // Channels
-    } else if (comment = args.id.match(/[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
+    } else if (command = args.id.match(/[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
         command = `https://www.youtube.com/@${command}`;
     } else {
         return res.json({ metas: [] });
