@@ -45,7 +45,6 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
-        '--no-check-certificate',
         '--skip-download',
         '--ignore-errors',
         '--no-warnings',
@@ -122,7 +121,7 @@ app.get('/:config/manifest.json', (req, res) => {
         ]).concat([
             // Add search unless explicitly disabled
             ...(userConfig.search || userConfig.search === undefined ? 
-                [ { type: 'movie', id: 'ytsearch100:', name: 'YouTube', extra: [
+                [ { type: 'movie', id: ':ytsearch', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] } ] : 
@@ -143,11 +142,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     };
 
     let command;
-    // Handle Prefixes
-    if (['ytsearch100:'].includes(args.id)) {
+    // YT-DLP Prefixes
+    if ([':ytsearch'].includes(args.id)) {
         if (!args.extra?.search) return res.json({ metas: [] });
-        command = `${args.id}${args.extra.search}`;
-    // YT-DLP Commands
+        command = `ytsearch100:${args.extra.search}`;
+    // YT-DLP Playlists
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
     // Other Playlists
