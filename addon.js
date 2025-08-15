@@ -64,7 +64,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Config encryption endpoint
+// Config Encryption Endpoint
 app.post('/encrypt', (req, res) => {
     try {
         // Testing
@@ -105,7 +105,7 @@ app.get('/:config/manifest.json', (req, res) => {
     try {
         userConfig = decryptConfig(req.params.config);
     } catch (error) {
-        console.error(`Error decrypting config for manifest handler:`, error.message);
+        console.error('Error decrypting config for manifest handler:', error.message);
         return res.status(400);
     }
     
@@ -144,7 +144,7 @@ app.get('/:config/manifest.json', (req, res) => {
     });
 });
 
-// Stremio Addon Resource Route
+// Stremio Addon Config Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const args = {
         type: req.params.type,
@@ -309,7 +309,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     }
 });
 
-// Serve the configuration page at the root
+// Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -612,13 +612,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
     `);
 });
 
-// Error handling middleware
+// Error Handling Middleware
 app.use((err, req, res, next) => {
     console.error('Express error:', err);
     res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-// Start the server
+// Start the Server
 app.listen(PORT, () => {
     console.log(`Addon server running on port ${PORT}`);
     if (!process.env.ENCRYPTION_KEY) {
