@@ -170,12 +170,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ metas: [] });
 
     try {
+        const skip = parseInt(args.extra?.skip ?? 0);
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
-            '--playlist-start', `${(args.extra?.skip ?? 0) + 1}`,
-            '--playlist-end', `${(args.extra?.skip ?? 0) + 100}`
+            '--playlist-start', `${skip + 1}`,
+            '--playlist-end', `${skip + 100}`
         ]));
         const metas = (data.entries || []).map(video => 
             video.id ? {
