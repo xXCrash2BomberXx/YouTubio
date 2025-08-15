@@ -72,8 +72,7 @@ app.post('/encrypt', (req, res) => {
             'ytsearch100:papa meat, channel',
             '--flat-playlist',
             '--dump-single-json',
-            '--playlist-start', `${skip + 1}`,
-            '--playlist-end', `${skip + 100}`
+            '--playlist-end', '100'
         ]));
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
@@ -116,7 +115,7 @@ app.get('/:config/manifest.json', (req, res) => {
         name: 'YouTube',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
-        types: ['movie'],
+        types: ['movie', 'channel'],
         idPrefixes: [prefix],
         catalogs: (userConfig.catalogs.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
@@ -128,12 +127,16 @@ app.get('/:config/manifest.json', (req, res) => {
             { type: 'movie', id: ':ythistory', name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
         ]).concat([
             // Add search unless explicitly disabled
-            ...(userConfig.search || userConfig.search === undefined ? 
-                [ { type: 'movie', id: ':ytsearch', name: 'YouTube', extra: [
+            ...(userConfig.search || userConfig.search === undefined ? [
+                { type: 'movie', id: ':ytsearch', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
-                ] } ] : 
-                [])
+                ] },
+                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                    { name: 'search', isRequired: true },
+                    { name: 'skip', isRequired: false }
+                ] }
+            ] : [])
         ]),
         behaviorHints: {
             configurable: true
@@ -150,10 +153,14 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     };
 
     let command;
-    // YT-DLP Prefixes
+    // YT-DLP Search
     if ([':ytsearch'].includes(args.id)) {
         if (!args.extra?.search) return res.json({ metas: [] });
         command = `ytsearch100:${args.extra.search}`;
+    // YT-DLP Channel Search
+    } else if ([':ytsearch_channel'].includes(args.id)) {
+        if (!args.extra?.search) return res.json({ metas: [] });
+        command = `ytsearch100:${args.extra.search}, channel`;
     // YT-DLP Playlists
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
