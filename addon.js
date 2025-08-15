@@ -67,6 +67,14 @@ app.use(express.json());
 // Config encryption endpoint
 app.post('/encrypt', (req, res) => {
     try {
+        // Testing
+        console.log(runYtDlpWithCookies(req.body.cookies, [
+            'ytsearch100:papa meat, channel',
+            '--flat-playlist',
+            '--dump-single-json',
+            '--playlist-start', `${skip + 1}`,
+            '--playlist-end', `${skip + 100}`
+        ]));
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         console.error('Encryption error:', error);
