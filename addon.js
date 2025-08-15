@@ -149,9 +149,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     // YT-DLP Playlists
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
-    // Other Playlists
+    // Playlists
     } else if (command = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
         command = `https://www.youtube.com/playlist?list=${command}`;
+    // Channels
+    } else if (comment = args.id.match(/[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
+        command = `https://www.youtube.com/@${command}`;
     } else {
         return res.json({ metas: [] });
     }
@@ -447,7 +450,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         let url = new URL(input);
                         if (url.searchParams.has('list')) return url.searchParams.get('list');
                     } catch (e) {}
-                    return input.trim();
+                    return (input.match(/(?<=@)[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0] ?? input).trim();
                 }
                 
                 function renderPlaylists() {
