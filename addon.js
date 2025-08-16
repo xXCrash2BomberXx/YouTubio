@@ -151,6 +151,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         extra: Object.fromEntries(new URLSearchParams(req.params.extra))
     };
 
+    let channel = false;
     let command;
     // YT-DLP Search
     if ([':ytsearch'].includes(args.id)) {
@@ -160,6 +161,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if ([':ytsearch_channel'].includes(args.id)) {
         if (!args.extra?.search) return res.json({ metas: [] });
         command = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.extra.search)}&sp=EgIQAg%253D%253D`;
+        channel = true;
     // YT-DLP Playlists
     } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
         command = args.id;
@@ -194,13 +196,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         ]));
         const metas = (data.entries || []).map(video => 
             video.id ? {
-                id: `${prefix}${video.id}`,
-                type: 'movie',
-                name: video.title || 'Unknown Title',
+                id: `${prefix}${channel ? video.uploader_id : video.id}`,
+                type: channel ? 'channel' : 'movie',
+                name: video.title ?? 'Unknown Title',
                 poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
-                posterShape: 'landscape',
-                description: video.description || '',
-                releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null
+                posterShape: channel ? 'square' : 'landscape',
+                description: video.description ?? '',
+                releaseInfo: video.upload_date?.substring(0, 4)
             } : null
         ).filter(meta => meta !== null);
         return res.json({ metas });
