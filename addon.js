@@ -114,7 +114,7 @@ app.get('/:config/manifest.json', (req, res) => {
         name: 'YouTube',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
-        types: ['movie', 'channel'],
+        types: ['movie'],
         idPrefixes: [prefix],
         catalogs: (userConfig.catalogs.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
@@ -131,7 +131,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] },
-                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                { type: 'movie', id: ':ytsearch_channel', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
