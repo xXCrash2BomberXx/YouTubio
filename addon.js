@@ -167,8 +167,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if (command = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
         command = `https://www.youtube.com/playlist?list=${command}`;
     // Channels
-    } else if (command = args.id.match(/[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
-        command = `https://www.youtube.com/@${command}/videos`;
+    } else if (command = args.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
+        command = `https://www.youtube.com/${command}/videos`;
     } else {
         return res.json({ metas: [] });
     }
@@ -465,7 +465,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         let url = new URL(input);
                         if (url.searchParams.has('list')) return url.searchParams.get('list');
                     } catch (e) {}
-                    return (input.match(/(?<=@)[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0] ?? input).trim();
+                    return (input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0] ?? input).trim();
                 }
                 
                 function renderPlaylists() {
