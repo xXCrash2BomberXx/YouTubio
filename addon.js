@@ -197,7 +197,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
-                type: channel ? 'channel' : 'movie',
+                type: 'movie',
                 name: video.title ?? 'Unknown Title',
                 poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: channel ? 'square' : 'landscape',
