@@ -168,7 +168,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `https://www.youtube.com/playlist?list=${command}`;
     // Channels
     } else if (command = args.id.match(/[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
-        command = `https://www.youtube.com/@${command}`;
+        command = `https://www.youtube.com/@${command}/videos`;
     } else {
         return res.json({ metas: [] });
     }
