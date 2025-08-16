@@ -68,7 +68,7 @@ app.post('/encrypt', (req, res) => {
     try {
         // Testing
         runYtDlpWithCookies(req.body.cookies, [
-            'ytsearch100:papa meat, channel',
+            `https://www.youtube.com/results?search_query=${encodeURIComponent('Papa Meat')}&sp=EgIQAg%253D%253D`,
             '--flat-playlist',
             '--dump-single-json',
             '--playlist-end', '100'
