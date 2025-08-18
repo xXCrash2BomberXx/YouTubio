@@ -195,7 +195,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ]));
-        console.log(data);
+        if (channel) console.log(data);
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
@@ -207,6 +207,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 releaseInfo: video.upload_date?.substring(0, 4)
             } : null
         ).filter(meta => meta !== null);
+        if (channel) console.log(metas);
         return res.json({ metas });
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
