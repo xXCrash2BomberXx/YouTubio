@@ -204,7 +204,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: channel ? 'square' : 'landscape',
                 description: video.description ?? '',
-                releaseInfo: video.upload_date?.substring(0, 4)
+                releaseInfo: video.upload_date?.substring(0, 4) ?? ''
             } : null
         ).filter(meta => meta !== null);
         if (channel) console.log(metas);
