@@ -66,13 +66,6 @@ app.use(express.json());
 // Config Encryption Endpoint
 app.post('/encrypt', (req, res) => {
     try {
-        // Testing
-        runYtDlpWithCookies(req.body.cookies, [
-            `https://www.youtube.com/results?search_query=${encodeURIComponent('Papa Meat')}&sp=EgIQAg%253D%253D`,
-            '--flat-playlist',
-            '--dump-single-json',
-            '--playlist-end', '100'
-        ]).then(r => console.log(r));
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         console.error('Encryption error:', error);
@@ -187,7 +180,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
     try {
         const skip = parseInt(args.extra?.skip ?? 0);
-        console.log(command);
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             command,
             '--flat-playlist',
@@ -195,7 +187,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ]));
-        if (channel) console.log(data);
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
@@ -207,7 +198,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 releaseInfo: video.upload_date?.substring(0, 4) ?? ''
             } : null
         ).filter(meta => meta !== null);
-        if (channel) console.log(metas);
         return res.json({ metas });
     } catch (err) {
         console.error(`Error in ${args.id} handler:`, err.message);
@@ -219,7 +209,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    console.log(host, protocol);
+    console.log(protocol, host, Buffer.from(req.params.config, 'base64').toString('utf-8'));
     
     const args = {
         type: req.params.type,
