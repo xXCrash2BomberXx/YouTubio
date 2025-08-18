@@ -114,7 +114,7 @@ app.get('/:config/manifest.json', (req, res) => {
         name: 'YouTube',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
-        types: ['movie', 'channel'],
+        types: ['movie'],
         idPrefixes: [prefix],
         catalogs: (userConfig.catalogs.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
@@ -131,7 +131,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] },
-                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                { type: 'movie', id: ':ytsearch_channel', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
@@ -199,7 +199,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
-                type: channel ? 'channel' : 'movie',
+                type: 'movie',
                 name: video.title ?? 'Unknown Title',
                 poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: channel ? 'square' : 'landscape',
@@ -301,7 +301,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             }
                         ] : []), {
                             name: 'View Channel',
-                            externalUrl: `stremio:///discover/${req.params.config}/movie/${prefix}${videoData.uploader_id}`,
+                            externalUrl: `stremio:///discover/${req.params.config}/movie/${videoData.uploader_id}`,
                             description: 'Click to open the channel as a Catalog'
                         }
                     ],
