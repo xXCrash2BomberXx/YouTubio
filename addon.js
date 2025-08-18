@@ -187,6 +187,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
     try {
         const skip = parseInt(args.extra?.skip ?? 0);
+        console.log(command);
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             command,
             '--flat-playlist',
@@ -194,6 +195,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ]));
+        console.log(data);
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
