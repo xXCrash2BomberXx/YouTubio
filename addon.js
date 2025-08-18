@@ -217,6 +217,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
+    const host = req.get('host');
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    console.log(host, protocol);
+    
     const args = {
         type: req.params.type,
         id: req.params.id,
@@ -301,7 +305,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             }
                         ] : []), {
                             name: 'View Channel',
-                            externalUrl: `stremio:///discover/${req.params.config}/movie/${videoData.uploader_id}`,
+                            externalUrl: `stremio:///discover/${req.params.config}/movie/${encodeURIComponent(videoData.uploader_id)}`,
                             description: 'Click to open the channel as a Catalog'
                         }
                     ],
