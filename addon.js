@@ -114,7 +114,7 @@ app.get('/:config/manifest.json', (req, res) => {
         name: 'YouTube',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
-        types: ['movie'],
+        types: ['movie', 'channel'],
         idPrefixes: [prefix],
         catalogs: (userConfig.catalogs.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
@@ -131,7 +131,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] },
-                { type: 'movie', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
@@ -199,7 +199,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
-                type: 'movie',
+                type: channel ? 'channel' : 'movie',
                 name: video.title ?? 'Unknown Title',
                 poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
                 posterShape: channel ? 'square' : 'landscape',
@@ -262,41 +262,49 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                     title: title,
                     released: released,
                     thumbnail: thumbnail,
-                    streams: [{
-                        name: 'YT-DLP Player',
-                        url: videoData.url,
-                        description: 'Click to watch the scraped video from YT-DLP',
-                        subtitles: Object.entries(videoData.subtitles || {}).map(([k, v]) => {
-                            const srt = v.find(x => x.ext == 'srt');
-                            return {
-                                id: srt.name,
-                                url: srt.url,
-                                lang: k
-                            };
-                        }).concat(
-                            Object.entries(videoData.automatic_captions || {}).map(([k, v]) => {
-                                const srt = v.find(x => x.ext == 'srt');
-                                return {
-                                    id: `Auto ${srt.name}`,
-                                    url: srt.url,
-                                    lang: k
-                                };
-                            })
-                        ),
-                        behaviorHints: {
-                            ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                            videoSize: videoData.filesize_approx,
-                            filename: videoData.filename
+                    streams: [
+                        ...(args.type === 'movie' ? [
+                            {
+                                name: 'YT-DLP Player',
+                                url: videoData.url,
+                                description: 'Click to watch the scraped video from YT-DLP',
+                                subtitles: Object.entries(videoData.subtitles || {}).map(([k, v]) => {
+                                    const srt = v.find(x => x.ext == 'srt');
+                                    return {
+                                        id: srt.name,
+                                        url: srt.url,
+                                        lang: k
+                                    };
+                                }).concat(
+                                    Object.entries(videoData.automatic_captions || {}).map(([k, v]) => {
+                                        const srt = v.find(x => x.ext == 'srt');
+                                        return {
+                                            id: `Auto ${srt.name}`,
+                                            url: srt.url,
+                                            lang: k
+                                        };
+                                    })
+                                ),
+                                behaviorHints: {
+                                    ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                    videoSize: videoData.filesize_approx,
+                                    filename: videoData.filename
+                                }
+                            }, {
+                                name: 'Stremio Player',
+                                ytId: videoId,
+                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                            }, {
+                                name: 'YouTube Player',
+                                externalUrl: videoData.original_url,
+                                description: 'Click to watch in the official YouTube Player'
+                            }
+                        ] : []), {
+                            name: 'View Channel',
+                            externalUrl: `stremio:///discover/${req.params.config}/movie/${prefix}${videoData.uploader_id}`,
+                            description: 'Click to open the channel as a Catalog'
                         }
-                    }, {
-                        name: 'Stremio Player',
-                        ytId: videoId,
-                        description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                    }, {
-                        name: 'YouTube Player',
-                        externalUrl: videoData.original_url,
-                        description: 'Click to watch in the official YouTube Player'
-                    }],
+                    ],
                     overview: description
                 }],
                 runtime: `${Math.floor(videoData.duration / 60)} min`,
