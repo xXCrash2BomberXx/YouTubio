@@ -456,10 +456,14 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 
                 function extractPlaylistId(input) {
                     let match;
+                        // Channel URL
                     if (match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ||
+                        // Playlist ID / Playlist URL
                         match = input.match(/(?<=(list=)?)PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ||
+                        // Search URL
                         match = input.match(/(?<=(search_query=)?)[a-zA-Z0-9!*()-_+*"<.>%]+/))
                         return match[0].trim();
+                    // Search
                     return decodeURIComponent(input).trim();
                 }
                 
