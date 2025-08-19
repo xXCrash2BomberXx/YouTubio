@@ -371,9 +371,9 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             </ol>
                         </details>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" onclick="this.value='';this.disabled=false;" class="install-button action-button">Clear</button>
+                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
                     </div>
-                    <div class="settings-section" id="addon-settings">
+                    <div class="settings-section">
                         <h3>Playlists</h3>
                         <div style="margin-bottom: 10px;">
                             <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
@@ -439,6 +439,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'undefined'};
+                document.getElementById('clear-cookies').addEventListener('click', () => {
+                    cookies.value = "";
+                    cookies.disabled = false;
+                });
                 function extractPlaylistId(input) {
                     let match;
                         // Channel URL
