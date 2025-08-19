@@ -5,6 +5,8 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const puppeteer = require('puppeteer');
+const { google } = require('googleapis');
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
@@ -13,6 +15,8 @@ const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const ALGORITHM = 'aes-256-gcm';
 
 function encrypt(text) {
@@ -37,6 +41,44 @@ function decrypt(encryptedData) {
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
+}
+
+async function generateYouTubeCookies(refreshToken) {
+    const oauth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    const { credentials } = await oauth2Client.refreshAccessToken();
+
+    const browser = await puppeteer.launch({ 
+        headless: true, 
+        args: ['--no-sandbox'] 
+    });
+    const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({
+        Authorization: `Bearer ${credentials.access_token}`
+    });
+    await page.goto('https://accounts.google.com/', { waitUntil: 'networkidle0' });
+    await page.waitForTimeout(2000);
+    try {
+        await page.goto('https://www.youtube.com/playlist?list=WL');
+    } catch (error) {}
+    await page.goto('https://www.youtube.com/robots.txt', { waitUntil: 'networkidle0' });
+    const cookies = await page.cookies();
+    const relevantCookies = cookies.filter(cookie => 
+        cookie.domain.includes('youtube') || cookie.domain.includes('google')
+    );
+    await browser.close();
+    
+    const netscapeFormat = '# Netscape HTTP Cookie File\n' + 
+        relevantCookies.map(cookie => [
+            cookie.domain.startsWith('.') ? cookie.domain : '.' + cookie.domain,
+            'TRUE',
+            cookie.path || '/',
+            cookie.secure ? 'TRUE' : 'FALSE',
+            cookie.expires ? Math.floor(cookie.expires) : '0',
+            cookie.name,
+            cookie.value
+        ].join('\t')).join('\n');
+    return netscapeFormat;
 }
 
 let counter = 0;
