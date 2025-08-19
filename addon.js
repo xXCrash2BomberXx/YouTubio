@@ -77,6 +77,7 @@ app.post('/encrypt', (req, res) => {
     }
 });
 
+// Config Decryption
 function decryptConfig(configParam, skipDecryption = false) {
     if (!configParam) return {};
     try {
@@ -148,7 +149,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const userConfig = decryptConfig(req.params.config);
     const query = Object.fromEntries(new URLSearchParams(req.params.extra))
     const skip = parseInt(query?.skip ?? 0);
-    
+
     let command;
     // YT-DLP Search
     if ([':ytsearch'].includes(req.params.id)) {
