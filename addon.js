@@ -240,7 +240,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             url: video.url,
                             description: 'Click to watch the scraped video from YT-DLP',
                             subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-                                const srt = v.find(x => x.ext == 'srt') ?? v[0] ?? {};
+                                const srt = v.find(x => x.ext == 'srt') ?? v[0];
                                 return srt ? {
                                     id: srt.name,
                                     url: srt.url,
