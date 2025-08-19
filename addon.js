@@ -209,8 +209,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    console.log(protocol, host, Buffer.from(req.params.config, 'base64').toString('utf-8'));
-    
+    const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
     const args = {
         type: req.params.type,
         id: req.params.id,
@@ -295,7 +294,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             }
                         ] : []), {
                             name: 'View Channel',
-                            externalUrl: `stremio:///discover/${req.params.config}/movie/${encodeURIComponent(videoData.uploader_id)}`,
+                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(videoData.uploader_id)}`,
                             description: 'Click to open the channel as a Catalog'
                         }
                     ],
