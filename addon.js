@@ -142,8 +142,8 @@ app.get('/:config/manifest.json', (req, res) => {
 
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
-    if (!req.params.id.startsWith?.(prefix)) return res.json({ meta: {} });
-    const videoId = req.params.id.slice(prefix.length);
+    if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
+    const videoId = req.params.id?.slice(prefix.length);
     const channel = videoId.startsWith('@');
     const query = Object.fromEntries(new URLSearchParams(req.params.extra));
     const skip = parseInt(query?.skip ?? 0);
@@ -187,7 +187,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 type: req.params.type,
                 name: video.title ?? 'Unknown Title',
                 poster: `${
-                    channel ? req.get('host').includes('localhost') ? 'http' : 'https' + ':' : ''
+                    channel ? (req.get('host').includes('localhost') ? 'http' : 'https') + ':' : ''
                 }${
                     video.thumbnail ?? video.thumbnails?.at(-1)?.url
                 }`,
@@ -200,8 +200,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
-    if (!req.params.id.startsWith?.(prefix)) return res.json({ meta: {} });
-    const videoId = req.params.id.slice(prefix.length);
+    if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
+    const videoId = req.params.id?.slice(prefix.length);
     const channel = videoId.startsWith('@');
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
