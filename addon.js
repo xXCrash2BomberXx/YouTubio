@@ -78,11 +78,11 @@ app.post('/encrypt', (req, res) => {
 });
 
 // Config Decryption
-function decryptConfig(configParam, skipDecryption = false) {
+function decryptConfig(configParam, skipDecryption = true) {
     if (!configParam) return {};
     try {
         const parsed = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
-        if (!skipDecryption && parsed.encrypted) {
+        if (skipDecryption && parsed.encrypted) {
             try {
                 const decrypted = decrypt(parsed.encrypted);
                 try {
@@ -103,7 +103,7 @@ function decryptConfig(configParam, skipDecryption = false) {
 
 // Stremio Addon Manifest Route
 app.get('/:config/manifest.json', (req, res) => {
-    const userConfig = decryptConfig(req.params.config, true);
+    const userConfig = decryptConfig(req.params.config, false);
     
     res.json({
         id: 'youtubio.elfhosted.com',
@@ -214,7 +214,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
     const description = video.description ?? '';
-    const released = new Date(video.timestamp * 1000).toISOString();
+    const released = new Date((video.timestamp ?? 0) * 1000).toISOString();
     return res.json({
         meta: video.id ? {
             id: req.params.id,
@@ -291,7 +291,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const userConfig = decryptConfig(req.params.config);
+    const userConfig = decryptConfig(req.params.config, false);
     res.send(`
         <!DOCTYPE html>
         <html>
