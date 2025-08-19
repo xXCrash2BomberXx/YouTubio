@@ -362,18 +362,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         <details class="instructions">
                             <summary>How to get your cookies.txt file</summary>
                             <ol>
-                                <li>Install a browser extension for exporting cookies:
-                                    <ul>
-                                        <li><a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" rel="noopener noreferrer">Get cookies.txt LOCALLY for Chrome</a></li>
-                                        <li><a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank" rel="noopener noreferrer">cookies.txt for Firefox</a></li>
-                                    </ul>
-                                </li>
-                                <li>Go to <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">youtube.com</a> and make sure you are logged into your account.</li>
-                                <li>Click the extension's icon in your browser's toolbar.</li>
-                                <li>Click "Export", "Download", or "Copy" to save the <strong>cookies.txt</strong> file or contents.</li>
-                                    <ul>
-                                        <li>If you used "Export" or "Download", Open the file and copy its entire content.</li>
-                                    </ul>
+                                <li>Go to <a href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a> and follow the steps on the site for cookie exporting. (Make sure you are logged into your account if you want personalized content.)</li>
                                 <li>Paste the content into the text area above.</li>
                             </ol>
                         </details>
