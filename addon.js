@@ -5,6 +5,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const util = require('util');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
@@ -136,8 +137,10 @@ app.get('/:config/manifest.json', (req, res) => {
     });
 });
 
-// Stremio Addon Config Route
+// Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
+    const host = req.get('host');
+    const protocol = host.includes('localhost') ? 'http' : 'https';
     const args = {
         type: req.params.type,
         id: req.params.id,
@@ -187,6 +190,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ]));
+        console.log(util.inspect(data, { depth: null, colors: true }));
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
