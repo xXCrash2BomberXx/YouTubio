@@ -81,10 +81,15 @@ app.post('/encrypt', (req, res) => {
 function decryptConfig(configParam, skipDecryption = false) {
     if (!configParam) return {};
     try {
-        const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
-        if (!skipDecryption && config.encrypted) {
+        const parsed = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
+        if (!skipDecryption && parsed.encrypted) {
             try {
-                config.encrypted = JSON.parse(decrypt(config.encrypted));
+                const decrypted = decrypt(parsed.encrypted);
+                try {
+                    config.encrypted = JSON.parse(decrypted);
+                } catch (error) {
+                    console.log('Failed to parse decryption: ' + error.message);
+                }
             } catch (error) {
                 console.error('Failed to decrypt config: ' + error.message);
             }
@@ -170,30 +175,25 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `ytsearch100:${req.params.id}`;
     }
 
-    try {
-        const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
-            command,
-            '--flat-playlist',
-            '--dump-single-json',
-            '--playlist-start', `${skip + 1}`,
-            '--playlist-end', `${skip + 100}`
-        ]));
-        const metas = (data.entries || []).map(video => 
-            video.id ? {
-                id: `${prefix}${channel ? video.uploader_id : video.id}`,
-                type: channel ? 'channel' : 'movie',
-                name: video.title ?? 'Unknown Title',
-                poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`,
-                posterShape: channel ? 'square' : 'landscape',
-                description: video.description ?? '',
-                releaseInfo: video.upload_date?.substring(0, 4) ?? ''
-            } : null
-        ).filter(meta => meta !== null);
-        return res.json({ metas });
-    } catch (err) {
-        console.error(`Error in ${req.params.id} handler:`, err.message);
-        return res.status(400).json({ metas: [] });
-    }
+    const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+        command,
+        '--flat-playlist',
+        '--dump-single-json',
+        '--playlist-start', `${skip + 1}`,
+        '--playlist-end', `${skip + 100}`
+    ]));
+    const metas = (data.entries || []).map(video => 
+        video.id ? {
+            id: `${prefix}${channel ? video.uploader_id : video.id}`,
+            type: channel ? 'channel' : 'movie',
+            name: video.title ?? 'Unknown Title',
+            poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`,
+            posterShape: channel ? 'square' : 'landscape',
+            description: video.description ?? '',
+            releaseInfo: video.upload_date?.substring(0, 4) ?? ''
+        } : null
+    ).filter(meta => meta !== null);
+    return res.json({ metas });
 });
 
 // Stremio Addon Meta Route
@@ -206,102 +206,92 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    try {
-        const video = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
-            `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
-            '-j',
-            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
-        ]));
-        const title = video.title || 'Unknown Title';
-        const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
-        const description = video.description || '';
-        const released = new Date(video.timestamp * 1000).toISOString();
-        return res.json({
-            meta: video.id ? {
+    const video = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+        `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
+        '-j',
+        ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+    ]));
+    const title = video.title || 'Unknown Title';
+    const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
+    const description = video.description || '';
+    const released = new Date(video.timestamp * 1000).toISOString();
+    return res.json({
+        meta: video.id ? {
+            id: req.params.id,
+            type: 'movie',
+            name: title,
+            genres: video.tags,
+            poster: thumbnail,
+            posterShape: 'landscape',
+            background: thumbnail,
+            description: description,
+            releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null,
+            released: released,
+            videos: [{
                 id: req.params.id,
-                type: 'movie',
-                name: title,
-                genres: video.tags,
-                poster: thumbnail,
-                posterShape: 'landscape',
-                background: thumbnail,
-                description: description,
-                releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null,
+                title: title,
                 released: released,
-                videos: [{
-                    id: req.params.id,
-                    title: title,
-                    released: released,
-                    thumbnail: thumbnail,
-                    streams: [
-                        ...(req.params.type === 'movie' ? [
-                            {
-                                name: 'YT-DLP Player',
-                                url: video.url,
-                                description: 'Click to watch the scraped video from YT-DLP',
-                                subtitles: Object.entries(video.subtitles || {}).map(([k, v]) => {
+                thumbnail: thumbnail,
+                streams: [
+                    ...(req.params.type === 'movie' ? [
+                        {
+                            name: 'YT-DLP Player',
+                            url: video.url,
+                            description: 'Click to watch the scraped video from YT-DLP',
+                            subtitles: Object.entries(video.subtitles || {}).map(([k, v]) => {
+                                const srt = v.find(x => x.ext == 'srt');
+                                return {
+                                    id: srt.name,
+                                    url: srt.url,
+                                    lang: k
+                                };
+                            }).concat(
+                                Object.entries(video.automatic_captions || {}).map(([k, v]) => {
                                     const srt = v.find(x => x.ext == 'srt');
                                     return {
-                                        id: srt.name,
+                                        id: `Auto ${srt.name}`,
                                         url: srt.url,
                                         lang: k
                                     };
-                                }).concat(
-                                    Object.entries(video.automatic_captions || {}).map(([k, v]) => {
-                                        const srt = v.find(x => x.ext == 'srt');
-                                        return {
-                                            id: `Auto ${srt.name}`,
-                                            url: srt.url,
-                                            lang: k
-                                        };
-                                    })
-                                ),
-                                behaviorHints: {
-                                    ...(video.protocol !== 'https' || video.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                    videoSize: video.filesize_approx,
-                                    filename: video.filename
-                                }
-                            }, {
-                                name: 'Stremio Player',
-                                ytId: videoId,
-                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                            }, {
-                                name: 'YouTube Player',
-                                externalUrl: video.original_url,
-                                description: 'Click to watch in the official YouTube Player'
+                                })
+                            ),
+                            behaviorHints: {
+                                ...(video.protocol !== 'https' || video.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                videoSize: video.filesize_approx,
+                                filename: video.filename
                             }
-                        ] : []), {
-                            name: 'View Channel',
-                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(video.uploader_id)}`,
-                            description: 'Click to open the channel as a Catalog'
+                        }, {
+                            name: 'Stremio Player',
+                            ytId: videoId,
+                            description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                        }, {
+                            name: 'YouTube Player',
+                            externalUrl: video.original_url,
+                            description: 'Click to watch in the official YouTube Player'
                         }
-                    ],
-                    overview: description
-                }],
-                runtime: `${Math.floor(video.duration / 60)} min`,
-                language: video.language,
-                website: video.original_url,
-                behaviorHints: {
-                    defaultVideoId: req.params.id
-                }
-            } : {}
-        });
-    } catch (err) {
-        console.error('Error in meta handler:', err.message);
-        return res.status(400).json({ meta: {} });
-    }
+                    ] : []), {
+                        name: 'View Channel',
+                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(video.uploader_id)}`,
+                        description: 'Click to open the channel as a Catalog'
+                    }
+                ],
+                overview: description
+            }],
+            runtime: `${Math.floor(video.duration / 60)} min`,
+            language: video.language,
+            website: video.original_url,
+            behaviorHints: {
+                defaultVideoId: req.params.id
+            }
+        } : {}
+    });
 });
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    let userConfig = {};
-    try {
-        if (req.params.config) userConfig = decryptConfig(req.params.config, true);
-    } catch (error) {
-        userConfig = {};
-    }
+    const userConfig = decryptConfig(req.params.config);
     res.send(`
         <!DOCTYPE html>
         <html>
