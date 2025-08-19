@@ -141,7 +141,7 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const query = queryObject.fromEntries(new URLSearchParams(req.params.extra))
+    const query = Object.fromEntries(new URLSearchParams(req.params.extra))
 
     let channel = false;
     let command;
