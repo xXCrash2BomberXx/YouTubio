@@ -81,7 +81,7 @@ app.post('/encrypt', (req, res) => {
 function decryptConfig(configParam, enableDecryption = true) {
     if (!configParam) return {};
     try {
-        const config = JSON.parse(decodeURIComponent(configParam));
+        const config = JSON.parse(configParam);
         if (enableDecryption && config.encrypted) {
             try {
                 const decrypted = decrypt(config.encrypted);
