@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 
 const express = require('express');
@@ -201,7 +202,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     if (!req.params.id.startsWith?.(prefix)) return res.json({ meta: {} });
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const channel = req.params.type === 'channel';
+    const channel = req.params.id.charAt(prefix.length) === '@';
     const userConfig = decryptConfig(req.params.config);
     const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
