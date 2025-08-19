@@ -5,7 +5,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
-const util = require('util');
+// const util = require('util');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
@@ -229,6 +229,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '-j',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
+        console.log(util.inspect(videoData, {showHidden: false, depth: null}))
         const title = videoData.title || 'Unknown Title';
         const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
         const description = videoData.description || '';
