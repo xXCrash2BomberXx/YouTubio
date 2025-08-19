@@ -405,7 +405,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
+                ${userConfig.encrypted ? \`cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;\` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
