@@ -142,10 +142,7 @@ app.get('/:config/manifest.json', (req, res) => {
 
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
-    const host = req.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
     const channel = req.params.type === 'channel';
-    const userConfig = decryptConfig(req.params.config);
     const query = Object.fromEntries(new URLSearchParams(req.params.extra));
     const skip = parseInt(query?.skip ?? 0);
 
@@ -176,7 +173,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     }
 
     return res.json({ metas: 
-        ((await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+        ((await runYtDlpWithCookies(decryptConfig(req.params.config).encrypted?.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
@@ -187,7 +184,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
                 type: req.params.type,
                 name: video.title ?? 'Unknown Title',
-                poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`,
+                poster: `${
+                    channel ? req.get('host').includes('localhost') ? 'http' : 'https' + ':' : ''
+                }${
+                    video.thumbnail ?? video.thumbnails?.at(-1)?.url
+                }`,
                 posterShape: channel ? 'square' : 'landscape',
                 description: video.description,
                 releaseInfo: video.upload_date?.substring(0, 4)
