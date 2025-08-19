@@ -464,7 +464,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         match = input.match(/(?<=(search_query=)?)[a-zA-Z0-9!*()-_+*"<.>%]+/))
                         return match[0].trim();
                     // Search
-                    return decodeURIComponent(input).trim();
+                    return input.trim();
                 }
                 
                 function renderPlaylists() {
