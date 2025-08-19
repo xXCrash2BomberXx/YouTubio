@@ -143,34 +143,36 @@ app.get('/:config/manifest.json', (req, res) => {
 
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
-    const channel = req.params.type === 'channel';
+    if (!req.params.id.startsWith?.(prefix)) return res.json({ meta: {} });
+    const videoId = req.params.id.slice(prefix.length);
+    const channel = videoId.startsWith('@');
     const query = Object.fromEntries(new URLSearchParams(req.params.extra));
     const skip = parseInt(query?.skip ?? 0);
 
     let command;
     // YT-DLP Search
-    if ([':ytsearch'].includes(req.params.id)) {
+    if ([':ytsearch'].includes(videoId)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `ytsearch100:${query.search}`;
     // Channel Search
-    } else if (channel && [':ytsearch_channel'].includes(req.params.id)) {
+    } else if (channel && [':ytsearch_channel'].includes(videoId)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
     // YT-DLP Playlists
-    } else if (req.params.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(req.params.id)) {
-        command = req.params.id;
+    } else if (videoId.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId)) {
+        command = videoId;
     // Channels
-    } else if ( (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
+    } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
         command = `https://www.youtube.com/${command[0]}/videos`;
     // Playlists
-    } else if ( (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
+    } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
         command = `https://www.youtube.com/playlist?list=${command[0]}`;
     // Saved Channel Search
     } else if (channel) {
-        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(req.params.id)}`;
+        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
     // Saved YT-DLP Search
     } else {
-        command = `ytsearch100:${req.params.id}`;
+        command = `ytsearch100:${videoId}`;
     }
 
     return res.json({ metas: 
@@ -200,11 +202,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     if (!req.params.id.startsWith?.(prefix)) return res.json({ meta: {} });
+    const videoId = req.params.id.slice(prefix.length);
+    const channel = videoId.startsWith('@');
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const channel = req.params.id.charAt(prefix.length) === '@';
     const userConfig = decryptConfig(req.params.config);
-    const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
     const video = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
@@ -494,11 +496,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 renderPlaylists();
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    if (!cookies.value || !cookies.value.trim()) {
-                        errorDiv.textContent = "You must provide cookies to use this addon";
-                        errorDiv.style.display = 'block';
-                        return;
-                    }
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
@@ -522,7 +519,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         }
                         const configString = btoa(JSON.stringify({
                             encrypted: cookies.value,
-                            catalogs: playlists,
+                            catalogs: playlists.map((pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
