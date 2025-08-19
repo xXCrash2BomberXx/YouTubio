@@ -212,26 +212,26 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
     try {
-        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+        const video = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
             `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
             '-j',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
-        const title = videoData.title || 'Unknown Title';
+        const title = video.title || 'Unknown Title';
         const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
-        const description = videoData.description || '';
-        const released = new Date(videoData.timestamp * 1000).toISOString();
+        const description = video.description || '';
+        const released = new Date(video.timestamp * 1000).toISOString();
         return res.json({
-            meta: videoData.id ? {
+            meta: video.id ? {
                 id: req.params.id,
                 type: 'movie',
                 name: title,
-                genres: videoData.tags,
+                genres: video.tags,
                 poster: thumbnail,
                 posterShape: 'landscape',
                 background: thumbnail,
                 description: description,
-                releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null,
+                releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null,
                 released: released,
                 videos: [{
                     id: req.params.id,
@@ -242,9 +242,9 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         ...(req.params.type === 'movie' ? [
                             {
                                 name: 'YT-DLP Player',
-                                url: videoData.url,
+                                url: video.url,
                                 description: 'Click to watch the scraped video from YT-DLP',
-                                subtitles: Object.entries(videoData.subtitles || {}).map(([k, v]) => {
+                                subtitles: Object.entries(video.subtitles || {}).map(([k, v]) => {
                                     const srt = v.find(x => x.ext == 'srt');
                                     return {
                                         id: srt.name,
@@ -252,7 +252,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                         lang: k
                                     };
                                 }).concat(
-                                    Object.entries(videoData.automatic_captions || {}).map(([k, v]) => {
+                                    Object.entries(video.automatic_captions || {}).map(([k, v]) => {
                                         const srt = v.find(x => x.ext == 'srt');
                                         return {
                                             id: `Auto ${srt.name}`,
@@ -262,9 +262,9 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                     })
                                 ),
                                 behaviorHints: {
-                                    ...(videoData.protocol !== 'https' || videoData.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                    videoSize: videoData.filesize_approx,
-                                    filename: videoData.filename
+                                    ...(video.protocol !== 'https' || video.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                    videoSize: video.filesize_approx,
+                                    filename: video.filename
                                 }
                             }, {
                                 name: 'Stremio Player',
@@ -272,20 +272,20 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 description: 'Click to watch using Stremio\'s built-in YouTube Player'
                             }, {
                                 name: 'YouTube Player',
-                                externalUrl: videoData.original_url,
+                                externalUrl: video.original_url,
                                 description: 'Click to watch in the official YouTube Player'
                             }
                         ] : []), {
                             name: 'View Channel',
-                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(videoData.uploader_id)}`,
+                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(video.uploader_id)}`,
                             description: 'Click to open the channel as a Catalog'
                         }
                     ],
                     overview: description
                 }],
-                runtime: `${Math.floor(videoData.duration / 60)} min`,
-                language: videoData.language,
-                website: videoData.original_url,
+                runtime: `${Math.floor(video.duration / 60)} min`,
+                language: video.language,
+                website: video.original_url,
                 behaviorHints: {
                     defaultVideoId: req.params.id
                 }
