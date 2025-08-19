@@ -100,7 +100,7 @@ app.get('/:config/manifest.json', (req, res) => {
         userConfig = decryptConfig(req.params.config, true);
     } catch (error) {
         console.error('Error decrypting config for manifest handler:', error.message);
-        return res.status(400);
+        userConfig = {};
     }
     
     res.json({
@@ -111,7 +111,7 @@ app.get('/:config/manifest.json', (req, res) => {
         resources: ['catalog', 'stream', 'meta'],
         types: ['movie', 'channel'],
         idPrefixes: [prefix],
-        catalogs: (userConfig.catalogs.map(c => {
+        catalogs: (userConfig.catalogs?.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
             return c;
         }) || [
@@ -180,7 +180,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.status(400).json({ metas: [] });
     }
 
-    if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ metas: [] });
+    if (!userConfig.encrypted?.cookies) return res.json({ metas: [] });
 
     try {
         const skip = parseInt(query?.skip ?? 0);
@@ -226,7 +226,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         return res.status(400).json({ meta: {} });
     }
 
-    if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ meta: {} });
+    if (!userConfig.encrypted?.cookies) return res.json({ meta: {} });
 
     try {
         const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
@@ -320,8 +320,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     let userConfig = {};
     try {
-        if (req.params.config)
-            userConfig = decryptConfig(req.params.config, true);
+        if (req.params.config) userConfig = decryptConfig(req.params.config, true);
     } catch (error) {
         userConfig = {};
     }
@@ -437,7 +436,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
-                ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
+                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ""}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'undefined'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
