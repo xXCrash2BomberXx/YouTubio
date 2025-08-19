@@ -40,8 +40,9 @@ function decrypt(encryptedData) {
 }
 
 let counter = 0;
-async function runYtDlpWithCookies(cookiesContent, argsArray) {
-    const filename = cookiesContent ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+async function runYtDlpWithAuth(config, argsArray) {
+    const auth = decryptConfig(config).encrypted?.auth;
+    const filename = auth ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
@@ -49,9 +50,9 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         '--ignore-errors',
         '--no-warnings',
         '--no-cache-dir',
-        ...(cookiesContent ? ['--cookies', filename] : [])];
+        ...(auth ? ['--cookies', filename] : [])];
     try {
-        if (filename) await fs.writeFile(filename, cookiesContent);
+        if (filename) await fs.writeFile(filename, auth);
         return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
     } catch (error) {
         console.log('Error running YT-DLP: ' + error);
@@ -175,7 +176,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     }
 
     return res.json({ metas: 
-        ((await runYtDlpWithCookies(decryptConfig(req.params.config).encrypted?.cookies, [
+        ((await runYtDlpWithAuth(req.params.config, [
             command,
             '--flat-playlist',
             '--dump-single-json',
@@ -205,13 +206,12 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const channel = req.params.type === 'channel';
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const userConfig = decryptConfig(req.params.config);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    const video = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+    const video = await runYtDlpWithAuth(req.params.config, [
         `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
         '-j',
-        ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
     ]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
@@ -507,7 +507,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({ 
-                                    cookies: cookies.value,
+                                    auth: cookies.value,
                                 })
                             });
                             if (!encryptResponse.ok) {
