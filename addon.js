@@ -142,7 +142,7 @@ app.get('/:config/manifest.json', (req, res) => {
 
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
-    if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
+    if (!req.params.id?.startsWith(prefix)) return res.json({ metas: [] });
     const videoId = req.params.id?.slice(prefix.length);
     const channel = videoId.startsWith('@');
     const query = Object.fromEntries(new URLSearchParams(req.params.extra));
@@ -404,9 +404,9 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
-                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ""}
-                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
+                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
+                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
+                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
