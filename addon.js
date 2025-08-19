@@ -185,7 +185,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ])).entries ?? []).map(video => 
-            video.id ? {
+            (channel ? video.uploader_id : video.id) ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
                 type: req.params.type,
                 name: video.title ?? 'Unknown Title',
