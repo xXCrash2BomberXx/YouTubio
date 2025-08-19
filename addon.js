@@ -144,7 +144,7 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!req.params.id?.startsWith(prefix)) return res.json({ metas: [] });
     const videoId = req.params.id?.slice(prefix.length);
-    const channel = videoId.startsWith('@');
+    const channel = req.params.type === 'channel';
     const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
     const skip = parseInt(query?.skip ?? 0);
 
