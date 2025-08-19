@@ -144,21 +144,20 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
+    const channel = req.params.type === 'channel';
     const userConfig = decryptConfig(req.params.config);
     const query = Object.fromEntries(new URLSearchParams(req.params.extra))
     const skip = parseInt(query?.skip ?? 0);
-
-    let channel = false;
+    
     let command;
     // YT-DLP Search
     if ([':ytsearch'].includes(req.params.id)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `ytsearch100:${query.search}`;
     // Channel Search
-    } else if (req.params.type === 'channel' && [':ytsearch_channel'].includes(req.params.id)) {
+    } else if (channel && [':ytsearch_channel'].includes(req.params.id)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-        channel = true;
     // YT-DLP Playlists
     } else if (req.params.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(req.params.id)) {
         command = req.params.id;
@@ -169,7 +168,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) {
         command = `https://www.youtube.com/playlist?list=${command[0]}`;
     // Saved Channel Search
-    } else if (req.params.type === 'channel') {
+    } else if (channel) {
         command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(req.params.id)}`;
     // Saved YT-DLP Search
     } else {
@@ -207,6 +206,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     if (!req.params.id.startsWith(prefix)) return res.json({ meta: {} });
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
+    const channel = req.params.type === 'channel';
     const userConfig = decryptConfig(req.params.config);
     const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
@@ -218,7 +218,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
         const title = videoData.title || 'Unknown Title';
-        const thumbnail = videoData.thumbnail ?? videoData.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${videoData.id}/hqdefault.jpg`;
+        const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
         const description = videoData.description || '';
         const released = new Date(videoData.timestamp * 1000).toISOString();
         return res.json({
