@@ -42,7 +42,9 @@ function decrypt(encryptedData) {
 let counter = 0;
 async function runYtDlpWithAuth(config, argsArray) {
     const auth = decryptConfig(config).encrypted?.auth;
-    const filename = auth ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+    // Implement better auth system
+    const cookies = auth;
+    const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
@@ -50,9 +52,9 @@ async function runYtDlpWithAuth(config, argsArray) {
         '--ignore-errors',
         '--no-warnings',
         '--no-cache-dir',
-        ...(auth ? ['--cookies', filename] : [])];
+        ...(cookies ? ['--cookies', filename] : [])];
     try {
-        if (filename) await fs.writeFile(filename, auth);
+        if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
     } catch (error) {
         console.log('Error running YT-DLP: ' + error);
