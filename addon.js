@@ -149,22 +149,26 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if ([':ytsearch'].includes(req.params.id)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `ytsearch100:${query.search}`;
-    // YT-DLP Channel Search
-    } else if ([':ytsearch_channel'].includes(req.params.id)) {
+    // Channel Search
+    } else if (channel.type === 'channel' && [':ytsearch_channel'].includes(req.params.id)) {
         if (!query?.search) return res.json({ metas: [] });
-        command = `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=EgIQAg%253D%253D`;
+        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
         channel = true;
     // YT-DLP Playlists
     } else if (req.params.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(req.params.id)) {
         command = req.params.id;
     // Channels
-    } else if (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
-        command = `https://www.youtube.com/${command}/videos`;
+    } else if (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) {
+        command = `https://www.youtube.com/${command[0]}/videos`;
     // Playlists
-    } else if (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
-        command = `https://www.youtube.com/playlist?list=${command}`;
+    } else if (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) {
+        command = `https://www.youtube.com/playlist?list=${command[0]}`;
+    // Saved Channel Search
+    } else if (req.params.type === 'channel') {
+        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(req.params.id)}`;
+    // Saved YT-DLP Search
     } else {
-        return res.json({ metas: [] });
+        command = `ytsearch100:${decodeURIComponent(req.params.id)}`;
     }
 
     let userConfig;
@@ -451,11 +455,12 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 });
                 
                 function extractPlaylistId(input) {
-                    try {
-                        let url = new URL(input);
-                        if (url.searchParams.has('list')) return url.searchParams.get('list');
-                    } catch (e) {}
-                    return (input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0] ?? input).trim();
+                    let match;
+                    if (match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ||
+                        match = input.match(/(?<=(list=)?)PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ||
+                        match = input.match(/(?<=(search_query=)?)[a-zA-Z0-9!*()-_+*"<.>%]+/))
+                        return match[0].trim();
+                    return decodeURIComponent(input).trim();
                 }
                 
                 function renderPlaylists() {
