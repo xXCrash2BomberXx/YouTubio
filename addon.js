@@ -81,7 +81,7 @@ app.post('/encrypt', (req, res) => {
 function decryptConfig(configParam, enableDecryption = true) {
     if (!configParam) return {};
     try {
-        const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
+        const config = JSON.parse(decodeURIComponent(configParam));
         if (enableDecryption && config.encrypted) {
             try {
                 const decrypted = decrypt(config.encrypted);
@@ -516,14 +516,14 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             cookies.value = await encryptResponse.text();
                             cookies.disabled = true;
                         }
-                        const configString = btoa(JSON.stringify({
+                        const configString = encodeURIComponent(JSON.stringify({
                             encrypted: cookies.value,
                             catalogs: playlists.map((pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
                             )
-                        }));
+                        })));
                         installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
