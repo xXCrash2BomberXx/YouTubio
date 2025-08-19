@@ -373,8 +373,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                         <button type="button" onclick="this.value='';this.disabled=false;" class="install-button action-button">Clear</button>
                     </div>
-                    
-                    <div class="settings-section">
+                    <div class="settings-section" id="addon-settings">
                         <h3>Playlists</h3>
                         <div style="margin-bottom: 10px;">
                             <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
@@ -393,8 +392,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             <tbody></tbody>
                         </table>
                     </div>
-                    
-                    <div class="settings-section">
+                    <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
                         <div class="toggle-container">
                             <input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad">
@@ -411,11 +409,9 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             </div>
                         </div>
                     </div>
-                    
                     <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
                     <div id="error-message" class="error" style="display:none;"></div>
                 </form>
-                
                 <div id="results" style="display:none;">
                     <h2>Install your addon</h2>
                     <a href="#" target="_blank" id="install-stremio" class="install-button">Stremio</a>
@@ -433,19 +429,16 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 const installUrlInput = document.getElementById('install-url');
                 const installWeb = document.getElementById('install-web');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
-                
                 const defaultPlaylists = [
                     { type: 'movie', id: ':ytrec', name: 'Discover' },
                     { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
                     { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
-                
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
                 ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'undefined'};
-                
                 function extractPlaylistId(input) {
                     let match;
                         // Channel URL
@@ -458,33 +451,28 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     // Search
                     return input.trim();
                 }
-                
                 function renderPlaylists() {
                     playlistTableBody.innerHTML = '';
                     playlists.forEach((pl, index) => {
                         const row = document.createElement('tr');
-                        
                         // Type
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
                         typeInput.value = pl.type;
                         typeInput.addEventListener('input', () => pl.type = typeInput.value.trim());
                         typeCell.appendChild(typeInput);
-                        
                         // ID
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
                         idInput.value = pl.id;
                         idInput.addEventListener('change', () => pl.id = extractPlaylistId(idInput.value));
                         idCell.appendChild(idInput);
-                        
                         // Name
                         const nameCell = document.createElement('td');
                         const nameInput = document.createElement('input');
                         nameInput.value = pl.name;
                         nameInput.addEventListener('input', () => pl.name = nameInput.value.trim());
                         nameCell.appendChild(nameInput);
-                        
                         // Actions
                         const actionsCell = document.createElement('td');
                         const upBtn = document.createElement('button');
@@ -509,37 +497,29 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             playlists.splice(index, 1);
                             renderPlaylists();
                         });
-                        
                         actionsCell.appendChild(upBtn);
                         actionsCell.appendChild(downBtn);
                         actionsCell.appendChild(removeBtn);
-                        
                         row.appendChild(typeCell);
                         row.appendChild(idCell);
                         row.appendChild(nameCell);
                         row.appendChild(actionsCell);
-                        
                         playlistTableBody.appendChild(row);
                     });
                 }
-                
                 document.getElementById('add-playlist').addEventListener('click', () => {
                     playlists.push({ type: 'movie', id: '', name: '' });
                     renderPlaylists();
                 });
-                
                 document.getElementById('add-defaults').addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
                     renderPlaylists();
                 });
-                
                 document.getElementById('remove-defaults').addEventListener('click', () => {
                     playlists = playlists.filter(pl => !defaultPlaylists.some(def => def.id === pl.id));
                     renderPlaylists();
                 });
-                
                 renderPlaylists();
-                
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
                     if (!cookies.value || !cookies.value.trim()) {
@@ -568,7 +548,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             cookies.value = await encryptResponse.text();
                             cookies.disabled = true;
                         }
-                        
                         const configString = btoa(JSON.stringify({
                             encrypted: cookies.value,
                             catalogs: playlists,
@@ -577,11 +556,9 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
                             )
                         }));
-                        
                         installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
-                        
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
@@ -591,7 +568,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         submitBtn.textContent = 'Generate Install Link';
                     }
                 });
-                
                 document.getElementById('copy-btn').addEventListener('click', async function() {
                     await navigator.clipboard.writeText(installUrlInput.value);
                     this.textContent = 'Copied!';
