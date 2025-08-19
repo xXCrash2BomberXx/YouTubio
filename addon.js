@@ -225,7 +225,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
     try {
         const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
-            `https://www.youtube.com/watch?v=${videoId}`,
+            `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
             '-j',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
