@@ -208,7 +208,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
     const video = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
-        `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
+        `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
         '-j',
         ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
     ]);
