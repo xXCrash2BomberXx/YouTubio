@@ -52,7 +52,7 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         ...(cookiesContent ? ['--cookies', filename] : [])];
     try {
         if (filename) await fs.writeFile(filename, cookiesContent);
-        return await ytDlpWrap.execPromise(fullArgs);
+        return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
     } catch (error) {
         console.log('Error running YT-DLP: ' + error);
         return {};
@@ -78,11 +78,11 @@ app.post('/encrypt', (req, res) => {
 });
 
 // Config Decryption
-function decryptConfig(configParam, skipDecryption = true) {
+function decryptConfig(configParam, enableDecryption = true) {
     if (!configParam) return {};
     try {
         const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
-        if (skipDecryption && config.encrypted) {
+        if (enableDecryption && config.encrypted) {
             try {
                 const decrypted = decrypt(config.encrypted);
                 try {
@@ -175,13 +175,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `ytsearch100:${req.params.id}`;
     }
 
-    const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+    const data = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
         command,
         '--flat-playlist',
         '--dump-single-json',
         '--playlist-start', `${skip + 1}`,
         '--playlist-end', `${skip + 100}`
-    ]));
+    ]);
     const metas = (data.entries || []).map(video => 
         video.id ? {
             id: `${prefix}${channel ? video.uploader_id : video.id}`,
@@ -206,11 +206,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    const video = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+    const video = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
         `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
         '-j',
         ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
-    ]));
+    ]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
     const released = new Date((video.timestamp ?? 0) * 1000).toISOString();
@@ -238,22 +238,22 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             url: video.url,
                             description: 'Click to watch the scraped video from YT-DLP',
                             subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-                                const srt = v.find(x => x.ext == 'srt');
-                                return {
+                                const srt = v.find(x => x.ext == 'srt') ?? v[0] ?? {};
+                                return srt ? {
                                     id: srt.name,
                                     url: srt.url,
                                     lang: k
-                                };
+                                } : null;
                             }).concat(
                                 Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                                    const srt = v.find(x => x.ext == 'srt');
-                                    return {
+                                    const srt = v.find(x => x.ext == 'srt') ?? v[0];
+                                    return srt ? {
                                         id: `Auto ${srt.name}`,
                                         url: srt.url,
                                         lang: k
-                                    };
+                                    } : null;
                                 })
-                            ),
+                            ).filter(srt => srt !== null),
                             behaviorHints: {
                                 ...(video.protocol !== 'https' || video.video_ext !== 'mp4' ? { notWebReady: true } : {}),
                                 videoSize: video.filesize_approx,
