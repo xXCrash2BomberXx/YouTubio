@@ -187,10 +187,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             id: `${prefix}${channel ? video.uploader_id : video.id}`,
             type: channel ? 'channel' : 'movie',
             name: video.title ?? 'Unknown Title',
-            poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`,
+            poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`,
             posterShape: channel ? 'square' : 'landscape',
-            description: video.description ?? '',
-            releaseInfo: video.upload_date?.substring(0, 4) ?? ''
+            description: video.description,
+            releaseInfo: video.upload_date?.substring(0, 4)
         } : null
     ).filter(meta => meta !== null);
     return res.json({ metas });
@@ -212,8 +212,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
     ]));
     const title = video.title ?? 'Unknown Title';
-    const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
-    const description = video.description ?? '';
+    const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
     const released = new Date((video.timestamp ?? 0) * 1000).toISOString();
     return res.json({
         meta: video.id ? {
@@ -224,8 +223,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             poster: thumbnail,
             posterShape: channel ? 'square' : 'landscape',
             background: thumbnail,
-            description: description,
-            releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null,
+            description: video.description,
+            releaseInfo: video.upload_date?.substring(0, 4),
             released: released,
             videos: [{
                 id: req.params.id,
@@ -275,7 +274,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         description: 'Click to open the channel as a Catalog'
                     }
                 ],
-                overview: description
+                overview: video.description
             }],
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
