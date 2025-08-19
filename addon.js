@@ -104,7 +104,7 @@ function decryptConfig(configParam, enableDecryption = true) {
 // Stremio Addon Manifest Route
 app.get('/:config/manifest.json', (req, res) => {
     const userConfig = decryptConfig(req.params.config, false);
-    
+
     res.json({
         id: 'youtubio.elfhosted.com',
         version: '0.1.0',
@@ -174,7 +174,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else {
         command = `ytsearch100:${req.params.id}`;
     }
-=
+
     return res.json({ metas: 
         ((await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
             command,
