@@ -214,9 +214,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
         ...(channel ? ['--flat-playlist', '--dump-single-json'] : [
             '-j',
-            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
-        ]),
-    ]);
+            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])])]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
     const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
