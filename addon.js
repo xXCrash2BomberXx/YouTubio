@@ -82,9 +82,9 @@ function decryptConfig(configParam, skipDecryption = true) {
     if (!configParam) return {};
     try {
         const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
-        if (skipDecryption && parsed.encrypted) {
+        if (skipDecryption && config.encrypted) {
             try {
-                const decrypted = decrypt(parsed.encrypted);
+                const decrypted = decrypt(config.encrypted);
                 try {
                     config.encrypted = JSON.parse(decrypted);
                 } catch (error) {
