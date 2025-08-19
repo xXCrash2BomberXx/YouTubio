@@ -79,17 +79,18 @@ function decryptConfig(configParam, skipDecryption = false) {
         throw new Error('No config provided');
     }
     try {
-        const configJson = Buffer.from(configParam, 'base64').toString('utf-8');
-        const config = JSON.parse(configJson);
-        if (!skipDecryption && config.encrypted) {
-            const decryptedJson = decrypt(config.encrypted);
-            const decryptedData = JSON.parse(decryptedJson);
-            config.encrypted = decryptedData;
-        }
-        return config;
+        const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
     } catch (error) {
-        throw new Error('Failed to decrypt config: ' + error.message);
+        throw new Error('Failed to parse config: ' + error.message);
     }
+    if (!skipDecryption && config.encrypted) {
+        try {
+            return JSON.parse(decrypt(config.encrypted));
+        } catch (error) {
+            throw new Error('Failed to decrypt config: ' + error.message);
+        }
+    }
+    return config;
 }
 
 // Stremio Addon Manifest Route
@@ -150,7 +151,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         if (!query?.search) return res.json({ metas: [] });
         command = `ytsearch100:${query.search}`;
     // Channel Search
-    } else if (channel.type === 'channel' && [':ytsearch_channel'].includes(req.params.id)) {
+    } else if (req.params.type === 'channel' && [':ytsearch_channel'].includes(req.params.id)) {
         if (!query?.search) return res.json({ metas: [] });
         command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
         channel = true;
@@ -450,7 +451,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         // Playlist ID / Playlist URL
                         ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ) ||
                         // Search URL
-                        ( match = input.match(/(?<=search_query=)[a-zA-Z0-9!*()-_+*"<.>%]+/) ))
+                        ( match = input.match(/(?<=search_query=)[^&]+/) ))
                         return match[0].trim();
                     // Search
                     return input.trim();
