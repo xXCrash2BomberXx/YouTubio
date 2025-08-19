@@ -120,7 +120,7 @@ app.get('/:config/manifest.json', (req, res) => {
             { type: 'movie', id: ':ythistory', name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
         ]).concat([
             // Add search unless explicitly disabled
-            ...(userConfig.search || userConfig.search === undefined ? [
+            ...(userConfig.search === false ? [] : [
                 { type: 'movie', id: ':ytsearch', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
@@ -129,7 +129,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
-            ] : [])
+            ])
         ]),
         behaviorHints: {
             configurable: true
@@ -361,7 +361,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
                 <form id="config-form">
-                    <div class="settings-section" id="playlist-manager">
+                    <div class="settings-section">
                         <h3>Cookies</h3>
                         <details class="instructions">
                             <summary>How to get your cookies.txt file</summary>
@@ -371,10 +371,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             </ol>
                         </details>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" id="clear-cookies" class="install-button action-button">Clear</button>
+                        <button type="button" onclick="this.value='';this.disabled=false;" class="install-button action-button">Clear</button>
                     </div>
                     
-                    <div class="settings-section" id="playlist-manager">
+                    <div class="settings-section">
                         <h3>Playlists</h3>
                         <div style="margin-bottom: 10px;">
                             <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
@@ -394,7 +394,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         </table>
                     </div>
                     
-                    <div class="settings-section" id="addon-settings">
+                    <div class="settings-section">
                         <h3>Settings</h3>
                         <div class="toggle-container">
                             <input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad">
@@ -425,9 +425,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 </div>
             </div>
             <script>
-                const host = '${host}';
-                const protocol = '${protocol}';
-                
                 const cookies = document.getElementById('cookie-data');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
@@ -446,22 +443,17 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
                 ${userConfig.encrypted ? `cookies.value = '${userConfig.encrypted}'; cookies.disabled = true;` : ""}
-                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad ? 'true' : 'false'};
-                document.getElementById('search').checked = ${userConfig.search || userConfig.search === undefined ? 'true' : 'false'};
-                
-                document.getElementById('clear-cookies').addEventListener('click', () => {
-                    cookies.value = "";
-                    cookies.disabled = false;
-                });
+                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
+                document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'undefined'};
                 
                 function extractPlaylistId(input) {
                     let match;
                         // Channel URL
-                    if (match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ||
+                    if (( match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ) ||
                         // Playlist ID / Playlist URL
-                        match = input.match(/(?<=(list=)?)PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ||
+                        ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ) ||
                         // Search URL
-                        match = input.match(/(?<=(search_query=)?)[a-zA-Z0-9!*()-_+*"<.>%]+/))
+                        ( match = input.match(/(?<=search_query=)[a-zA-Z0-9!*()-_+*"<.>%]+/) ))
                         return match[0].trim();
                     // Search
                     return input.trim();
@@ -586,8 +578,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             )
                         }));
                         
-                        installStremio.href = \`stremio://\${host}/\${configString}/manifest.json\`;
-                        installUrlInput.value = \`\${protocol}://\${host}/\${configString}/manifest.json\`;
+                        installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
+                        installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         
                         document.getElementById('results').style.display = 'block';
@@ -599,6 +591,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         submitBtn.textContent = 'Generate Install Link';
                     }
                 });
+                
                 document.getElementById('copy-btn').addEventListener('click', async function() {
                     await navigator.clipboard.writeText(installUrlInput.value);
                     this.textContent = 'Copied!';
