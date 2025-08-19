@@ -215,7 +215,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     ]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
-    const released = new Date((video.timestamp ?? 0) * 1000).toISOString();
+    const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
     return res.json({
         meta: video.id ? {
             id: req.params.id,
