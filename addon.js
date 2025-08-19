@@ -518,12 +518,11 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         }
                         const configString = encodeURIComponent(JSON.stringify({
                             encrypted: cookies.value,
-                            catalogs: playlists.map((pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
+                            catalogs: playlists.map((pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id }))),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
-                                    .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
-                            )
-                        })));
+                                    .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value]))
+                        }));
                         installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
