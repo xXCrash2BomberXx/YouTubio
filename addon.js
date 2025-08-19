@@ -108,7 +108,7 @@ app.get('/:config/manifest.json', (req, res) => {
         name: 'YouTube',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
-        types: ['movie'],
+        types: ['movie', 'channel'],
         idPrefixes: [prefix],
         catalogs: (userConfig.catalogs.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
@@ -125,7 +125,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] },
-                { type: 'movie', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
@@ -141,31 +141,27 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const args = {
-        type: req.params.type,
-        id: req.params.id,
-        extra: Object.fromEntries(new URLSearchParams(req.params.extra))
-    };
+    const query = queryObject.fromEntries(new URLSearchParams(req.params.extra))
 
     let channel = false;
     let command;
     // YT-DLP Search
-    if ([':ytsearch'].includes(args.id)) {
-        if (!args.extra?.search) return res.json({ metas: [] });
-        command = `ytsearch100:${args.extra.search}`;
+    if ([':ytsearch'].includes(req.params.id)) {
+        if (!query?.search) return res.json({ metas: [] });
+        command = `ytsearch100:${query.search}`;
     // YT-DLP Channel Search
-    } else if ([':ytsearch_channel'].includes(args.id)) {
-        if (!args.extra?.search) return res.json({ metas: [] });
-        command = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.extra.search)}&sp=EgIQAg%253D%253D`;
+    } else if ([':ytsearch_channel'].includes(req.params.id)) {
+        if (!query?.search) return res.json({ metas: [] });
+        command = `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=EgIQAg%253D%253D`;
         channel = true;
     // YT-DLP Playlists
-    } else if (args.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(args.id)) {
-        command = args.id;
+    } else if (req.params.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(req.params.id)) {
+        command = req.params.id;
     // Channels
-    } else if (command = args.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
+    } else if (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)?.[0]) {
         command = `https://www.youtube.com/${command}/videos`;
     // Playlists
-    } else if (command = args.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
+    } else if (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)?.[0]) {
         command = `https://www.youtube.com/playlist?list=${command}`;
     } else {
         return res.json({ metas: [] });
@@ -175,14 +171,14 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     try {
         userConfig = decryptConfig(req.params.config);
     } catch (error) {
-        console.error(`Error decrypting config for ${args.id}:`, error.message);
+        console.error(`Error decrypting config for ${req.params.id}:`, error.message);
         return res.status(400).json({ metas: [] });
     }
 
     if (!userConfig.encrypted || !userConfig.encrypted.cookies) return res.json({ metas: [] });
 
     try {
-        const skip = parseInt(args.extra?.skip ?? 0);
+        const skip = parseInt(query?.skip ?? 0);
         const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
             command,
             '--flat-playlist',
@@ -190,11 +186,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--playlist-start', `${skip + 1}`,
             '--playlist-end', `${skip + 100}`
         ]));
-        console.log(util.inspect(data, { depth: null, colors: true }));
         const metas = (data.entries || []).map(video => 
             video.id ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
-                type: 'movie',
+                type: channel ? 'channel' : 'movie',
                 name: video.title ?? 'Unknown Title',
                 poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`,
                 posterShape: channel ? 'square' : 'landscape',
@@ -204,7 +199,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         ).filter(meta => meta !== null);
         return res.json({ metas });
     } catch (err) {
-        console.error(`Error in ${args.id} handler:`, err.message);
+        console.error(`Error in ${req.params.id} handler:`, err.message);
         return res.status(400).json({ metas: [] });
     }
 });
@@ -214,13 +209,9 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
-    const args = {
-        type: req.params.type,
-        id: req.params.id,
-    };
 
-    if (!args.id.startsWith(prefix)) return res.json({ meta: {} });
-    const videoId = args.id.slice(prefix.length);
+    if (!req.params.id.startsWith(prefix)) return res.json({ meta: {} });
+    const videoId = req.params.id.slice(prefix.length);
 
     let userConfig;
     try {
@@ -244,7 +235,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const released = new Date(videoData.timestamp * 1000).toISOString();
         return res.json({
             meta: videoData.id ? {
-                id: args.id,
+                id: req.params.id,
                 type: 'movie',
                 name: title,
                 genres: videoData.tags,
@@ -255,12 +246,12 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 releaseInfo: videoData.upload_date ? videoData.upload_date.substring(0, 4) : null,
                 released: released,
                 videos: [{
-                    id: args.id,
+                    id: req.params.id,
                     title: title,
                     released: released,
                     thumbnail: thumbnail,
                     streams: [
-                        ...(args.type === 'movie' ? [
+                        ...(req.params.type === 'movie' ? [
                             {
                                 name: 'YT-DLP Player',
                                 url: videoData.url,
@@ -308,7 +299,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 language: videoData.language,
                 website: videoData.original_url,
                 behaviorHints: {
-                    defaultVideoId: args.id
+                    defaultVideoId: req.params.id
                 }
             } : {}
         });
