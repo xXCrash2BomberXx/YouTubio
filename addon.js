@@ -96,7 +96,7 @@ function decryptConfig(configParam, skipDecryption = false) {
 app.get('/:config/manifest.json', (req, res) => {
     let userConfig;
     try {
-        userConfig = decryptConfig(req.params.config);
+        userConfig = decryptConfig(req.params.config, true);
     } catch (error) {
         console.error('Error decrypting config for manifest handler:', error.message);
         return res.status(400);
@@ -168,7 +168,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(req.params.id)}`;
     // Saved YT-DLP Search
     } else {
-        command = `ytsearch100:${decodeURIComponent(req.params.id)}`;
+        command = `ytsearch100:${req.params.id}`;
     }
 
     let userConfig;
