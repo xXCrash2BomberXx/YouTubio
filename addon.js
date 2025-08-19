@@ -78,22 +78,21 @@ app.post('/encrypt', (req, res) => {
 });
 
 function decryptConfig(configParam, skipDecryption = false) {
-    if (!configParam) {
-        throw new Error('No config provided');
-    }
+    if (!configParam) return {};
     try {
         const config = JSON.parse(Buffer.from(configParam, 'base64').toString('utf-8'));
-    } catch (error) {
-        throw new Error('Failed to parse config: ' + error.message);
-    }
-    if (!skipDecryption && config.encrypted) {
-        try {
-            return JSON.parse(decrypt(config.encrypted));
-        } catch (error) {
-            throw new Error('Failed to decrypt config: ' + error.message);
+        if (!skipDecryption && config.encrypted) {
+            try {
+                config.encrypted = JSON.parse(decrypt(config.encrypted));
+            } catch (error) {
+                console.error('Failed to decrypt config: ' + error.message);
+            }
         }
+        return config;
+    } catch (error) {
+        console.error('Failed to parse config: ' + error.message);
+        return {};
     }
-    return config;
 }
 
 // Stremio Addon Manifest Route
