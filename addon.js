@@ -146,7 +146,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const channel = req.params.type === 'channel';
     const userConfig = decryptConfig(req.params.config);
-    const query = Object.fromEntries(new URLSearchParams(req.params.extra))
+    const query = Object.fromEntries(new URLSearchParams(req.params.extra));
     const skip = parseInt(query?.skip ?? 0);
 
     let command;
@@ -174,26 +174,25 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else {
         command = `ytsearch100:${req.params.id}`;
     }
-
-    const data = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
-        command,
-        '--flat-playlist',
-        '--dump-single-json',
-        '--playlist-start', `${skip + 1}`,
-        '--playlist-end', `${skip + 100}`
-    ]);
-    const metas = (data.entries || []).map(video => 
-        video.id ? {
-            id: `${prefix}${channel ? video.uploader_id : video.id}`,
-            type: channel ? 'channel' : 'movie',
-            name: video.title ?? 'Unknown Title',
-            poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`,
-            posterShape: channel ? 'square' : 'landscape',
-            description: video.description,
-            releaseInfo: video.upload_date?.substring(0, 4)
-        } : null
-    ).filter(meta => meta !== null);
-    return res.json({ metas });
+=
+    return res.json({ metas: 
+        ((await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+            command,
+            '--flat-playlist',
+            '--dump-single-json',
+            '--playlist-start', `${skip + 1}`,
+            '--playlist-end', `${skip + 100}`
+        ])).entries ?? []).map(video => 
+            video.id ? {
+                id: `${prefix}${channel ? video.uploader_id : video.id}`,
+                type: req.params.type,
+                name: video.title ?? 'Unknown Title',
+                poster: `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`,
+                posterShape: channel ? 'square' : 'landscape',
+                description: video.description,
+                releaseInfo: video.upload_date?.substring(0, 4)
+            } : null
+        ).filter(meta => meta !== null) });
 });
 
 // Stremio Addon Meta Route
