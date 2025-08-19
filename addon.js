@@ -41,7 +41,7 @@ function decrypt(encryptedData) {
 
 let counter = 0;
 async function runYtDlpWithCookies(cookiesContent, argsArray) {
-    const filename = path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`);
+    const filename = cookiesContent ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
@@ -49,13 +49,16 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         '--ignore-errors',
         '--no-warnings',
         '--no-cache-dir',
-        '--cookies', filename];
+        ...(cookiesContent ? ['--cookies', filename] : [])];
     try {
-        await fs.writeFile(filename, cookiesContent);
+        if (filename) await fs.writeFile(filename, cookiesContent);
         return await ytDlpWrap.execPromise(fullArgs);
+    } catch (error) {
+        console.log('Error running YT-DLP: ' + error);
+        return {};
     } finally {
         try {
-            await fs.unlink(filename);
+            if (filename) await fs.unlink(filename);
         } catch (error) {}
     }
 }
@@ -142,7 +145,9 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
+    const userConfig = decryptConfig(req.params.config);
     const query = Object.fromEntries(new URLSearchParams(req.params.extra))
+    const skip = parseInt(query?.skip ?? 0);
 
     let channel = false;
     let command;
@@ -172,19 +177,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `ytsearch100:${req.params.id}`;
     }
 
-    let userConfig;
     try {
-        userConfig = decryptConfig(req.params.config);
-    } catch (error) {
-        console.error(`Error decrypting config for ${req.params.id}:`, error.message);
-        return res.status(400).json({ metas: [] });
-    }
-
-    if (!userConfig.encrypted?.cookies) return res.json({ metas: [] });
-
-    try {
-        const skip = parseInt(query?.skip ?? 0);
-        const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
+        const data = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
             command,
             '--flat-playlist',
             '--dump-single-json',
@@ -211,25 +205,15 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
+    if (!req.params.id.startsWith(prefix)) return res.json({ meta: {} });
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
+    const userConfig = decryptConfig(req.params.config);
+    const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    if (!req.params.id.startsWith(prefix)) return res.json({ meta: {} });
-    const videoId = req.params.id.slice(prefix.length);
-
-    let userConfig;
     try {
-        userConfig = decryptConfig(req.params.config);
-    } catch (error) {
-        console.error('Error decrypting config for meta:', error.message);
-        return res.status(400).json({ meta: {} });
-    }
-
-    if (!userConfig.encrypted?.cookies) return res.json({ meta: {} });
-
-    try {
-        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted.cookies, [
+        const videoData = JSON.parse(await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
             `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
             '-j',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
