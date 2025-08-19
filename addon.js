@@ -98,13 +98,7 @@ function decryptConfig(configParam, skipDecryption = false) {
 
 // Stremio Addon Manifest Route
 app.get('/:config/manifest.json', (req, res) => {
-    let userConfig;
-    try {
-        userConfig = decryptConfig(req.params.config, true);
-    } catch (error) {
-        console.error('Error decrypting config for manifest handler:', error.message);
-        userConfig = {};
-    }
+    const userConfig = decryptConfig(req.params.config, true);
     
     res.json({
         id: 'youtubio.elfhosted.com',
