@@ -82,8 +82,9 @@ async function generateYouTubeCookies(refreshToken) {
 }
 
 let counter = 0;
-async function runYtDlpWithCookies(cookiesContent, argsArray) {
-    const filename = cookiesContent ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+async function runYtDlpWithConfig(auth, argsArray) {
+    const cookies = generateYouTubeCookies(decryptConfig(auth)?.encrypted?.auth);
+    const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
@@ -91,9 +92,9 @@ async function runYtDlpWithCookies(cookiesContent, argsArray) {
         '--ignore-errors',
         '--no-warnings',
         '--no-cache-dir',
-        ...(cookiesContent ? ['--cookies', filename] : [])];
+        ...(cookies ? ['--cookies', filename] : [])];
     try {
-        if (filename) await fs.writeFile(filename, cookiesContent);
+        if (filename) await fs.writeFile(filename, auth);
         return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
     } catch (error) {
         console.log('Error running YT-DLP: ' + error);
@@ -109,13 +110,52 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Config Encryption Endpoint
-app.post('/encrypt', (req, res) => {
+// OAuth Authorization Endpoint
+app.get('/auth', (req, res) => {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        return res.status(500).send('Google OAuth credentials not configured.');
+    }
+    const protocol = req.get('host').includes('localhost') ? 'http' : 'https';
+    const oauth2Client = new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        `${protocol}://${req.get('host')}/callback`
+    );
+    const state = req.query.state || '';
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: ['https://www.googleapis.com/auth/youtube.readonly'],
+        state: state
+    });
+    res.redirect(authUrl);
+});
+
+// OAuth Callback Endpoint
+app.get('/callback', async (req, res) => {
+    if (!req.query.code) {
+        return res.status(400).send('Authorization code missing.');
+    }
+    const protocol = req.get('host').includes('localhost') ? 'http' : 'https';
     try {
-        res.send(encrypt(JSON.stringify(req.body)));
+        const oauth2Client = new google.auth.OAuth2(
+            GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET,
+            `${protocol}://${req.get('host')}/callback`
+        );
+        const { tokens } = await oauth2Client.getToken(req.query.code);
+        if (!tokens.refresh_token) {
+            return res.status(400).send('Refresh token not received.');
+        }
+        let configObj = { encrypted: encrypt(JSON.stringify({ auth: tokens.refresh_token })) };
+        if (req.query.state) {
+            configObj = { ...decryptConfig(req.query.state, false), encrypted: encrypted };
+        }
+        const configString = Buffer.from(JSON.stringify(configObj)).toString('base64');
+        res.redirect(`/${configString}/configure`);
     } catch (error) {
-        console.error('Encryption error:', error);
-        res.status(500).send('Encryption failed');
+        console.error('OAuth callback error:', error);
+        res.status(500).send('Failed to process OAuth callback.');
     }
 });
 
@@ -214,8 +254,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `ytsearch100:${req.params.id}`;
     }
 
-    return res.json({ metas: 
-        ((await runYtDlpWithCookies(decryptConfig(req.params.config).encrypted?.cookies, [
+    return res.json({ metas:
+        ((await runYtDlpWithConfig(req.params.config, [
             command,
             '--flat-playlist',
             '--dump-single-json',
@@ -244,14 +284,13 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const channel = req.params.type === 'channel';
-    const userConfig = decryptConfig(req.params.config);
     const videoId = req.params.id.slice(prefix.length);
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    const video = await runYtDlpWithCookies(userConfig.encrypted?.cookies, [
+    const video = await runYtDlpWithConfig(req.params.config, [
         `https://www.youtube.com/${req.params.type === 'movie' ? 'watch?v=' : ''}${videoId}`,
         '-j',
-        ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ...(req.params.config?.markWatchedOnLoad ? ['--mark-watched'] : [])
     ]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
@@ -372,15 +411,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 <form id="config-form">
                     <div class="settings-section">
                         <h3>Cookies</h3>
-                        <details class="instructions">
-                            <summary>How to get your cookies.txt file</summary>
-                            <ol>
-                                <li>Go to <a href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a> and follow the steps on the site for cookie exporting. (Make sure you are logged into your account if you want personalized content.)</li>
-                                <li>Paste the content into the text area above.</li>
-                            </ol>
-                        </details>
-                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                        <button type="button" class="install-button action-button" id="google-login">Login with Google</button>
+                        <p id="auth-status"></p>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
@@ -430,8 +462,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 </div>
             </div>
             <script>
-                const cookies = document.getElementById('cookie-data');
-                const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
                 const installStremio = document.getElementById('install-stremio');
@@ -445,13 +475,18 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ""}
+                let encrypted = ${JSON.stringify(userConfig.encrypted || '')};
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'undefined'};
-                document.getElementById('clear-cookies').addEventListener('click', () => {
-                    cookies.value = "";
-                    cookies.disabled = false;
-                });
+                const authStatus = document.getElementById('auth-status');
+                const googleLogin = document.getElementById('google-login');
+                if (encrypted) {
+                    googleLogin.textContent = 'Re-login with Google';
+                    authStatus.textContent = 'Authenticated';
+                } else {
+                    googleLogin.textContent = 'Login with Google';
+                    authStatus.textContent = 'Not authenticated';
+                }
                 function extractPlaylistId(input) {
                     let match;
                         // Channel URL
@@ -533,39 +568,32 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     renderPlaylists();
                 });
                 renderPlaylists();
+                document.getElementById('google-login').addEventListener('click', () => {
+                    const stateString = btoa(JSON.stringify({
+                        catalogs: playlists,
+                        ...Object.fromEntries(
+                            Array.from(document.getElementById('addon-settings').querySelectorAll("input"))
+                                .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
+                        )
+                    }));
+                    window.location.href = '/auth?state=' + encodeURIComponent(stateString);
+                });
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    if (!cookies.value || !cookies.value.trim()) {
-                        errorDiv.textContent = "You must provide cookies to use this addon";
+                    if (!encrypted) {
+                        errorDiv.textContent = "You must login with Google to use this addon";
                         errorDiv.style.display = 'block';
                         return;
                     }
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Encrypting...';
+                    submitBtn.textContent = 'Generating...';
                     errorDiv.style.display = 'none';
                     try {
-                        if (!cookies.disabled) {
-                            // Encrypt the sensitive data
-                            const encryptResponse = await fetch('/encrypt', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ 
-                                    cookies: cookies.value,
-                                })
-                            });
-                            if (!encryptResponse.ok) {
-                                throw new Error(await encryptResponse.text() || 'Encryption failed');
-                            }
-                            cookies.value = await encryptResponse.text();
-                            cookies.disabled = true;
-                        }
                         const configString = btoa(JSON.stringify({
-                            encrypted: cookies.value,
+                            encrypted: encrypted,
                             catalogs: playlists,
                             ...Object.fromEntries(
-                                Array.from(addonSettings.querySelectorAll("input"))
+                                Array.from(document.getElementById('addon-settings').querySelectorAll("input"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
                             )
                         }));
