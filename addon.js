@@ -408,7 +408,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : "JSON.parse(JSON.stringify(defaultPlaylists))"};
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ""}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'undefined'};
-                document.getElementById('search').checked = ${userConfig.search === false ? 'undefined' : 'true'};
+                document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
