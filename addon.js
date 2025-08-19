@@ -5,7 +5,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
-// const util = require('util');
+const util = require('util');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
