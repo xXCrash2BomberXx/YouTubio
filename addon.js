@@ -202,7 +202,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
     const videoId = req.params.id?.slice(prefix.length);
-    const channel = videoId.startsWith('@');
+    const channel = req.params.type === 'channel';
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const userConfig = decryptConfig(req.params.config);
