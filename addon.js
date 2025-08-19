@@ -116,7 +116,7 @@ app.get('/:config/manifest.json', (req, res) => {
         catalogs: (userConfig.catalogs?.map(c => {
             c.extra = [ { name: 'skip', isRequired: false } ];
             return c;
-        }) || [
+        }) ?? [
             { type: 'movie', id: ':ytrec', name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
             { type: 'movie', id: ':ytsubs', name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
             { type: 'movie', id: ':ytwatchlater', name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
@@ -211,18 +211,18 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         '-j',
         ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
     ]));
-    const title = video.title || 'Unknown Title';
+    const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}`;
-    const description = video.description || '';
+    const description = video.description ?? '';
     const released = new Date(video.timestamp * 1000).toISOString();
     return res.json({
         meta: video.id ? {
             id: req.params.id,
-            type: 'movie',
+            type: req.params.type,
             name: title,
             genres: video.tags,
             poster: thumbnail,
-            posterShape: 'landscape',
+            posterShape: channel ? 'square' : 'landscape',
             background: thumbnail,
             description: description,
             releaseInfo: video.upload_date ? video.upload_date.substring(0, 4) : null,
@@ -238,7 +238,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             name: 'YT-DLP Player',
                             url: video.url,
                             description: 'Click to watch the scraped video from YT-DLP',
-                            subtitles: Object.entries(video.subtitles || {}).map(([k, v]) => {
+                            subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
                                 const srt = v.find(x => x.ext == 'srt');
                                 return {
                                     id: srt.name,
@@ -246,7 +246,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                     lang: k
                                 };
                             }).concat(
-                                Object.entries(video.automatic_captions || {}).map(([k, v]) => {
+                                Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
                                     const srt = v.find(x => x.ext == 'srt');
                                     return {
                                         id: `Auto ${srt.name}`,
@@ -277,7 +277,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 ],
                 overview: description
             }],
-            runtime: `${Math.floor(video.duration / 60)} min`,
+            runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
             website: video.original_url,
             behaviorHints: {
