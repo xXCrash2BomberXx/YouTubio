@@ -145,7 +145,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     if (!req.params.id?.startsWith(prefix)) return res.json({ metas: [] });
     const videoId = req.params.id?.slice(prefix.length);
     const channel = videoId.startsWith('@');
-    const query = Object.fromEntries(new URLSearchParams(req.params.extra));
+    const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
     const skip = parseInt(query?.skip ?? 0);
 
     let command;
