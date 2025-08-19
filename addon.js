@@ -162,7 +162,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     } else if (req.params.id.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(req.params.id)) {
         command = req.params.id;
     // Channels
-    } else if ( (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ) {
+    } else if ( (command = req.params.id.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
         command = `https://www.youtube.com/${command[0]}/videos`;
     // Playlists
     } else if ( (command = req.params.id.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
