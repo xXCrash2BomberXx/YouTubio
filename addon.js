@@ -215,6 +215,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         '-j',
         ...(channel ? ['--flat-playlist', '--dump-single-json'] : []),
         ...(!channel && req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+    console.log(video);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
     const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
