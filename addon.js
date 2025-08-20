@@ -57,7 +57,7 @@ async function runYtDlpWithAuth(config, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
     } catch (error) {
-        console.log('Error running YT-DLP: ' + error);
+        console.error('Error running YT-DLP: ' + error);
         return {};
     } finally {
         try {
@@ -91,7 +91,7 @@ function decryptConfig(configParam, enableDecryption = true) {
                 try {
                     config.encrypted = JSON.parse(decrypted);
                 } catch (error) {
-                    console.log('Failed to parse decryption: ' + error.message);
+                    console.error('Failed to parse decryption: ' + error.message);
                 }
             } catch (error) {
                 console.error('Failed to decrypt config: ' + error.message);
@@ -215,7 +215,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         '-j',
         ...(channel ? ['--flat-playlist', '--dump-single-json'] : []),
         ...(!channel && req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
-    console.log(video);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
     const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
