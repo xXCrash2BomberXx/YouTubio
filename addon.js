@@ -406,7 +406,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
                     { type: 'movie', id: ':ythistory', name: 'History' }
                 ];
-                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
+                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
+                    ...pl,
+                    id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
+                }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
