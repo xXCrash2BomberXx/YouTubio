@@ -237,7 +237,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 released: released,
                 thumbnail: thumbnail,
                 streams: [
-                    ...(req.params.type === 'movie' ? [
+                    ...(!channel ? [
                         {
                             name: 'YT-DLP Player',
                             url: video.url,
