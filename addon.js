@@ -214,7 +214,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const video = await runYtDlpWithAuth(req.params.config, [
         `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
         '-j',
-        ...(channel ? ['--flat-playlist', '--dump-single-json'] : []),
+        ...(channel ? ['--flat-playlist', '--dump-single-json'] : ['-f', 'bv*+ba/best']),
         ...(!channel && req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
