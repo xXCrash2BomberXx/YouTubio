@@ -48,9 +48,10 @@ async function runYtDlpWithAuth(config, argsArray) {
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
         ...argsArray,
-        '--skip-download',
-        '--ignore-errors',
+        '-i',
+        '-q',
         '--no-warnings',
+        '-s',
         '--no-cache-dir',
         '--extractor-args', 'youtube:player_client=android',
         ...(cookies ? ['--cookies', filename] : [])];
@@ -181,10 +182,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     return res.json({ metas: 
         ((await runYtDlpWithAuth(req.params.config, [
             command,
-            '-J',
+            '-I', `${skip + 1}:${skip + 100}:1`
             '--flat-playlist',
-            '--playlist-start', `${skip + 1}`,
-            '--playlist-end', `${skip + 100}`
+            '-J'
         ])).entries ?? []).map(video => 
             (channel ? video.uploader_id : video.id) ? {
                 id: `${prefix}${channel ? video.uploader_id : video.id}`,
@@ -213,7 +213,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
     const video = await runYtDlpWithAuth(req.params.config, [
         `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
-        ...(channel ? ['-J', '--flat-playlist'] : ['-j']),
+        ...(channel ? ['--flat-playlist', '-J'] : ['-j', '--check-formats']),
         ...(!channel && req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
