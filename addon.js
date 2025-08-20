@@ -182,7 +182,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     return res.json({ metas: 
         ((await runYtDlpWithAuth(req.params.config, [
             command,
-            '-I', `${skip + 1}:${skip + 100}:1`
+            '-I', `${skip + 1}:${skip + 100}:1`,
             '--flat-playlist',
             '-J'
         ])).entries ?? []).map(video => 
