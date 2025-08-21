@@ -351,7 +351,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         <input type="text" id="username" placeholder="Username: " required>
                         <input type="password" id="password" placeholder="Password: " required>
                         <input type="text" id="twofa" placeholder="2FA Setup Code: ">
-                        <textarea id="auth-data" style="display:none;"></textarea>
+                        <textarea id="encrypted" style="display:none;"></textarea>
                         <button type="button" class="install-button action-button" id="clear-login">Clear</button>
                     </div>
                     <div class="settings-section">
@@ -405,7 +405,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 const username = document.getElementById('username');
                 const password = document.getElementById('password');
                 const twofa = document.getElementById('twofa');
-                const auth = document.getElementById('auth-data');
+                const encrypted = document.getElementById('encrypted');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
@@ -423,14 +423,14 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     ...pl,
                     id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
                 }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
-                ${userConfig.encrypted ? `username.style.display = 'none'; password.style.display = 'none'; twofa.style.display = 'none'; auth.value = ${JSON.stringify(userConfig.encrypted)};` : ''}
+                ${userConfig.encrypted ? `username.style.display = 'none'; password.style.display = 'none'; twofa.style.display = 'none'; encrypted.value = ${JSON.stringify(userConfig.encrypted)};` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('clear-auth').addEventListener('click', () => {
                     username.style.display = 'unset';
                     password.style.display = 'unset';
                     twofa.style.display = 'unset';
-                    auth.value = '';
+                    encrypted.value = '';
                 });
                 function extractPlaylistId(input) {
                     let match;
@@ -520,7 +520,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
-                        if (!auth.value) {
+                        if (!encrypted.value) {
                             // Encrypt the sensitive data
                             const encryptResponse = await fetch('/encrypt', {
                                 method: 'POST',
@@ -536,13 +536,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             if (!encryptResponse.ok) {
                                 throw new Error(await encryptResponse.text() || 'Encryption failed');
                             }
-                            auth.value = await encryptResponse.text();
+                            encrypted.value = await encryptResponse.text();
                             username.style.display = 'none';
                             password.style.display = 'none';
                             twofa.style.display = 'none';
                         }
                         const configString = encodeURIComponent(JSON.stringify({
-                            encrypted: auth.value,
+                            encrypted: encrypted.value,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
