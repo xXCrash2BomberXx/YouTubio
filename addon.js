@@ -424,7 +424,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ) ||
                         // Search URL
                         ( match = input.match(/(?<=search_query=)[^&]+/) ))
-                        return match[0].trim();
+                        return decodeURIComponent(match[0].trim());
                     // Search
                     return input.trim();
                 }
