@@ -122,18 +122,18 @@ app.get('/:config/manifest.json', (req, res) => {
             c.extra = [ { name: 'skip', isRequired: false } ];
             return c;
         }) ?? [
-            { type: 'movie', id: ':ytrec', name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: ':ytsubs', name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: ':ytwatchlater', name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: ':ythistory', name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
+            { type: 'movie', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
+            { type: 'movie', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
         ]).concat([
             // Add search unless explicitly disabled
             ...(userConfig.search === false ? [] : [
-                { type: 'movie', id: ':ytsearch', name: 'YouTube', extra: [
+                { type: 'movie', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] },
-                { type: 'channel', id: ':ytsearch_channel', name: 'YouTube', extra: [
+                { type: 'channel', id: `${prefix}:ytsearch_channel`, name: 'YouTube', extra: [
                     { name: 'search', isRequired: true },
                     { name: 'skip', isRequired: false }
                 ] }
