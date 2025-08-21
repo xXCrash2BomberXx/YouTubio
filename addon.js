@@ -425,7 +425,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         return decodeURIComponent(match[0].trim());
                         // Search URL
                     else if (input.match(/(?<=search_query=)[^&]+/))
-                        return new URLSearchParams((input.split('?', 1)[1] ?? input).trim()).get('search_query');
+                        return new URLSearchParams((input.split('?', 2)[1] ?? input).trim()).get('search_query');
                     // Search
                     return input.trim();
                 }
