@@ -2,9 +2,8 @@
 
 const express = require('express');
 const YTDlpWrap = require('yt-dlp-wrap').default;
-const fs = require('fs').promises;
-const path = require('path');
 const crypto = require('crypto');
+const { totp } = require('otplib');
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
@@ -47,33 +46,25 @@ function decrypt(encryptedData) {
     return decrypted;
 }
 
-let counter = 0;
 async function runYtDlpWithAuth(config, argsArray) {
-    const auth = decryptConfig(config).encrypted?.auth;
-    // Implement better auth system
-    const cookies = auth;
-    const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
-    counter %= Number.MAX_SAFE_INTEGER;
-    const fullArgs = [
-        ...argsArray,
-        '-i',
-        '-q',
-        '--no-warnings',
-        '-s',
-        '--no-cache-dir',
-        '--flat-playlist',
-        '-J',
-        ...(cookies ? ['--cookies', filename] : [])];
+    const auth = decryptConfig(config).encrypted;
     try {
-        if (filename) await fs.writeFile(filename, cookies);
-        return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
+        return JSON.parse(await ytDlpWrap.execPromise([
+            ...argsArray,
+            '-i',
+            '-q',
+            '--no-warnings',
+            '-s',
+            '--no-cache-dir',
+            '--flat-playlist',
+            '-J',
+            '-u', auth.username,
+            '-p', auth.password,
+            '-2', totp.generate(auth.twofa)
+        ]));
     } catch (error) {
         console.error('Error running YT-DLP: ' + error);
         return {};
-    } finally {
-        try {
-            if (filename) await fs.unlink(filename);
-        } catch (error) {}
     }
 }
 
@@ -348,16 +339,20 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${process.env.EMBED || ""}
                 <form id="config-form">
                     <div class="settings-section">
-                        <h3>Cookies</h3>
+                        <h3>Authentication</h3>
                         <details class="instructions">
-                            <summary>How to get your cookies.txt file</summary>
+                            <summary>How to get your 2FA code</summary>
                             <ol>
-                                <li>Go to <a href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a> and follow the steps on the site for cookie exporting. (Make sure you are logged into your account if you want personalized content.)</li>
-                                <li>Paste the content into the text area above.</li>
+                                <li>Go to <a href="https://myaccount.google.com/u/0/two-step-verification/authenticator" target="_blank" rel="noopener noreferrer">myaccount.google.com/u/0/two-step-verification/authenticator</a>.</li>
+                                <li>Copy your 32-character secret key into the box below.</li>
+                                <li>Set up other Authenticators again before continuing if necessary.</li>
                             </ol>
                         </details>
-                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                        <input type="text" id="username" placeholder="Username: " required>
+                        <input type="password" id="password" placeholder="Password: " required>
+                        <input type="text" id="twofa" placeholder="2FA Setup Code: ">
+                        <textarea id="auth-data" style="display:none;"></textarea>
+                        <button type="button" class="install-button action-button" id="clear-login">Clear</button>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
@@ -407,7 +402,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 </div>
             </div>
             <script>
-                const cookies = document.getElementById('cookie-data');
+                const username = document.getElementById('username');
+                const password = document.getElementById('password');
+                const twofa = document.getElementById('twofa');
+                const auth = document.getElementById('auth-data');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
@@ -425,12 +423,14 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     ...pl,
                     id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
                 }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
+                ${userConfig.encrypted ? `username.style.display = 'none'; password.style.display = 'none'; twofa.style.display = 'none'; auth.value = ${JSON.stringify(userConfig.encrypted)};` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
-                document.getElementById('clear-cookies').addEventListener('click', () => {
-                    cookies.value = "";
-                    cookies.disabled = false;
+                document.getElementById('clear-auth').addEventListener('click', () => {
+                    username.style.display = 'unset';
+                    password.style.display = 'unset';
+                    twofa.style.display = 'unset';
+                    auth.value = '';
                 });
                 function extractPlaylistId(input) {
                     let match;
@@ -520,7 +520,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
-                        if (!cookies.disabled) {
+                        if (!auth.value) {
                             // Encrypt the sensitive data
                             const encryptResponse = await fetch('/encrypt', {
                                 method: 'POST',
@@ -528,17 +528,21 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({ 
-                                    auth: cookies.value,
+                                    username: username.value,
+                                    password: password.value,
+                                    twofa: twofa.value
                                 })
                             });
                             if (!encryptResponse.ok) {
                                 throw new Error(await encryptResponse.text() || 'Encryption failed');
                             }
-                            cookies.value = await encryptResponse.text();
-                            cookies.disabled = true;
+                            auth.value = await encryptResponse.text();
+                            username.style.display = 'none';
+                            password.style.display = 'none';
+                            twofa.style.display = 'none';
                         }
                         const configString = encodeURIComponent(JSON.stringify({
-                            encrypted: cookies.value,
+                            encrypted: auth.value,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
