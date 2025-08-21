@@ -6,7 +6,6 @@ const crypto = require('crypto');
 const { totp } = require('otplib');
 // const util = require('util');
 
-const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
