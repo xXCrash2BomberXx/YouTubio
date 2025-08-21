@@ -17,7 +17,7 @@ const ALGORITHM = 'aes-256-gcm';
 
 function encrypt(text) {
     const salt = crypto.randomBytes(16);
-    const iv = crypto.randomBytes(16);;
+    const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(
         ALGORITHM,
         crypto.createHash('sha256').update(Buffer.concat([ENCRYPTION_KEY, salt])).digest(),
@@ -25,7 +25,7 @@ function encrypt(text) {
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag();
-    return salt.toString('hex') + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+    return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
 function decrypt(encryptedData) {
@@ -54,19 +54,19 @@ async function runYtDlpWithAuth(config, argsArray) {
     const cookies = auth;
     const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
-    const fullArgs = [
-        ...argsArray,
-        '-i',
-        '-q',
-        '--no-warnings',
-        '-s',
-        '--no-cache-dir',
-        '--flat-playlist',
-        '-J',
-        ...(cookies ? ['--cookies', filename] : [])];
     try {
         if (filename) await fs.writeFile(filename, cookies);
-        return JSON.parse(await ytDlpWrap.execPromise(fullArgs));
+        return JSON.parse(await ytDlpWrap.execPromise([
+            ...argsArray,
+            '-i',
+            '-q',
+            '--no-warnings',
+            '-s',
+            '--no-cache-dir',
+            '--flat-playlist',
+            '-J',
+            ...(cookies ? ['--cookies', filename] : [])
+        ]));
     } catch (error) {
         console.error('Error running YT-DLP: ' + error);
         return {};
