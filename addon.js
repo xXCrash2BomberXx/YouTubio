@@ -236,7 +236,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                     ...(!channel ? [
                         {
                             name: 'YT-DLP Player',
-                            url: video.requested_formats?.[0].url ?? video.url,
+                            url: (video.requested_formats?.[0] ?? video.formats?.at(-1) ?? video).url,
                             description: 'Click to watch the scraped video from YT-DLP',
                             subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
                                 const srt = v.find(x => x.ext == 'srt') ?? v[0];
