@@ -186,7 +186,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '-J'
         ])).entries ?? []).map(video => 
             (channel ? video.uploader_id : video.id) ? {
-                id: `${prefix}${channel ? video.uploader_id : video.id}`,
+                id: prefix + (channel ? video.uploader_id : video.id),
                 type: req.params.type,
                 name: video.title ?? 'Unknown Title',
                 poster: `${
@@ -273,7 +273,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }
                     ] : []), {
                         name: 'View Channel',
-                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(video.uploader_id)}`,
+                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }
                 ],
