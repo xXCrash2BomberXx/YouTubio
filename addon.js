@@ -53,6 +53,7 @@ async function runYtDlpWithAuth(config, argsArray) {
         '--no-warnings',
         '-s',
         '--no-cache-dir',
+        '--flat-playlist',
         ...(cookies ? ['--cookies', filename] : [])];
     try {
         if (filename) await fs.writeFile(filename, cookies);
@@ -182,7 +183,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         ((await runYtDlpWithAuth(req.params.config, [
             command,
             '-I', `${skip + 1}:${skip + 100}:1`,
-            '--flat-playlist',
             '-J'
         ])).entries ?? []).map(video => 
             (channel ? video.uploader_id : video.id) ? {
@@ -212,7 +212,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
     const video = await runYtDlpWithAuth(req.params.config, [
         `https://www.youtube.com/${channel ? '' : 'watch?v='}${videoId}`,
-        ...(channel ? ['--flat-playlist', '-J'] : ['-j']),
+        (channel ? '-J' : '-j'),
         ...(!channel && req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     const title = video.title ?? 'Unknown Title';
     const thumbnail = `${channel ? protocol + ':' : ''}${video.thumbnail ?? video.thumbnails?.at(-1)?.url}`;
@@ -238,7 +238,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                     ...(!channel ? [
                         {
                             name: 'YT-DLP Player',
-                            url: video.url,
+                            url: video.requested_formats[0].url,
                             description: 'Click to watch the scraped video from YT-DLP',
                             subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
                                 const srt = v.find(x => x.ext == 'srt') ?? v[0];
