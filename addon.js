@@ -53,7 +53,6 @@ async function runYtDlpWithAuth(config, argsArray) {
         '--no-warnings',
         '-s',
         '--no-cache-dir',
-        '--extractor-args', 'youtube:player_client=android',
         ...(cookies ? ['--cookies', filename] : [])];
     try {
         if (filename) await fs.writeFile(filename, cookies);
