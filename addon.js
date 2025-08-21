@@ -71,6 +71,13 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
+
 // Config Encryption Endpoint
 app.post('/encrypt', (req, res) => {
     try {
@@ -340,7 +347,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     <div class="settings-section">
                         <h3>Authentication</h3>
                         <details class="instructions">
-                            <summary>How to get your 2FA code</summary>
+                            <summary>How to get your 2FA Setup Code</summary>
                             <ol>
                                 <li>Go to <a href="https://myaccount.google.com/u/0/two-step-verification/authenticator" target="_blank" rel="noopener noreferrer">myaccount.google.com/u/0/two-step-verification/authenticator</a>.</li>
                                 <li>Copy your 32-character secret key into the box below.</li>
@@ -425,7 +432,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${userConfig.encrypted ? `username.style.display = 'none'; password.style.display = 'none'; twofa.style.display = 'none'; encrypted.value = ${JSON.stringify(userConfig.encrypted)};` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
-                document.getElementById('clear-auth').addEventListener('click', () => {
+                document.getElementById('clear-login').addEventListener('click', () => {
                     username.style.display = 'unset';
                     password.style.display = 'unset';
                     twofa.style.display = 'unset';
