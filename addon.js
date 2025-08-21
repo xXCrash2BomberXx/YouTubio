@@ -421,10 +421,11 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         // Channel URL
                     if (( match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ) ||
                         // Playlist ID / Playlist URL
-                        ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ) ||
-                        // Search URL
-                        ( match = input.match(/(?<=search_query=)[^&]+/) ))
+                        ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ))
                         return decodeURIComponent(match[0].trim());
+                        // Search URL
+                    else if (input.match(/(?<=search_query=)[^&]+/))
+                        return new URLSearchParams((input.split('?', 1)[1] ?? input).trim()).get('search_query');
                     // Search
                     return input.trim();
                 }
