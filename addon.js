@@ -15,7 +15,7 @@ const ALGORITHM = 'aes-256-gcm';
 
 function encrypt(text) {
     const salt = crypto.randomBytes(16);
-    const iv = crypto.randomBytes(16);;
+    const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(
         ALGORITHM,
         crypto.createHash('sha256').update(Buffer.concat([ENCRYPTION_KEY, salt])).digest(),
