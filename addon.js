@@ -59,7 +59,7 @@ async function runYtDlpWithAuth(config, argsArray) {
             '-J',
             '-u', auth.username,
             '-p', auth.password,
-            '-2', totp.generate(auth.twofa)
+            '-2', totp.generate(auth.twofa.replace(/\s+/g, '').toUpperCase())
         ]));
     } catch (error) {
         console.error('Error running YT-DLP: ' + error);
