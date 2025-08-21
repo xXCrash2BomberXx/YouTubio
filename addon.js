@@ -17,7 +17,7 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = `http${process.env.SPACE_HOST ? 's' : ''}://${process.env.SPACE_HOST || `localhost:${PORT}`}/oauth2callback`;
 const prefix = 'yt_id:';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || true ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
 
 async function oauth2ToCookiesTxt(auth) {
@@ -31,7 +31,7 @@ async function oauth2ToCookiesTxt(auth) {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setExtraHTTPHeaders({
-        Authorization: `Bearer ${await client.getAccessToken()}`,
+        Authorization: `Bearer ${(await client.getAccessToken()).token}`,
     });
     await page.goto('https://www.youtube.com', { waitUntil: 'networkidle2' });
     const cookies = await page.cookies();
@@ -113,7 +113,7 @@ app.get('/auth', (req, res) =>
     ).generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
-        scope: ['https://www.googleapis.com/auth/youtube']
+        scope: ['https://www.googleapis.com/auth/youtube.readonly']
     }))
 );
 
