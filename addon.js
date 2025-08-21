@@ -189,11 +189,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 id: prefix + (channel ? video.uploader_id : video.id),
                 type: req.params.type,
                 name: video.title ?? 'Unknown Title',
-                poster: `${
-                    channel ? (req.get('host').includes('localhost') ? 'http' : 'https') + ':' : ''
-                }${
-                    video.thumbnail ?? video.thumbnails?.at(-1)?.url
-                }`,
+                poster:
+                    (channel ? (req.get('host').includes('localhost') ? 'http' : 'https') + ':' : '') +
+                    video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 posterShape: channel ? 'square' : 'landscape',
                 description: video.description,
                 releaseInfo: video.upload_date?.substring(0, 4)
