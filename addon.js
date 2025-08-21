@@ -23,7 +23,7 @@ function encrypt(text) {
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag();
-    return salt.toString('hex') + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+    return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
 }
 
 function decrypt(encryptedData) {
