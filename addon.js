@@ -5,15 +5,47 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const puppeteer = require('puppeteer');
+const { google } = require('googleapis');
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = `http${process.env.SPACE_HOST ? 's' : ''}://${process.env.SPACE_HOST || `localhost:${PORT}`}/oauth2callback`;
 const prefix = 'yt_id:';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || true ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
+
+async function oauth2ToCookiesTxt(auth) {
+    if (!auth) throw new Error("Missing auth object");
+    const client = new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        REDIRECT_URI
+    );
+    client.setCredentials(auth);
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({
+        Authorization: `Bearer ${await client.getAccessToken()}`,
+    });
+    await page.goto('https://www.youtube.com', { waitUntil: 'networkidle2' });
+    const cookies = await page.cookies();
+    await browser.close();
+    return '# Netscape HTTP Cookie File\n' + cookies.map(c => [
+        c.domain,
+        String(!c.hostOnly).toUpperCase(),
+        c.path,
+        String(c.secure).toUpperCase(),
+        c.expires && c.expires > 0 ? Math.floor(c.expires) : 0,
+        c.name,
+        c.value,
+    ].join('\t')).join('\n');
+}
 
 function encrypt(text) {
     const iv = crypto.randomBytes(16);
@@ -42,8 +74,7 @@ function decrypt(encryptedData) {
 let counter = 0;
 async function runYtDlpWithAuth(config, argsArray) {
     const auth = decryptConfig(config).encrypted?.auth;
-    // Implement better auth system
-    const cookies = auth;
+    const cookies = (auth.access_token || auth.refresh_token) ? await oauth2ToCookiesTxt(auth) : auth;
     const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
     counter %= Number.MAX_SAFE_INTEGER;
     const fullArgs = [
@@ -73,13 +104,41 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Config Encryption Endpoint
-app.post('/encrypt', (req, res) => {
+// Redirect to Google login
+app.get('/auth', (req, res) => 
+    res.redirect(new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        REDIRECT_URI
+    ).generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: ['https://www.googleapis.com/auth/youtube']
+    }))
+);
+
+// Callback — create a fresh OAuth2 client per request
+app.get('/oauth2callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) return res.status(400).send("Missing code");
     try {
-        res.send(encrypt(JSON.stringify(req.body)));
-    } catch (error) {
-        console.error('Encryption error:', error);
-        res.status(500).send('Encryption failed');
+        const { tokens } = await (new google.auth.OAuth2(
+            GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET,
+            REDIRECT_URI
+        )).getToken(code);
+        res.send(`
+            <script>
+                window.opener.postMessage(
+                    ${JSON.stringify({ encrypted : encrypt(JSON.stringify({ auth: tokens })) })},
+                    window.location.origin
+                );
+                window.close();
+            </script>
+        `);
+    } catch (err) {
+        console.error("OAuth2 error:", err);
+        res.status(500).send("Failed to authenticate");
     }
 });
 
@@ -340,16 +399,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${process.env.EMBED || ""}
                 <form id="config-form">
                     <div class="settings-section">
-                        <h3>Cookies</h3>
-                        <details class="instructions">
-                            <summary>How to get your cookies.txt file</summary>
-                            <ol>
-                                <li>Go to <a href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a> and follow the steps on the site for cookie exporting. (Make sure you are logged into your account if you want personalized content.)</li>
-                                <li>Paste the content into the text area above.</li>
-                            </ol>
-                        </details>
-                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                        <h3>Authentication</h3>
+                        <p>Sign in with Google to link your YouTube account.</p>
+                        <button type="button" class="install-button action-button" id="google-auth">
+                            Sign in with Google
+                        </button>
+                        <button type="button" class="install-button action-button" id="clear-auth">Clear</button>
+                        <textarea id="auth-data" style="display:none;"></textarea>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
@@ -399,7 +455,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 </div>
             </div>
             <script>
-                const cookies = document.getElementById('cookie-data');
+                const authButton = document.getElementById('google-auth');
+                const authData = document.getElementById('auth-data');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
@@ -417,12 +474,20 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     ...pl,
                     id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
                 }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
+                ${userConfig.encrypted ? `authData.value = ${JSON.stringify(userConfig.encrypted)}; authData.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
-                document.getElementById('clear-cookies').addEventListener('click', () => {
-                    cookies.value = "";
-                    cookies.disabled = false;
+                authButton.addEventListener('click', () => {
+                    const popup = window.open('/auth', 'googleAuth', 'width=600,height=700');
+                    window.addEventListener('message', (event) => {
+                        if (event.origin !== window.location.origin) return;
+                        if (event.data?.encrypted) authData.value = event.data.encrypted;
+                        authButton.style.display = 'none';
+                    }, { once: true });
+                }); 
+                document.getElementById('clear-auth').addEventListener('click', () => {
+                    authData.value = '';
+                    authButton.style.display = 'unset';
                 });
                 function extractPlaylistId(input) {
                     let match;
@@ -508,29 +573,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 renderPlaylists();
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
-                        if (!cookies.disabled) {
-                            // Encrypt the sensitive data
-                            const encryptResponse = await fetch('/encrypt', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ 
-                                    auth: cookies.value,
-                                })
-                            });
-                            if (!encryptResponse.ok) {
-                                throw new Error(await encryptResponse.text() || 'Encryption failed');
-                            }
-                            cookies.value = await encryptResponse.text();
-                            cookies.disabled = true;
-                        }
                         const configString = encodeURIComponent(JSON.stringify({
-                            encrypted: cookies.value,
+                            encrypted: authData.value,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input"))
@@ -542,9 +588,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     } catch (error) {
                         errorDiv.textContent = error.message;
                         errorDiv.style.display = 'block';
-                    } finally {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Generate Install Link';
                     }
                 });
                 document.getElementById('copy-btn').addEventListener('click', async function() {

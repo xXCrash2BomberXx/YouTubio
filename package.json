@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "googleapis": "^156.0.0",
+    "puppeteer": "^24.17.0",
     "yt-dlp-wrap": "^2.3.12"
   }
 }
