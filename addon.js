@@ -233,6 +233,23 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const title = video.title ?? 'Unknown Title';
     const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
     const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
+    const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+        const srt = v.find(x => x.ext == 'srt') ?? v[0];
+        return srt ? {
+            id: srt.name,
+            url: srt.url,
+            lang: k
+        } : null;
+    }).concat(
+        Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: `Auto ${srt.name}`,
+                url: srt.url,
+                lang: k
+            } : null;
+        })
+    ).filter(srt => srt !== null);
     return res.json({
         meta: video.id ? {
             id: req.params.id,
@@ -252,33 +269,17 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        {
-                            name: 'YT-DLP Player',
-                            url: (video.requested_formats?.[0] ?? video.formats?.at(-1) ?? video).url,
-                            description: 'Click to watch the scraped video from YT-DLP',
-                            subtitles: Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-                                const srt = v.find(x => x.ext == 'srt') ?? v[0];
-                                return srt ? {
-                                    id: srt.name,
-                                    url: srt.url,
-                                    lang: k
-                                } : null;
-                            }).concat(
-                                Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                                    const srt = v.find(x => x.ext == 'srt') ?? v[0];
-                                    return srt ? {
-                                        id: `Auto ${srt.name}`,
-                                        url: srt.url,
-                                        lang: k
-                                    } : null;
-                                })
-                            ).filter(srt => srt !== null),
+                        ...video.formats.filter(src => !src.format_id.startsWith('sb') && src.fps).toReversed().map(src => ({
+                            name: `YT-DLP Player ${src.resolution}`,
+                            url: src.url,
+                            description: src.format,
+                            subtitles: subtitles,
                             behaviorHints: {
-                                ...(video.protocol !== 'https' || video.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                videoSize: video.filesize_approx,
+                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        }, {
+                        })), {
                             name: 'Stremio Player',
                             ytId: videoId,
                             description: 'Click to watch using Stremio\'s built-in YouTube Player'
