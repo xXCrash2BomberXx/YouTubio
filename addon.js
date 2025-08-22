@@ -122,7 +122,7 @@ app.get('/:config/manifest.json', (req, res) => {
     res.json({
         id: 'youtubio.elfhosted.com',
         version: '0.1.0',
-        name: 'YouTubio',
+        name: 'YouTubio | ElfHosted',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
         types: ['mixed', 'movie', 'channel'],
