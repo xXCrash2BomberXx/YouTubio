@@ -122,7 +122,7 @@ app.get('/:config/manifest.json', (req, res) => {
     res.json({
         id: 'youtubio.elfhosted.com',
         version: '0.1.0',
-        name: 'YouTube',
+        name: 'YouTubio',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
         types: ['mixed', 'movie', 'channel'],
@@ -154,6 +154,10 @@ app.get('/:config/manifest.json', (req, res) => {
         ]),
         behaviorHints: {
             configurable: true
+        },
+        "stremioAddonsConfig": {
+            "issuer": "https://stremio-addons.net",
+            "signature": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..tLliZZqbqp8DSpNFCa_o7g.1Zu-sGRA8Xmc-qG9d_ctvcvrbtBFdVH8Kqmj9RL-ONB5C5iiy5qITOH3Z1nrTfQuiIhwJyQuU0npD0S8lYtv5InjpulZHYQDdBJpPnTvn1jqwM4AgDPCpm05lNLYW3Kp.IpryYoO1JqXwFBmkHrD3OA"
         }
     });
 });
