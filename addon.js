@@ -197,22 +197,27 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         command = `ytsearch100:${videoId}`;
     }
 
-    return res.json({ metas: 
-        ((await runYtDlpWithAuth(req.params.config, [
-            command,
-            '-I', `${skip + 1}:${skip + 100}:1`,
-        ])).entries ?? []).map(video => {
-            const channel = video.ie_key === 'YoutubeTab';
-            return (channel ? video.uploader_id : video.id) ? {
-                id: prefix + (channel ? video.uploader_id : video.id),
-                type: channel ? 'channel' : 'movie',
-                name: video.title ?? 'Unknown Title',
-                poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
-                posterShape: channel ? 'square' : 'landscape',
-                description: video.description,
-                releaseInfo: video.upload_date?.substring(0, 4)
-            } : null;
-        }).filter(meta => meta !== null) });
+    try {
+        return res.json({ metas: 
+            ((await runYtDlpWithAuth(req.params.config, [
+                command,
+                '-I', `${skip + 1}:${skip + 100}:1`,
+            ])).entries ?? []).map(video => {
+                const channel = video.ie_key === 'YoutubeTab';
+                return (channel ? video.uploader_id : video.id) ? {
+                    id: prefix + (channel ? video.uploader_id : video.id),
+                    type: channel ? 'channel' : 'movie',
+                    name: video.title ?? 'Unknown Title',
+                    poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
+                    posterShape: channel ? 'square' : 'landscape',
+                    description: video.description,
+                    releaseInfo: video.upload_date?.substring(0, 4)
+                } : null;
+            }).filter(meta => meta !== null) });
+    catch (error) {
+        console.error('Error in Catalog handler: ' + error);
+        return res.json({metas: []});
+    }
 });
 
 // Stremio Addon Meta Route
@@ -225,10 +230,16 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
     const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
 
-    let video = await runYtDlpWithAuth(req.params.config, [
+    let video;
+    try {
+        video = await runYtDlpWithAuth(req.params.config, [
             command,
             '--ignore-no-formats-error',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+    } catch (error) {
+        console.log('Error in Meta handler: ' + error);
+        return res.json({meta: {}});
+    }
     const channel = video._type === 'playlist';
     const title = video.title ?? 'Unknown Title';
     const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
