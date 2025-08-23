@@ -121,7 +121,7 @@ app.get('/:config/manifest.json', (req, res) => {
 
     res.json({
         id: 'youtubio.elfhosted.com',
-        version: '0.1.0',
+        version: '0.1.1',
         name: 'YouTubio | ElfHosted',
         description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
         resources: ['catalog', 'stream', 'meta'],
@@ -269,7 +269,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...video.formats.filter(src => !src.format_id.startsWith('sb') && src.fps).toReversed().map(src => ({
+                        ...video.formats.filter(src => !src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none').toReversed().map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
