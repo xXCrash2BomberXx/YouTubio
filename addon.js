@@ -268,7 +268,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...(video.formats ?? []).filter(src => !src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none').toReversed().map(src => ({
+                        ...(video.formats ?? []).filter(src => req.params.config.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
@@ -398,6 +398,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                 When enabled, Stremio's search feature will also return YouTube results.
                             </div>
                         </div>
+                        <div class="toggle-container">
+                            <input type="checkbox" id="showBrokenLinks" name="showBrokenLinks">
+                            <label for="showBrokenLinks">Show Broken Links</label>
+                            <div class="setting-description">
+                                When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on vidoes without it enabled.
+                            </div>
+                        </div>
                     </div>
                     <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
                     <div id="error-message" class="error" style="display:none;"></div>
@@ -432,6 +439,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
+                document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
