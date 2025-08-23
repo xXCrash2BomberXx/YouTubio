@@ -232,29 +232,33 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '--ignore-no-formats-error',
             ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     } catch (error) {
-        console.error('COOKIE REQUIRED: ' + error);
-        video = JSON.parse(await ytDlpWrap.execPromise([
-            '-i',
-            '-q',
-            '--no-warnings',
-            '-s',
-            '--no-cache-dir',
-            '--print', `{
-                "_type": "video",
-                "title": "%(title|json)s",
-                "thumbnail": "%(thumbnail|json)s",
-                "timestamp": "%(timestamp)s",
-                "uploader": "%(uploader|json)s",
-                "id": ${JSON.stringify(videoId)},
-                "uploader_id": "%(uploader_id|json)s",
-                "uploader_url": "%(uploader_url|json)s",
-                "duration": "%(duration)d",
-                "language": "%(language|json)s",
-                "original_url": ${JSON.stringify(command)}
-            }`,
-            command,
-            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
-        ]));
+        console.error('COOKIE RECOMMENDED: ' + error);
+        try {
+            video = JSON.parse(await ytDlpWrap.execPromise([
+                '-i',
+                '-q',
+                '--no-warnings',
+                '-s',
+                '--no-cache-dir',
+                '--print', `{
+                    "_type": "video",
+                    "title": "%(title|json)s",
+                    "thumbnail": "%(thumbnail|json)s",
+                    // "timestamp": "%(timestamp)s",
+                    "uploader": "%(uploader|json)s",
+                    "id": ${JSON.stringify(videoId)},
+                    "uploader_id": "%(uploader_id|json)s",
+                    "uploader_url": "%(uploader_url|json)s",
+                    // "duration": "%(duration)d",
+                    // "language": "%(language|json)s",
+                    "original_url": ${JSON.stringify(command)}
+                }`,
+                command,
+                ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
+            ]));
+        } catch (error) {
+            console.error('COOKIE REQUIRED: ' + error);
+        }
     }
     const channel = video._type === 'playlist';
     const title = video.title ?? 'Unknown Title';
