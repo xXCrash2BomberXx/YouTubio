@@ -48,8 +48,8 @@ function decrypt(encryptedData) {
 }
 
 let counter = 0;
-async function runYtDlpWithAuth(config, argsArray) {
-    const auth = decryptConfig(config).encrypted?.auth;
+async function runYtDlpWithAuth(encryptedConfig, argsArray) {
+    const auth = decryptConfig(encryptedConfig).encrypted?.auth;
     // Implement better auth system
     const cookies = auth;
     const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
@@ -218,6 +218,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
+    const userConfig = decryptConfig(req.params.config, false);
     const videoId = req.params.id?.slice(prefix.length);
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -227,7 +228,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     let video = await runYtDlpWithAuth(req.params.config, [
             command,
             '--ignore-no-formats-error',
-            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     const channel = video._type === 'playlist';
     const title = video.title ?? 'Unknown Title';
     const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
@@ -268,7 +269,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...(video.formats ?? []).filter(src => req.params.config.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                        ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
