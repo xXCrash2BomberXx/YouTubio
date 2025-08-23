@@ -222,15 +222,37 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
+    const comamnd = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
 
     let video;
 
     try {
         video = await runYtDlpWithAuth(req.params.config, [
-            `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`,
+            comamnd,
             ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     } catch (error) {
         console.error('COOKIE REQUIRED :' + error);
+        video = JSON.parse(await ytDlpWrap.execPromise([
+            '-i',
+            '-q',
+            '--no-warnings',
+            '-s',
+            '--no-cache-dir',
+            '--print', JSON.stringify({
+                _type: 'video',
+                title: '%(title)s',
+                thumbnail: '%(thumbnail)s',
+                timestamp: '%(timestamp)s',
+                uploader: '%(uploader)s',
+                description: '%(description)s',
+                id: videoId,
+                uploader_id: '%(uploader_id)s',
+                uploader_url: '%(uploader_url)s',
+                original_url: comamnd
+            }),
+            comamnd,
+            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ]));
     }
     const channel = video._type === 'playlist';
     const title = video.title ?? 'Unknown Title';
