@@ -10,7 +10,7 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 - **Powerful Search** – Search for YouTube videos and channels directly within Stremio.  
 - **Customizable Catalogs** – Use default catalogs or add your own custom playlists.  
 - **Secure Configuration** – User data (including cookies) is **encrypted** for security.  
-- **Easy Deployment** – Quickly deploy the addon using Docker.  
+- **Easy Deployment** – Deploy with **Docker** or **Node.js**.  
 
 ---
 
@@ -24,15 +24,34 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 
 ## 🚀 Deployment
 
-You can deploy using **Docker**.
+You can deploy using **Docker** or **Node.js**.
 
-### ✅ Prerequisites
-- **Docker** installed on your system.  
+---
 
-### ⚡ Steps
+### 🐳 Docker Deployment
+
+#### ✅ Prerequisites
+- **Docker** installed on your system  
+
+#### ⚡ Steps
 ```bash
 # Build the Docker image
 docker build -t youtubio .
+```
 
-# Run the container
-docker run -p 7000:7000 youtubio
+### 🟢 Node.js Deployment
+
+#### ✅ Prerequisites
+- **Node.js** installed (v16+ recommended)
+- **npm** package manager
+
+#### ⚡ Steps
+```bash
+# Install dependencies
+npm install
+
+# Start the addon
+node addon.js
+```
+
+By default, the addon will be available at: `http://localhost:7000`
