@@ -214,7 +214,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     releaseInfo: video.upload_date?.substring(0, 4)
                 } : null;
             }).filter(meta => meta !== null) });
-    catch (error) {
+    } catch (error) {
         console.error('Error in Catalog handler: ' + error);
         return res.json({metas: []});
     }
