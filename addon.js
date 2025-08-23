@@ -67,9 +67,6 @@ async function runYtDlpWithAuth(config, argsArray) {
             '-J',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
-    } catch (error) {
-        console.error('Error running YT-DLP: ' + error);
-        return {};
     } finally {
         try {
             if (filename) await fs.unlink(filename);
@@ -226,9 +223,15 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
 
-    const video = await runYtDlpWithAuth(req.params.config, [
-        `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`,
-        ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+    let video;
+
+    try {
+        video = await runYtDlpWithAuth(req.params.config, [
+            `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`,
+            ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+    } catch (error) {
+        console.error('COOKIE REQUIRED :' + error);
+    }
     const channel = video._type === 'playlist';
     const title = video.title ?? 'Unknown Title';
     const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
