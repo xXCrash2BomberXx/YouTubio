@@ -253,7 +253,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 "language": "%(language|json)s",
                 "original_url": ${command}
             }`,
-            comamnd,
+            command,
             ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
     }
