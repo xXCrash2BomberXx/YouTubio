@@ -222,13 +222,14 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
-    const comamnd = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
+    const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
 
     let video;
 
     try {
         video = await runYtDlpWithAuth(req.params.config, [
-            comamnd,
+            command,
+            '--ignore-no-formats-error',
             ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])]);
     } catch (error) {
         console.error('COOKIE REQUIRED :' + error);
@@ -238,18 +239,20 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '--no-warnings',
             '-s',
             '--no-cache-dir',
-            '--print', JSON.stringify({
-                _type: 'video',
-                title: '%(title)s',
-                thumbnail: '%(thumbnail)s',
-                timestamp: '%(timestamp)s',
-                uploader: '%(uploader)s',
-                description: '%(description)s',
-                id: videoId,
-                uploader_id: '%(uploader_id)s',
-                uploader_url: '%(uploader_url)s',
-                original_url: comamnd
-            }),
+            '--print', `{
+                "_type": 'video',
+                "title": "%(title|json)s",
+                "thumbnail": "%(thumbnail|json)s",
+                "timestamp": "%(timestamp)s",
+                "uploader": "%(uploader|json)s",
+                "description": "%(description|json)s",
+                "id": ${JSON.stringify(videoId)},
+                "uploader_id": "%(uploader_id|json)s",
+                "uploader_url": "%(uploader_url|json)s",
+                "duration": "%(duration)d",
+                "language": "%(language|json)s",
+                "original_url": ${command}
+            }`,
             comamnd,
             ...(req.params.config.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]));
@@ -294,7 +297,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...video.formats.filter(src => !src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none').toReversed().map(src => ({
+                        ...(video.formats ?? []).filter(src => !src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none').toReversed().map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
