@@ -81,7 +81,7 @@ app.post('/encrypt', (req, res) => {
     try {
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
-        console.error('Encryption error:', error);
+        if (process.env.DEV_LOGGING) console.error('Encryption error:', error);
         res.status(500).send('Encryption failed');
     }
 });
@@ -195,7 +195,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             }).filter(meta => meta !== null)
         });
     } catch (error) {
-        console.error('Error in Catalog handler: ' + error);
+        if (process.env.DEV_LOGGING) console.error('Error in Catalog handler: ' + error);
         return res.json({ metas: [] });
     }
 });
@@ -575,7 +575,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
-    console.error('Express error:', err);
+    if (process.env.DEV_LOGGING) console.error('Express error:', err);
     res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
@@ -584,11 +584,7 @@ app.listen(PORT, () => {
     console.log(`Addon server running on port ${PORT}`);
     if (!process.env.ENCRYPTION_KEY) {
         console.warn('WARNING: Using random encryption key. Set ENCRYPTION_KEY environment variable for production.');
-        console.log('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
+        console.warn('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
     }
-    if (process.env.SPACE_HOST) {
-        console.log(`Access the configuration page at: https://${process.env.SPACE_HOST}`);
-    } else {
-        console.log(`Access the configuration page at: http://localhost:${PORT}`);
-    }
+    console.log(`Access the configuration page at: https://${process.env.SPACE_HOST ?? ('localhost:' + PORT)}`);
 });
