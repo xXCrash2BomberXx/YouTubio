@@ -119,18 +119,9 @@ app.get('/:config/manifest.json', (req, res) => {
             ]).concat([
                 // Add search unless explicitly disabled
                 ...(userConfig.search === false ? [] : [
-                    { type: 'mixed', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [
-                        { name: 'search', isRequired: true },
-                        { name: 'skip', isRequired: false }
-                    ] },
-                    { type: 'movie', id: `${prefix}:ytsearch:video`, name: 'YouTube', extra: [
-                        { name: 'search', isRequired: true },
-                        { name: 'skip', isRequired: false }
-                    ] },
-                    { type: 'channel', id: `${prefix}:ytsearch:channel`, name: 'YouTube', extra: [
-                        { name: 'search', isRequired: true },
-                        { name: 'skip', isRequired: false }
-                    ] }
+                    { type: 'mixed', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'movie', id: `${prefix}:ytsearch:video`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'channel', id: `${prefix}:ytsearch:channel`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
                 ])
             ]),
             behaviorHints: {
@@ -201,10 +192,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     description: video.description,
                     releaseInfo: video.upload_date?.substring(0, 4)
                 } : null;
-            }).filter(meta => meta !== null) });
+            }).filter(meta => meta !== null)
+        });
     } catch (error) {
         console.error('Error in Catalog handler: ' + error);
-        return res.json({metas: []});
+        return res.json({ metas: [] });
     }
 });
 
@@ -219,15 +211,16 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
-                command,
-                '--ignore-no-formats-error',
-                ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+            command,
+            '--ignore-no-formats-error',
+            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ]);
         const channel = video._type === 'playlist';
         const title = video.title ?? 'Unknown Title';
         const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
         const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
         const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
             return srt ? {
                 id: srt.name,
                 url: srt.url,
@@ -235,7 +228,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             } : null;
         }).concat(
             Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                const srt = v.find(x => x.ext == 'srt') ?? v[0];
+                const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
                 return srt ? {
                     id: `Auto ${srt.name}`,
                     url: srt.url,
@@ -243,67 +236,65 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
-        return res.json({
-            meta: video.id ? {
+        return res.json({ meta: {
+            id: req.params.id,
+            type: req.params.type,
+            name: title,
+            genres: video.tags,
+            poster: thumbnail,
+            posterShape: channel ? 'square' : 'landscape',
+            background: thumbnail,
+            description: video.description,
+            releaseInfo: video.upload_date?.substring(0, 4),
+            released: released,
+            videos: [{
                 id: req.params.id,
-                type: req.params.type,
-                name: title,
-                genres: video.tags,
-                poster: thumbnail,
-                posterShape: channel ? 'square' : 'landscape',
-                background: thumbnail,
-                description: video.description,
-                releaseInfo: video.upload_date?.substring(0, 4),
+                title: title,
                 released: released,
-                videos: [{
-                    id: req.params.id,
-                    title: title,
-                    released: released,
-                    thumbnail: thumbnail,
-                    streams: [
-                        ...(!channel ? [
-                            ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
-                                name: `YT-DLP Player ${src.resolution}`,
-                                url: src.url,
-                                description: src.format,
-                                subtitles: subtitles,
-                                behaviorHints: {
-                                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                    videoSize: src.filesize_approx,
-                                    filename: video.filename
-                                }
-                            })), {
-                                name: 'Stremio Player',
-                                ytId: videoId,
-                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                            }, {
-                                name: 'YouTube Player',
-                                externalUrl: video.original_url,
-                                description: 'Click to watch in the official YouTube Player'
+                thumbnail: thumbnail,
+                streams: [
+                    ...(!channel ? [
+                        ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                            name: `YT-DLP Player ${src.resolution}`,
+                            url: src.url,
+                            description: src.format,
+                            subtitles: subtitles,
+                            behaviorHints: {
+                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                videoSize: src.filesize_approx,
+                                filename: video.filename
                             }
-                        ] : []), {
-                            name: 'YT-DLP Channel',
-                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
-                            description: 'Click to open the channel as a Catalog'
+                        })), {
+                            name: 'Stremio Player',
+                            ytId: videoId,
+                            description: 'Click to watch using Stremio\'s built-in YouTube Player'
                         }, {
-                            name: 'YouTube Channel',
-                            externalUrl: video.uploader_url,
-                            description: 'Click to open the channel in the official YouTube Player'
+                            name: 'YouTube Player',
+                            externalUrl: video.original_url,
+                            description: 'Click to watch in the official YouTube Player'
                         }
-                    ],
-                    overview: video.description
-                }],
-                runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
-                language: video.language,
-                website: video.original_url,
-                behaviorHints: {
-                    defaultVideoId: req.params.id
-                }
-            } : {}
-        });
+                    ] : []), {
+                        name: 'YT-DLP Channel',
+                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                        description: 'Click to open the channel as a Catalog'
+                    }, {
+                        name: 'YouTube Channel',
+                        externalUrl: video.uploader_url,
+                        description: 'Click to open the channel in the official YouTube Player'
+                    }
+                ],
+                overview: video.description
+            }],
+            runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
+            language: video.language,
+            website: video.original_url,
+            behaviorHints: {
+                defaultVideoId: req.params.id
+            }
+        } });
     } catch (error) {
         console.log('Error in Meta handler: ' + error);
-        return res.json({meta: {}});
+        return res.json({ meta: {} });
     }
 });
 
