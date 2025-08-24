@@ -30,9 +30,7 @@ function encrypt(text) {
 
 function decrypt(encryptedData) {
     const parts = encryptedData.split(':');
-    if (parts.length !== 4) {
-        throw new Error('Invalid encrypted data format');
-    }
+    if (parts.length !== 4) throw new Error('Invalid encrypted data format');
     const salt = Buffer.from(parts[0], 'hex');
     const iv = Buffer.from(parts[1], 'hex');
     const authTag = Buffer.from(parts[2], 'hex');
@@ -90,114 +88,104 @@ app.post('/encrypt', (req, res) => {
 
 // Config Decryption
 function decryptConfig(configParam, enableDecryption = true) {
-    if (!configParam) return {};
-    try {
-        const config = JSON.parse(configParam);
-        if (enableDecryption && config.encrypted) {
-            try {
-                const decrypted = decrypt(config.encrypted);
-                try {
-                    config.encrypted = JSON.parse(decrypted);
-                } catch (error) {
-                    console.error('Failed to parse decryption: ' + error.message);
-                }
-            } catch (error) {
-                console.error('Failed to decrypt config: ' + error.message);
-            }
-        }
-        return config;
-    } catch (error) {
-        console.error('Failed to parse config: ' + error.message);
-        return {};
+    const config = JSON.parse(configParam);
+    if (enableDecryption && config.encrypted) {
+        config.encrypted = JSON.parse(decrypt(config.encrypted));
     }
+    return config;
 }
 
 // Stremio Addon Manifest Route
 app.get('/:config/manifest.json', (req, res) => {
-    const userConfig = decryptConfig(req.params.config, false);
+    try {
+        const userConfig = decryptConfig(req.params.config, false);
 
-    res.json({
-        id: 'youtubio.elfhosted.com',
-        version: '0.1.1',
-        name: 'YouTubio | ElfHosted',
-        description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
-        resources: ['catalog', 'stream', 'meta'],
-        types: ['mixed', 'movie', 'channel'],
-        idPrefixes: [prefix],
-        catalogs: (userConfig.catalogs?.map(c => {
-            c.extra = [ { name: 'skip', isRequired: false } ];
-            return c;
-        }) ?? [
-            { type: 'movie', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
-            { type: 'movie', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
-        ]).concat([
-            // Add search unless explicitly disabled
-            ...(userConfig.search === false ? [] : [
-                { type: 'mixed', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [
-                    { name: 'search', isRequired: true },
-                    { name: 'skip', isRequired: false }
-                ] },
-                { type: 'movie', id: `${prefix}:ytsearch:video`, name: 'YouTube', extra: [
-                    { name: 'search', isRequired: true },
-                    { name: 'skip', isRequired: false }
-                ] },
-                { type: 'channel', id: `${prefix}:ytsearch:channel`, name: 'YouTube', extra: [
-                    { name: 'search', isRequired: true },
-                    { name: 'skip', isRequired: false }
-                ] }
-            ])
-        ]),
-        behaviorHints: {
-            configurable: true
-        },
-        "stremioAddonsConfig": {
-            "issuer": "https://stremio-addons.net",
-            "signature": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..tLliZZqbqp8DSpNFCa_o7g.1Zu-sGRA8Xmc-qG9d_ctvcvrbtBFdVH8Kqmj9RL-ONB5C5iiy5qITOH3Z1nrTfQuiIhwJyQuU0npD0S8lYtv5InjpulZHYQDdBJpPnTvn1jqwM4AgDPCpm05lNLYW3Kp.IpryYoO1JqXwFBmkHrD3OA"
-        }
-    });
+        return res.json({
+            id: 'youtubio.elfhosted.com',
+            version: '0.1.1',
+            name: 'YouTubio | ElfHosted',
+            description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
+            resources: ['catalog', 'stream', 'meta'],
+            types: ['mixed', 'movie', 'channel'],
+            idPrefixes: [prefix],
+            catalogs: (userConfig.catalogs?.map(c => {
+                c.extra = [ { name: 'skip', isRequired: false } ];
+                return c;
+            }) ?? [
+                { type: 'movie', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'movie', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'movie', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'movie', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
+            ]).concat([
+                // Add search unless explicitly disabled
+                ...(userConfig.search === false ? [] : [
+                    { type: 'mixed', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [
+                        { name: 'search', isRequired: true },
+                        { name: 'skip', isRequired: false }
+                    ] },
+                    { type: 'movie', id: `${prefix}:ytsearch:video`, name: 'YouTube', extra: [
+                        { name: 'search', isRequired: true },
+                        { name: 'skip', isRequired: false }
+                    ] },
+                    { type: 'channel', id: `${prefix}:ytsearch:channel`, name: 'YouTube', extra: [
+                        { name: 'search', isRequired: true },
+                        { name: 'skip', isRequired: false }
+                    ] }
+                ])
+            ]),
+            behaviorHints: {
+                configurable: true
+            },
+            "stremioAddonsConfig": {
+                "issuer": "https://stremio-addons.net",
+                "signature": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..tLliZZqbqp8DSpNFCa_o7g.1Zu-sGRA8Xmc-qG9d_ctvcvrbtBFdVH8Kqmj9RL-ONB5C5iiy5qITOH3Z1nrTfQuiIhwJyQuU0npD0S8lYtv5InjpulZHYQDdBJpPnTvn1jqwM4AgDPCpm05lNLYW3Kp.IpryYoO1JqXwFBmkHrD3OA"
+            }
+        });
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Error in Manifest handler: ' + error);
+        return res.json({});
+    }
 });
 
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
-    if (!req.params.id?.startsWith(prefix)) return res.json({ metas: [] });
-    const videoId = req.params.id?.slice(prefix.length);
-    const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
-    const skip = parseInt(query?.skip ?? 0);
-
-    let command;
-    // YT-DLP Search
-    if (videoId.startsWith(':ytsearch')) {
-        if (!query?.search) return res.json({ metas: [] });
-        const videoId2 = videoId.slice(':ytsearch'.length);
-        // Video Search
-        if ([':video'].includes(videoId2))
-            command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-        // Channel Search
-        else if ([':channel'].includes(videoId2))
-            command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-        // Mixed Search
-        else
-            command = `ytsearch100:${query.search}`;
-    // YT-DLP Playlists
-    } else if (videoId.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId)) {
-        command = videoId;
-    // Channels
-    } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
-        command = `https://www.youtube.com/${command[0]}/videos`;
-    // Playlists
-    } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
-        command = `https://www.youtube.com/playlist?list=${command[0]}`;
-    // Saved Channel Search
-    } else if (req.params.type === 'channel') {
-        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
-    // Saved YT-DLP Search
-    } else {
-        command = `ytsearch100:${videoId}`;
-    }
-
     try {
+        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
+        const videoId = req.params.id?.slice(prefix.length);
+        const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
+        const skip = parseInt(query?.skip ?? 0);
+
+        let command;
+        // YT-DLP Search
+        if (videoId.startsWith(':ytsearch')) {
+            if (!query?.search) throw new Error("Missing query parameter");
+            const videoId2 = videoId.slice(':ytsearch'.length);
+            // Video Search
+            if ([':video'].includes(videoId2))
+                command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+            // Channel Search
+            else if ([':channel'].includes(videoId2))
+                command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+            // Mixed Search
+            else
+                command = `ytsearch100:${query.search}`;
+        // YT-DLP Playlists
+        } else if (videoId.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId)) {
+            command = videoId;
+        // Channels
+        } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
+            command = `https://www.youtube.com/${command[0]}/videos`;
+        // Playlists
+        } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
+            command = `https://www.youtube.com/playlist?list=${command[0]}`;
+        // Saved Channel Search
+        } else if (req.params.type === 'channel') {
+            command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+        // Saved YT-DLP Search
+        } else {
+            command = `ytsearch100:${videoId}`;
+        }
+
         return res.json({ metas: 
             ((await runYtDlpWithAuth(req.params.config, [
                 command,
@@ -222,110 +210,114 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
-    if (!req.params.id?.startsWith(prefix)) return res.json({ meta: {} });
-    const userConfig = decryptConfig(req.params.config, false);
-    const videoId = req.params.id?.slice(prefix.length);
-    const host = req.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
-    const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
-
-    let video;
     try {
-        video = await runYtDlpWithAuth(req.params.config, [
-            command,
-            '--ignore-no-formats-error',
-            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
+        const userConfig = decryptConfig(req.params.config, false);
+        const videoId = req.params.id?.slice(prefix.length);
+        const host = req.get('host');
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
+        const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
+        const video = await runYtDlpWithAuth(req.params.config, [
+                command,
+                '--ignore-no-formats-error',
+                ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])]);
+        const channel = video._type === 'playlist';
+        const title = video.title ?? 'Unknown Title';
+        const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
+        const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
+        const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: srt.name,
+                url: srt.url,
+                lang: k
+            } : null;
+        }).concat(
+            Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+                const srt = v.find(x => x.ext == 'srt') ?? v[0];
+                return srt ? {
+                    id: `Auto ${srt.name}`,
+                    url: srt.url,
+                    lang: k
+                } : null;
+            })
+        ).filter(srt => srt !== null);
+        return res.json({
+            meta: video.id ? {
+                id: req.params.id,
+                type: req.params.type,
+                name: title,
+                genres: video.tags,
+                poster: thumbnail,
+                posterShape: channel ? 'square' : 'landscape',
+                background: thumbnail,
+                description: video.description,
+                releaseInfo: video.upload_date?.substring(0, 4),
+                released: released,
+                videos: [{
+                    id: req.params.id,
+                    title: title,
+                    released: released,
+                    thumbnail: thumbnail,
+                    streams: [
+                        ...(!channel ? [
+                            ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                                name: `YT-DLP Player ${src.resolution}`,
+                                url: src.url,
+                                description: src.format,
+                                subtitles: subtitles,
+                                behaviorHints: {
+                                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                    videoSize: src.filesize_approx,
+                                    filename: video.filename
+                                }
+                            })), {
+                                name: 'Stremio Player',
+                                ytId: videoId,
+                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                            }, {
+                                name: 'YouTube Player',
+                                externalUrl: video.original_url,
+                                description: 'Click to watch in the official YouTube Player'
+                            }
+                        ] : []), {
+                            name: 'YT-DLP Channel',
+                            externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                            description: 'Click to open the channel as a Catalog'
+                        }, {
+                            name: 'YouTube Channel',
+                            externalUrl: video.uploader_url,
+                            description: 'Click to open the channel in the official YouTube Player'
+                        }
+                    ],
+                    overview: video.description
+                }],
+                runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
+                language: video.language,
+                website: video.original_url,
+                behaviorHints: {
+                    defaultVideoId: req.params.id
+                }
+            } : {}
+        });
     } catch (error) {
         console.log('Error in Meta handler: ' + error);
         return res.json({meta: {}});
     }
-    const channel = video._type === 'playlist';
-    const title = video.title ?? 'Unknown Title';
-    const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
-    const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
-    const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-        const srt = v.find(x => x.ext == 'srt') ?? v[0];
-        return srt ? {
-            id: srt.name,
-            url: srt.url,
-            lang: k
-        } : null;
-    }).concat(
-        Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-            const srt = v.find(x => x.ext == 'srt') ?? v[0];
-            return srt ? {
-                id: `Auto ${srt.name}`,
-                url: srt.url,
-                lang: k
-            } : null;
-        })
-    ).filter(srt => srt !== null);
-    return res.json({
-        meta: video.id ? {
-            id: req.params.id,
-            type: req.params.type,
-            name: title,
-            genres: video.tags,
-            poster: thumbnail,
-            posterShape: channel ? 'square' : 'landscape',
-            background: thumbnail,
-            description: video.description,
-            releaseInfo: video.upload_date?.substring(0, 4),
-            released: released,
-            videos: [{
-                id: req.params.id,
-                title: title,
-                released: released,
-                thumbnail: thumbnail,
-                streams: [
-                    ...(!channel ? [
-                        ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
-                            name: `YT-DLP Player ${src.resolution}`,
-                            url: src.url,
-                            description: src.format,
-                            subtitles: subtitles,
-                            behaviorHints: {
-                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                videoSize: src.filesize_approx,
-                                filename: video.filename
-                            }
-                        })), {
-                            name: 'Stremio Player',
-                            ytId: videoId,
-                            description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                        }, {
-                            name: 'YouTube Player',
-                            externalUrl: video.original_url,
-                            description: 'Click to watch in the official YouTube Player'
-                        }
-                    ] : []), {
-                        name: 'YT-DLP Channel',
-                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
-                        description: 'Click to open the channel as a Catalog'
-                    }, {
-                        name: 'YouTube Channel',
-                        externalUrl: video.uploader_url,
-                        description: 'Click to open the channel in the official YouTube Player'
-                    }
-                ],
-                overview: video.description
-            }],
-            runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
-            language: video.language,
-            website: video.original_url,
-            behaviorHints: {
-                defaultVideoId: req.params.id
-            }
-        } : {}
-    });
 });
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const userConfig = decryptConfig(req.params.config, false);
+    let userConfig;
+    try {
+        userConfig = decryptConfig(req.params.config, false);
+    } catch (error) {
+        console.log('Error in Config handler: ' + error);
+        userConfig = {};
+    }
     res.send(`
         <!DOCTYPE html>
         <html>
