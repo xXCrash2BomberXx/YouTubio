@@ -212,6 +212,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
+            '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
             '--ignore-no-formats-error',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]);
