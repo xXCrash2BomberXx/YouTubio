@@ -293,7 +293,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             }
         } });
     } catch (error) {
-        console.log('Error in Meta handler: ' + error);
+        if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
         return res.json({ meta: {} });
     }
 });
@@ -306,7 +306,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
     try {
         userConfig = decryptConfig(req.params.config, false);
     } catch (error) {
-        console.log('Error in Config handler: ' + error);
+        if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
         userConfig = {};
     }
     res.send(`
@@ -584,7 +584,7 @@ app.listen(PORT, () => {
     console.log(`Addon server running on port ${PORT}`);
     if (!process.env.ENCRYPTION_KEY) {
         console.warn('WARNING: Using random encryption key. Set ENCRYPTION_KEY environment variable for production.');
-        console.warn('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
+        if (process.env.DEV_LOGGING) console.warn('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
     }
     console.log(`Access the configuration page at: https://${process.env.SPACE_HOST ?? ('localhost:' + PORT)}`);
 });
