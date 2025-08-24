@@ -178,10 +178,10 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         }
 
         return res.json({ metas: 
-            ((await runYtDlpWithAuth(req.params.config, [
+            (await runYtDlpWithAuth(req.params.config, [
                 command,
                 '-I', `${skip + 1}:${skip + 100}:1`,
-            ])).entries ?? []).map(video => {
+            ])).entries.map(video => {
                 const channel = video.ie_key === 'YoutubeTab';
                 return (channel ? video.uploader_id : video.id) ? {
                     id: prefix + (channel ? video.uploader_id : video.id),
