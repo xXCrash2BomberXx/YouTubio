@@ -640,16 +640,16 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             cookies.value = await encryptResponse.text();
                             cookies.disabled = true;
                         }
-                        const configString = encodeURIComponent(JSON.stringify({
+                        const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
                             encrypted: cookies.value,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
                             )
-                        }));
-                        installUrlInput.value = \`${req.protocol}://${req.get('host')}/\${configString}/manifest.json\`;
-                        installStremio.href = \`stremio://addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        }))}/manifest.json\`;
+                        installStremio.href = 'stremio' + configString;
+                        installUrlInput.value = req.protocol + configString;
                         installWeb.href = \`\${protocolType.value !== 'stremio://' ? protocolType.value : 'https://web.stremio.com/#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
