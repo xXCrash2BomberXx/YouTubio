@@ -206,9 +206,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
-        const host = req.get('host');
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${encodeURIComponent(req.params.config)}/manifest.json`);
+        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
@@ -305,9 +303,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
-        const host = req.get('host');
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${encodeURIComponent(req.params.config)}/manifest.json`);
+        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
@@ -372,8 +368,6 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
-    const host = req.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
     let userConfig;
     try {
         userConfig = decryptConfig(req.params.config, false);
@@ -639,8 +633,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value]))}));
-                        installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
-                        installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
+                        installStremio.href = \`stremio://${req.get('host')}/\${configString}/manifest.json\`;
+                        installUrlInput.value = \`${req.protocol}://${req.get('host')}/\${configString}/manifest.json\`;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
