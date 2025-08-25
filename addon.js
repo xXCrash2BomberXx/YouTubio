@@ -208,7 +208,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const videoId = req.params.id?.slice(prefix.length);
         const host = req.get('host');
         const protocol = host.includes('localhost') ? 'http' : 'https';
-        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
+        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${encodeURIComponent(req.params.config)}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
@@ -307,7 +307,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         const videoId = req.params.id?.slice(prefix.length);
         const host = req.get('host');
         const protocol = host.includes('localhost') ? 'http' : 'https';
-        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
+        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${encodeURIComponent(req.params.config)}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
