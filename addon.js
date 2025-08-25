@@ -660,4 +660,3 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: https://${process.env.SPACE_HOST ?? ('localhost:' + PORT)}`);
 });
-    
