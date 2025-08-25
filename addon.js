@@ -299,6 +299,77 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     }
 });
 
+// Stremio Addon Stream Route
+app.get('/:config/stream/:type/:id.json', async (req, res) => {
+    try {
+        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
+        const userConfig = decryptConfig(req.params.config, false);
+        const videoId = req.params.id?.slice(prefix.length);
+        const host = req.get('host');
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const manifestUrl = encodeURIComponent(`${protocol}://${host}/${req.params.config}/manifest.json`);
+        const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
+        const video = await runYtDlpWithAuth(req.params.config, [
+            command,
+            '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
+            '--ignore-no-formats-error',
+            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ]);
+        const channel = video._type === 'playlist';
+        const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+            const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: srt.name,
+                url: srt.url,
+                lang: k
+            } : null;
+        }).concat(
+            Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+                const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
+                return srt ? {
+                    id: `Auto ${srt.name}`,
+                    url: srt.url,
+                    lang: k
+                } : null;
+            })
+        ).filter(srt => srt !== null);
+        return res.json({ streams: [
+            ...(!channel ? [
+                ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                    name: `YT-DLP Player ${src.resolution}`,
+                    url: src.url,
+                    description: src.format,
+                    subtitles: subtitles,
+                    behaviorHints: {
+                        ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                        videoSize: src.filesize_approx,
+                        filename: video.filename
+                    }
+                })), {
+                    name: 'Stremio Player',
+                    ytId: videoId,
+                    description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                }, {
+                    name: 'YouTube Player',
+                    externalUrl: video.original_url,
+                    description: 'Click to watch in the official YouTube Player'
+                }
+            ] : []), {
+                name: 'YT-DLP Channel',
+                externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                description: 'Click to open the channel as a Catalog'
+            }, {
+                name: 'YouTube Channel',
+                externalUrl: video.uploader_url,
+                description: 'Click to open the channel in the official YouTube Player'
+            }
+        ] });
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Error in Stream handler: ' + error);
+        return res.json({ streams: [] });
+    }
+});
+
 // Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
     const host = req.get('host');
@@ -589,3 +660,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: https://${process.env.SPACE_HOST ?? ('localhost:' + PORT)}`);
 });
+    
