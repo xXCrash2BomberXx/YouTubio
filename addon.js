@@ -478,9 +478,9 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                 <tr>
                                     <td>
                                         <select id="protocolType" name="protocolType">
-                                            <option value="stremio://">App Protocol (stremio://)</option>
-                                            <option value="web.stremio.com/#">Web Protocol (web.stremio.com/#)</option>
-                                            <option value="web.strem.io/#">Web Protocol (web.strem.io/#)</option>
+                                            <option value="stremio://" selected>App Protocol</option>
+                                            <option value="https://web.stremio.com/#">Web Protocol (stremio.com)</option>
+                                            <option value="https://web.strem.io/#">Web Protocol (strem.io)</option>
                                         </select>
                                     </td>
                                     <td><label for="protocolType">Redirect Protocol</label></td>
