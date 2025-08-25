@@ -649,7 +649,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             )
                         }))}/manifest.json\`;
                         installStremio.href = 'stremio' + configString;
-                        installUrlInput.value = req.protocol + configString;
+                        installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
                         installWeb.href = \`\${protocolType.value !== 'stremio://' ? protocolType.value : 'https://web.stremio.com/#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
