@@ -276,7 +276,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }
                     ] : []), {
                         name: 'YT-DLP Channel',
-                        externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                        externalUrl: `${userConfig.protocolType ?? 'stremio://'}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }, {
                         name: 'YouTube Channel',
@@ -356,7 +356,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
                 }
             ] : []), {
                 name: 'YT-DLP Channel',
-                externalUrl: `stremio:///discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                externalUrl: `${userConfig.protocolType ?? 'stremio://'}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                 description: 'Click to open the channel as a Catalog'
             }, {
                 name: 'YouTube Channel',
@@ -451,27 +451,43 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     </div>
                     <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
-                        <div class="toggle-container">
-                            <input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad">
-                            <label for="markWatchedOnLoad">Mark watched on load</label>
-                            <div class="setting-description">
-                                When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.
-                            </div>
-                        </div>
-                        <div class="toggle-container">
-                            <input type="checkbox" id="search" name="search" checked>
-                            <label for="search">Allow searching</label>
-                            <div class="setting-description">
-                                When enabled, Stremio's search feature will also return YouTube results.
-                            </div>
-                        </div>
-                        <div class="toggle-container">
-                            <input type="checkbox" id="showBrokenLinks" name="showBrokenLinks">
-                            <label for="showBrokenLinks">Show Broken Links</label>
-                            <div class="setting-description">
-                                When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on vidoes without it enabled.
-                            </div>
-                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Value</th>
+                                    <th>Setting</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad"></td>
+                                    <td><label for="markWatchedOnLoad">Mark watched on load</label></td>
+                                    <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="search" name="search" checked></td>
+                                    <td><label for="search">Allow searching</label></td>
+                                    <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks"></td>
+                                    <td><label for="showBrokenLinks">Show Broken Links</label></td>
+                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on vidoes without it enabled.</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <select id="protocolType" name="protocolType">
+                                            <option value="stremio://">App Protocol (stremio://)</option>
+                                            <option value="web.stremio.com/#">Web Protocol (web.stremio.com/#)</option>
+                                            <option value="web.strem.io/#">Web Protocol (web.strem.io/#)</option>
+                                        </select>
+                                    </td>
+                                    <td><label for="protocolType">Redirect Protocol</label></td>
+                                    <td class="setting-description">Select the protocol you would like links to use for fluid navigation.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
                     <div id="error-message" class="error" style="display:none;"></div>
@@ -507,6 +523,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
+                document.getElementById('protocolType').value = ${JSON.stringify(userConfig.protocolType ?? 'stremio://')};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
@@ -620,7 +637,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             encrypted: cookies.value,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
-                                Array.from(addonSettings.querySelectorAll("input"))
+                                Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value]))}));
                         installStremio.href = \`stremio://${host}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${protocol}://${host}/\${configString}/manifest.json\`;
