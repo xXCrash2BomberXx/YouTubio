@@ -634,8 +634,8 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value]))}));
-                        installStremio.href = \`stremio://${req.get('host')}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${req.protocol}://${req.get('host')}/\${configString}/manifest.json\`;
+                        installStremio.href = \`stremio://addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         installWeb.href = \`\${protocolType.value !== 'stremio://' ? protocolType.value : 'https://web.stremio.com/#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
