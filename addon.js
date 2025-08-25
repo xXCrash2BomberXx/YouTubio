@@ -497,6 +497,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
             <script>
                 const cookies = document.getElementById('cookie-data');
                 const addonSettings = document.getElementById('addon-settings');
+                const protocolType = document.getElementById('protocolType');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
                 const installStremio = document.getElementById('install-stremio');
@@ -517,7 +518,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
-                document.getElementById('protocolType').value = ${JSON.stringify(userConfig.protocolType ?? 'stremio://')};
+                protocolType.value = ${JSON.stringify(userConfig.protocolType ?? 'stremio://')};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
@@ -635,7 +636,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value]))}));
                         installStremio.href = \`stremio://${req.get('host')}/\${configString}/manifest.json\`;
                         installUrlInput.value = \`${req.protocol}://${req.get('host')}/\${configString}/manifest.json\`;
-                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        installWeb.href = \`\${protocolType.value !== 'stremio://' ? protocolType.value : 'https://web.stremio.com/#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
