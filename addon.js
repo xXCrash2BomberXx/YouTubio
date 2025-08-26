@@ -570,7 +570,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         }))}/manifest.json\`;
                         installStremio.href = 'stremio' + configString;
                         installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
-                        installWeb.href = \`${(req.get('Referrer') ?? 'https://web.stremio.com/') + '#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        installWeb.href = \`${req.get('Referrer') ?? 'https://web.stremio.com/'}#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
