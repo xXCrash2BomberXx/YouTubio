@@ -218,6 +218,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
+        const ref = req.get('Referrer');
+        const protocol = ref ? ref + '#' : 'stremio://';
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
         const video = await runYtDlpWithAuth(req.params.config, [
@@ -247,7 +249,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
-        if (process.env.DEV_LOGGING) console.log(`Referrer: '${req.get('Referrer')}', Origin: '${req.get('Origin')}'`);
         return res.json({ meta: {
             id: req.params.id,
             type: req.params.type,
@@ -287,7 +288,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }
                     ] : []), {
                         name: 'YT-DLP Channel',
-                        externalUrl: `${userConfig.protocolType ?? 'stremio://'}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                        externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }, {
                         name: 'YouTube Channel',
@@ -307,75 +308,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
         return res.json({ meta: {} });
-    }
-});
-
-// Stremio Addon Stream Route
-app.get('/:config/stream/:type/:id.json', async (req, res) => {
-    try {
-        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
-        const userConfig = decryptConfig(req.params.config, false);
-        const videoId = req.params.id?.slice(prefix.length);
-        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
-        const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
-        const video = await runYtDlpWithAuth(req.params.config, [
-            command,
-            '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
-            '--ignore-no-formats-error',
-            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
-        ]);
-        const channel = video._type === 'playlist';
-        const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-            const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
-            return srt ? {
-                id: srt.name,
-                url: srt.url,
-                lang: k
-            } : null;
-        }).concat(
-            Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
-                return srt ? {
-                    id: `Auto ${srt.name}`,
-                    url: srt.url,
-                    lang: k
-                } : null;
-            })
-        ).filter(srt => srt !== null);
-        return res.json({ streams: [
-            ...(!channel ? [
-                ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
-                    name: `YT-DLP Player ${src.resolution}`,
-                    url: src.url,
-                    description: src.format,
-                    subtitles: subtitles,
-                    behaviorHints: {
-                        ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                        videoSize: src.filesize_approx,
-                        filename: video.filename
-                    }
-                })), {
-                    name: 'Stremio Player',
-                    ytId: videoId,
-                    description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                }, {
-                    name: 'YouTube Player',
-                    externalUrl: video.original_url,
-                    description: 'Click to watch in the official YouTube Player'
-                }
-            ] : []), {
-                name: 'YT-DLP Channel',
-                externalUrl: `${userConfig.protocolType ?? 'stremio://'}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
-                description: 'Click to open the channel as a Catalog'
-            }, {
-                name: 'YouTube Channel',
-                externalUrl: video.uploader_url,
-                description: 'Click to open the channel in the official YouTube Player'
-            }
-        ] });
-    } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Stream handler: ' + error);
-        return res.json({ streams: [] });
     }
 });
 
@@ -482,17 +414,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
                                     <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on vidoes without it enabled.</td>
                                 </tr>
-                                <tr>
-                                    <td>
-                                        <select id="protocolType" name="protocolType">
-                                            <option value="stremio://" selected>App Protocol</option>
-                                            <option value="https://web.stremio.com/#">Web Protocol (stremio.com)</option>
-                                            <option value="https://web.strem.io/#">Web Protocol (strem.io)</option>
-                                        </select>
-                                    </td>
-                                    <td><label for="protocolType">Redirect Protocol</label></td>
-                                    <td class="setting-description">Select the protocol you would like links to use for fluid navigation.</td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -510,7 +431,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
             <script>
                 const cookies = document.getElementById('cookie-data');
                 const addonSettings = document.getElementById('addon-settings');
-                const protocolType = document.getElementById('protocolType');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
                 const installStremio = document.getElementById('install-stremio');
@@ -531,7 +451,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
-                protocolType.value = ${JSON.stringify(userConfig.protocolType ?? 'stremio://')};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
@@ -651,7 +570,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         }))}/manifest.json\`;
                         installStremio.href = 'stremio' + configString;
                         installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
-                        installWeb.href = \`\${protocolType.value !== 'stremio://' ? protocolType.value : 'https://web.stremio.com/#'}/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        installWeb.href = \`\https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         document.getElementById('results').style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
