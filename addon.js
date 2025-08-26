@@ -247,6 +247,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
+        if (process.env.DEV_LOGGING) console.log(req.get('Referrer'));
         return res.json({ meta: {
             id: req.params.id,
             type: req.params.type,
