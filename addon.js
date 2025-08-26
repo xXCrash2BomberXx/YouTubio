@@ -111,10 +111,9 @@ function decryptConfig(configParam, enableDecryption = true) {
 app.get('/:config/manifest.json', (req, res) => {
     try {
         const userConfig = decryptConfig(req.params.config, false);
-
         return res.json({
             id: 'youtubio.elfhosted.com',
-            version: '0.1.6',
+            version: '0.1.7',
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
@@ -157,7 +156,6 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
-
         let command;
         // YT-DLP Search
         if (videoId.startsWith(':ytsearch')) {
@@ -188,23 +186,23 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         } else {
             command = `ytsearch100:${videoId}`;
         }
-
-        return res.json({ metas: 
-            (await runYtDlpWithAuth(req.params.config, [
-                command,
-                '-I', `${skip + 1}:${skip + 100}:1`,
-            ])).entries.map(video => {
-                const channel = video.ie_key === 'YoutubeTab';
-                return (channel ? video.uploader_id : video.id) ? {
-                    id: prefix + (channel ? video.uploader_id : video.id),
-                    type: channel ? 'channel' : 'movie',
-                    name: video.title ?? 'Unknown Title',
-                    poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
-                    posterShape: channel ? 'square' : 'landscape',
-                    description: video.description,
-                    releaseInfo: video.upload_date?.substring(0, 4)
-                } : null;
-            }).filter(meta => meta !== null)
+        return res.json({
+            metas: (await runYtDlpWithAuth(req.params.config, [
+                    command,
+                    '-I', `${skip + 1}:${skip + 100}:1`,
+                ])).entries.map(video => {
+                    const channel = video.ie_key === 'YoutubeTab';
+                    return (channel ? video.uploader_id : video.id) ? {
+                        id: prefix + (channel ? video.uploader_id : video.id),
+                        type: channel ? 'channel' : 'movie',
+                        name: video.title ?? 'Unknown Title',
+                        poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
+                        posterShape: channel ? 'square' : 'landscape',
+                        description: video.description,
+                        releaseInfo: video.upload_date?.substring(0, 4)
+                    } : null;
+                }).filter(meta => meta !== null),
+            behaviorHints: { cacheMaxAge: 0 }
         });
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Catalog handler: ' + error);
@@ -301,9 +299,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
             website: video.original_url,
-            behaviorHints: {
-                defaultVideoId: req.params.id
-            }
+            behaviorHints: { defaultVideoId: req.params.id }
         } });
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
