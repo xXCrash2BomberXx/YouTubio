@@ -229,7 +229,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const channel = video._type === 'playlist';
         const title = video.title ?? 'Unknown Title';
         const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
-        const released = video.timestamp ? new Date(video.timestamp * 1000).toISOString() : undefined;
+        const released = new Date((video.release_timestamp ?? 0) * 1000).toISOString();
         const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
             const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
             return srt ? {
@@ -256,7 +256,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             posterShape: channel ? 'square' : 'landscape',
             background: thumbnail,
             description: video.description,
-            releaseInfo: video.upload_date?.substring(0, 4),
+            releaseInfo: video.release_year,
             released: released,
             videos: [{
                 id: req.params.id,
