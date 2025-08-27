@@ -294,6 +294,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         description: 'Click to open the channel in the official YouTube Player'
                     }
                 ],
+                episode: 1,
+                season: 1,
                 overview: video.description
             }],
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
