@@ -307,6 +307,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     }
 });
 
+// Stremio Addon Stream Route
+app.get('/:config/stream/:type/:id.json', async (req, res) => {
+    return res.json({ streams: [] });
+});
+
 // Configuration Page
 app.get(['/', '/:config?/configure'], (req, res) => {
     let userConfig;
