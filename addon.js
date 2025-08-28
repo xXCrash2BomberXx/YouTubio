@@ -117,7 +117,7 @@ app.get('/:config/manifest.json', (req, res) => {
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
-            types: ['YouTube'],
+            types: ['movie'],
             idPrefixes: [prefix],
             catalogs: (userConfig.catalogs?.map(c => {
                 c.extra = [ { name: 'skip', isRequired: false } ];
