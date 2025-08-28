@@ -14,6 +14,20 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 
 ---
 
+## Quick Setup with Cookies
+### Install the addon [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/b60986e1-7484-412d-84af-f4d90973ab83" />
+<img width="506" height="282" alt="image" src="https://github.com/user-attachments/assets/10c73fba-e850-4a41-a25a-46afd6a71fea" /><br>
+
+### Go to [youtube.com](https://www.youtube.com) and sign in if you want personalized content<br>
+<img width="378" height="206" alt="image" src="https://github.com/user-attachments/assets/d70f0d12-e10d-46bd-b682-4d5e67d4aa72" /><br>
+<img width="558" height="432" alt="image" src="https://github.com/user-attachments/assets/82caac82-0acd-469a-8bae-36ca2207cd83" /><br>
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/0157804a-6732-4ae5-b85d-c4235c04ab95" /><br>
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/fb0a738a-9447-4de5-af34-18a3bb5bada1" /><br>
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/e2857a18-06cc-481a-8564-bcc9de5c353f" /><br>
+
+---
+
 ## 🛠 How to Use
 1. **Configuration** – Open the addon's config page at the root URL where it’s hosted.  
 2. **Cookies** – Add your YouTube cookies for personalized content (instructions are provided on the config page).  
