@@ -258,6 +258,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             poster: thumbnail,
             posterShape: channel ? 'square' : 'landscape',
             background: thumbnail,
+            logo: thumbnail,
             description: video.description,
             releaseInfo: video.release_year ?? video.upload_date?.substring(0, 4),
             released: released,
@@ -297,6 +298,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         description: 'Click to open the channel in the official YouTube Player'
                     }
                 ],
+                episode: 1,
+                season: 1,
                 overview: video.description
             }],
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
