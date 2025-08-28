@@ -113,7 +113,7 @@ app.get('/:config/manifest.json', (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         return res.json({
             id: 'youtubio.elfhosted.com',
-            version: '0.3.0',
+            version: '0.4.0',
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
