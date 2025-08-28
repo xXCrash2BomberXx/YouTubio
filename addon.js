@@ -288,7 +288,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             releaseInfo: video.release_year ?? video.upload_date?.substring(0, 4),
             released: released,
             videos: [{
-                id: req.params.id,
+                id: req.params.id + ':1:1',
                 title: title,
                 released: released,
                 thumbnail: thumbnail,
@@ -330,7 +330,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
             website: video.original_url,
-            behaviorHints: { defaultVideoId: req.params.id }
+            behaviorHints: { defaultVideoId: req.params.id + ':1:1' }
         } });
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
