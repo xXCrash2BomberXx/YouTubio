@@ -135,6 +135,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     { type: 'YouTube', id: `${prefix}:ytsearch:channel`, name: 'Channel', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
                 ])
             ]),
+            logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
             behaviorHints: {
                 configurable: true
             },
