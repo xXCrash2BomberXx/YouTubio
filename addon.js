@@ -388,16 +388,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
+                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
                 <form id="config-form">
                     <div class="settings-section">
                         <h3>Cookies</h3>
-                        <details class="instructions">
-                            <summary>How to get your cookies.txt file</summary>
-                            <ol>
-                                <li>Go to <a href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a> and follow the steps on the site for cookie exporting. (Make sure you are logged into your account if you want personalized content.)</li>
-                                <li>Paste the content into the text area above.</li>
-                            </ol>
-                        </details>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                         <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
                     </div>
