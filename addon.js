@@ -159,35 +159,59 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
         let command;
-        // YT-DLP Search
-        if (videoId.startsWith(':ytsearch')) {
-            if (!query?.search) throw new Error("Missing query parameter");
-            const videoId2 = videoId.slice(':ytsearch'.length);
-            // Video Search
-            if ([':video'].includes(videoId2)) {
-                command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-            // Channel Search
-            } else if ([':channel'].includes(videoId2)) {
-                command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-            // Mixed Search
-            } else {
-                command = `ytsearch100:${query.search}`;
-            }
-        // YT-DLP Playlists
-        } else if (videoId.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId)) {
-            command = videoId;
-        // Channels
-        } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
-            command = `https://www.youtube.com/${command[0]}/videos`;
-        // Playlists
-        } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
-            command = `https://www.youtube.com/playlist?list=${command[0]}`;
-        // Saved Channel Search
-        } else if (catalogConfig?.channelSearch) {
+        switch (catalogConfig?.channelType) {
+        case 'video':
+            // Saved Video Search
+            command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+            break;
+        case 'channel':
+            // Saved Channel Search
             command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
-        // Saved YT-DLP Search
-        } else {
-            command = `ytsearch100:${videoId}`;
+            break;
+        case 'auto':
+        default:
+            switch (videoId) {
+            // YT-DLP Search
+            case ':ytsearch':
+                if (!query?.search) throw new Error("Missing query parameter");
+                switch(videoId.slice(':ytsearch'.length)) {
+                // Video Search
+                case ':video':
+                    command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                    break;
+                // Channel Search
+                case ':channel':
+                    command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                    break;
+                // Mixed Search
+                default:
+                    command = `ytsearch100:${query.search}`;
+                    break;
+                }
+                break;
+            // YT-DLP Playlists
+            case ':ytfav':
+            case ':ytwatchlater':
+            case ':ytsubs':
+            case ':ythistory':
+            case ':ytrec':
+            case ':ytnotif':
+                command = videoId;
+                break;
+            default:
+                // Channels
+                if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
+                    command = `https://www.youtube.com/${command[0]}/videos`;
+                // Playlists
+                } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
+                    command = `https://www.youtube.com/playlist?list=${command[0]}`;
+                // Saved YT-DLP Search
+                } else {
+                    command = `ytsearch100:${videoId}`;
+                }
+                break;
+            }
+            break;
         }
         return res.json({
             metas: (await runYtDlpWithAuth(req.params.config, [
@@ -389,7 +413,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     <th>Type</th>
                                     <th>Playlist ID / URL</th>
                                     <th>Name</th>
-                                    <th>Channel Search</th>
+                                    <th>Search Type</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -446,10 +470,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 const installWeb = document.getElementById('install-web');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
                 const defaultPlaylists = [
-                    { type: 'YouTube', id: ':ytrec', name: 'Discover' },
-                    { type: 'YouTube', id: ':ytsubs', name: 'Subscriptions' },
-                    { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later' },
-                    { type: 'YouTube', id: ':ythistory', name: 'History' }
+                    { type: 'YouTube', id: ':ytrec', name: 'Discover', channelType: 'auto' },
+                    { type: 'YouTube', id: ':ytsubs', name: 'Subscriptions', channelType: 'auto' },
+                    { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later', channelType: 'auto' },
+                    { type: 'YouTube', id: ':ythistory', name: 'History', channelType: 'auto' }
                 ];
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
                     ...pl,
@@ -499,12 +523,23 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         nameInput.addEventListener('input', () => pl.name = nameInput.value.trim());
                         nameCell.appendChild(nameInput);
                         // Channel Search
-                        const channelSearchCell = document.createElement('td');
-                        const channelSearchInput = document.createElement('input');
-                        channelSearchInput.type = 'checkbox';
-                        channelSearchInput.checked = pl.channelSearch === true;
-                        channelSearchInput.addEventListener('change', () => pl.channelSearch = channelSearchInput.checked);
-                        channelSearchCell.appendChild(channelSearchInput);
+                        const channelTypeCell = document.createElement('td');
+                        const channelTypeInput = document.createElement('select');
+                        const optAuto = document.createElement('option');
+                        optAuto.value = 'auto';
+                        optAuto.textContent = 'Auto';
+                        channelTypeInput.appendChild(optAuto);
+                        const optVideo = document.createElement('option');
+                        optVideo.value = 'video';
+                        optVideo.textContent = 'Video';
+                        channelTypeInput.appendChild(optVideo);
+                        const optChannel = document.createElement('option');
+                        optChannel.value = 'channel';
+                        optChannel.textContent = 'Channel';
+                        channelTypeInput.appendChild(optChannel);
+                        channelTypeInput.value = pl.channelType;
+                        channelTypeInput.addEventListener('change', () => pl.channelType = channelTypeInput.value);
+                        channelTypeCell.appendChild(channelTypeInput);
                         // Actions
                         const actionsCell = document.createElement('td');
                         const upBtn = document.createElement('button');
@@ -535,13 +570,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         row.appendChild(typeCell);
                         row.appendChild(idCell);
                         row.appendChild(nameCell);
-                        row.appendChild(channelSearchCell);
+                        row.appendChild(channelTypeCell);
                         row.appendChild(actionsCell);
                         playlistTableBody.appendChild(row);
                     });
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
-                    playlists.push({ type: 'YouTube', id: '', name: '', channelSearch: false });
+                    playlists.push({ type: 'YouTube', id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
                 document.getElementById('add-defaults').addEventListener('click', () => {
