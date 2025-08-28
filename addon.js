@@ -153,6 +153,8 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
+        const userConfig = decryptConfig(req.params.config, false);
+        const catalogConfig = userConfig.catalogs.find(cat => cat.id === req.params.id);
         const videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
@@ -162,14 +164,15 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             if (!query?.search) throw new Error("Missing query parameter");
             const videoId2 = videoId.slice(':ytsearch'.length);
             // Video Search
-            if ([':video'].includes(videoId2))
+            if ([':video'].includes(videoId2)) {
                 command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
             // Channel Search
-            else if ([':channel'].includes(videoId2))
+            } else if ([':channel'].includes(videoId2)) {
                 command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
             // Mixed Search
-            else
+            } else {
                 command = `ytsearch100:${query.search}`;
+            }
         // YT-DLP Playlists
         } else if (videoId.startsWith(":") && [':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId)) {
             command = videoId;
@@ -180,7 +183,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
             command = `https://www.youtube.com/playlist?list=${command[0]}`;
         // Saved Channel Search
-        } else if (req.params.type === 'channel') {
+        } else if (catalogConfig?.channelSearch) {
             command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
         // Saved YT-DLP Search
         } else {
@@ -383,6 +386,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                                     <th>Type</th>
                                     <th>Playlist ID / URL</th>
                                     <th>Name</th>
+                                    <th>Channel Search</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -439,10 +443,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 const installWeb = document.getElementById('install-web');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
                 const defaultPlaylists = [
-                    { type: 'movie', id: ':ytrec', name: 'Discover' },
-                    { type: 'movie', id: ':ytsubs', name: 'Subscriptions' },
-                    { type: 'movie', id: ':ytwatchlater', name: 'Watch Later' },
-                    { type: 'movie', id: ':ythistory', name: 'History' }
+                    { type: 'YouTube', id: ':ytrec', name: 'Discover' },
+                    { type: 'YouTube', id: ':ytsubs', name: 'Subscriptions' },
+                    { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later' },
+                    { type: 'YouTube', id: ':ythistory', name: 'History' }
                 ];
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
                     ...pl,
@@ -491,6 +495,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         nameInput.value = pl.name;
                         nameInput.addEventListener('input', () => pl.name = nameInput.value.trim());
                         nameCell.appendChild(nameInput);
+                        // Channel Search
+                        const channelSearchCell = document.createElement('td');
+                        const channelSearchInput = document.createElement('input');
+                        channelSearchInput.type = 'checkbox';
+                        channelSearchInput.checked = pl.channelSearch === true;
+                        channelSearchInput.addEventListener('change', () => pl.channelSearch = channelSearchInput.checked);
+                        channelSearchCell.appendChild(channelSearchInput);
                         // Actions
                         const actionsCell = document.createElement('td');
                         const upBtn = document.createElement('button');
@@ -521,12 +532,13 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         row.appendChild(typeCell);
                         row.appendChild(idCell);
                         row.appendChild(nameCell);
+                        row.appendChild(channelSearchCell);
                         row.appendChild(actionsCell);
                         playlistTableBody.appendChild(row);
                     });
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
-                    playlists.push({ type: 'movie', id: '', name: '' });
+                    playlists.push({ type: 'YouTube', id: '', name: '', channelSearch: false });
                     renderPlaylists();
                 });
                 document.getElementById('add-defaults').addEventListener('click', () => {
@@ -605,5 +617,5 @@ app.listen(PORT, () => {
         console.warn('WARNING: Using random encryption key. Set ENCRYPTION_KEY environment variable for production.');
         if (process.env.DEV_LOGGING) console.warn('Generated key (base64):', ENCRYPTION_KEY.toString('base64'));
     }
-    console.log(`Access the configuration page at: https://${process.env.SPACE_HOST ?? ('localhost:' + PORT)}`);
+    console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
