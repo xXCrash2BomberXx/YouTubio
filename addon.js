@@ -117,22 +117,22 @@ app.get('/:config/manifest.json', (req, res) => {
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
-            types: ['mixed', 'movie', 'channel'],
+            types: ['YouTube'],
             idPrefixes: [prefix],
             catalogs: (userConfig.catalogs?.map(c => {
                 c.extra = [ { name: 'skip', isRequired: false } ];
                 return c;
             }) ?? [
-                { type: 'movie', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'movie', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'movie', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'movie', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
+                { type: 'YouTube', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'YouTube', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'YouTube', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
+                { type: 'YouTube', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
             ]).concat([
                 // Add search unless explicitly disabled
                 ...(userConfig.search === false ? [] : [
-                    { type: 'mixed', id: `${prefix}:ytsearch`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'movie', id: `${prefix}:ytsearch:video`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'channel', id: `${prefix}:ytsearch:channel`, name: 'YouTube', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
+                    { type: 'YouTube', id: `${prefix}:ytsearch`, name: 'Mixed', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'YouTube', id: `${prefix}:ytsearch:video`, name: 'Video', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'YouTube', id: `${prefix}:ytsearch:channel`, name: 'Channel', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
                 ])
             ]),
             behaviorHints: {
@@ -169,26 +169,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
             break;
         case 'auto':
+        case undefined:
         default:
             switch (videoId) {
-            // YT-DLP Search
-            case ':ytsearch':
-                if (!query?.search) throw new Error("Missing query parameter");
-                switch(videoId.slice(':ytsearch'.length)) {
-                // Video Search
-                case ':video':
-                    command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-                    break;
-                // Channel Search
-                case ':channel':
-                    command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-                    break;
-                // Mixed Search
-                default:
-                    command = `ytsearch100:${query.search}`;
-                    break;
-                }
-                break;
             // YT-DLP Playlists
             case ':ytfav':
             case ':ytwatchlater':
@@ -199,8 +182,26 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 command = videoId;
                 break;
             default:
-                // Channels
-                if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
+                // YT-DLP Search
+                if (videoId.startsWith(':ytsearch')) {
+                    if (!query?.search) throw new Error("Missing query parameter");
+                    switch(videoId.slice(':ytsearch'.length)) {
+                    // Video Search
+                    case ':video':
+                        command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                        break;
+                    // Channel Search
+                    case ':channel':
+                        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                        break;
+                    // Mixed Search
+                    case '':
+                    default:
+                        command = `ytsearch100:${query.search}`;
+                        break;
+                    // Channels
+                    }
+                } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
                     command = `https://www.youtube.com/${command[0]}/videos`;
                 // Playlists
                 } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
