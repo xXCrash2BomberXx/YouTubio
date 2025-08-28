@@ -117,7 +117,7 @@ app.get('/:config/manifest.json', (req, res) => {
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
-            types: ['series'],
+            types: ['movie', 'channel'],
             idPrefixes: [prefix],
             catalogs: (userConfig.catalogs?.map(c => {
                 c.extra = [ { name: 'skip', isRequired: false } ];
@@ -222,7 +222,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     const channel = video.ie_key === 'YoutubeTab';
                     return (channel ? video.uploader_id : video.id) ? {
                         id: prefix + (channel ? video.uploader_id : video.id),
-                        type: 'series',
+                        type: channel ? 'channel' : 'movie',
                         name: video.title ?? 'Unknown Title',
                         poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
                         posterShape: channel ? 'square' : 'landscape',
@@ -315,7 +315,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }
                     ] : []), {
                         name: 'YT-DLP Channel',
-                        externalUrl: `${protocol}/discover/${manifestUrl}/series/${encodeURIComponent(prefix + video.uploader_id)}`,
+                        externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }, {
                         name: 'YouTube Channel',
