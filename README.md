@@ -1,4 +1,4 @@
-# 📺 YouTubio: Stremio YouTube Addon
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/20f3a7f1-52a2-4b14-a5d1-26fde9b061fd" /># 📺 YouTubio: Stremio YouTube Addon
 
 A **Stremio addon** that lets you watch YouTube videos and access your **subscriptions**, **Watch Later list**, and **history** directly inside Stremio.
 
@@ -34,7 +34,7 @@ Enable `Allow in InPrivate`<br>
 4. Go to [youtube.com](https://www.youtube.com) and sign in if you want personalized content<br>
 
 5. Extract the `cookies.txt`<br>
-<img width="1366" height="768" alt="Open the `Extensions` Menu in the Toolbar" src="https://github.com/user-attachments/assets/1ec7e133-cd10-4d94-8f52-f42378072067" /><br>
+<img width="1366" height="768" alt="Open the `Extensions` Menu in the Toolbar" src="https://github.com/user-attachments/assets/b8720843-77f5-4e2f-90c3-2ff8f2a600be" /><br>
 <img width="378" height="206" alt="Select the Addon" src="https://github.com/user-attachments/assets/d70f0d12-e10d-46bd-b682-4d5e67d4aa72" /><br>
 <img width="558" height="432" alt="Click the `Copy` Button" src="https://github.com/user-attachments/assets/82caac82-0acd-469a-8bae-36ca2207cd83" /><br>
 
