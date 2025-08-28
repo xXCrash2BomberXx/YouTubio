@@ -50,19 +50,7 @@ Enable `Allow in InPrivate`<br>
 
 ---
 
-## 🛠 How to Use
-1. **Configuration** – Open the addon's config page at the root URL where it’s hosted.  
-2. **Cookies** – Add your YouTube cookies for personalized content (instructions are provided on the config page).  
-3. **Playlists** – Add default playlists like *Discover*, *Subscriptions*, *Watch Later*, and *History*, or set up custom ones.  
-4. **Install Link** – Generate a Stremio installation link after configuring.  
-
----
-
 ## 🚀 Deployment
-
-You can deploy using **Docker** or **Node.js**.
-
----
 
 ### 🐳 Docker Deployment
 
