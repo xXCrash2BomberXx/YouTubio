@@ -417,7 +417,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 This addon supports FAR more than just YouTube with links!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
-                            <h5>(We block all NSFW platforms in this list on the public hosting)</h5>
+                            ${process.env.YTDLP_EXTRACTORS_EMBED}
                             <div style="max-height: 20em; overflow: auto;">
                                 ${await supportedWebsites}
                             </div>
