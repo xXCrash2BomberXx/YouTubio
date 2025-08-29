@@ -268,10 +268,10 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         let command;
         if ( (command = videoId.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
-            command = `https://www.youtube.com/${videoId[0]}/videos`;
+            command = `https://www.youtube.com/${command[0]}/videos`;
         // Playlists
         } else if ( (command = videoId.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
-            command = `https://www.youtube.com/watch?v=${videoId[0]}`;
+            command = `https://www.youtube.com/watch?v=${command[0]}`;
         } else {
             command = videoId;
         }
