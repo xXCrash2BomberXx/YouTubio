@@ -409,7 +409,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
-                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
+                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
                 <form id="config-form">
                     <div class="settings-section" style="text-align: center;">
                         <details>
