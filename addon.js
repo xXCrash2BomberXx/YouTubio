@@ -52,16 +52,6 @@ function decrypt(encryptedData) {
 
 let counter = 0;
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
-    const coreArgs = [
-        '-i',
-        '-q',
-        '--no-warnings',
-        '-s',
-        '--no-cache-dir',
-        '--flat-playlist',
-        '-J',
-        '--default-search', 'ytsearch100',
-    ];
     try {
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
         // Implement better auth system
@@ -71,13 +61,15 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
-            ...coreArgs,
+            '-i',
+            '-q',
+            '--no-warnings',
+            '-s',
+            '--no-cache-dir',
+            '--flat-playlist',
+            '-J',
+            '--default-search', 'ytsearch100',
             ...(cookies ? ['--cookies', filename] : [])
-        ]));
-    } catch {
-        return JSON.parse(await ytDlpWrap.execPromise([
-            ...argsArray,
-            ...coreArgs
         ]));
     } finally {
         try {
@@ -415,12 +407,17 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
-                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
-                <details style="max-height: 20em; overflow: auto; resize: both;">
-                    <summary>This addon supports FAR more than just YouTUbe with inks!</summary>
-                    ${await supportedWebsites}
-                </details>
                 <form id="config-form">
+                    <div class="settings-section" style="text-align: center;">
+                        For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
+                        <details style="max-height: 20em; overflow: auto; resize: both;">
+                            <summary>
+                                This addon supports FAR more than just YouTube with links!<br>
+                                <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
+                            </summary>
+                            ${await supportedWebsites}
+                        </details>
+                    </div>
                     <div class="settings-section">
                         <h3>Cookies</h3>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
