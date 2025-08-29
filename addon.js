@@ -138,10 +138,10 @@ app.get('/:config/manifest.json', (req, res) => {
             resources: ['catalog', 'stream', 'meta'],
             types: ['movie', 'channel'],
             idPrefixes: [prefix],
-            catalogs: (userConfig.catalogs?.map(c => {
-                c.extra = [ { name: 'skip', isRequired: false } ];
-                return c;
-            }) ?? [
+            catalogs: (userConfig.catalogs?.map(c => ({
+                ...c,
+                extra: [ { name: 'skip', isRequired: false } ]
+            })) ?? [
                 { type: 'YouTube', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
                 { type: 'YouTube', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
                 { type: 'YouTube', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
@@ -346,7 +346,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         description: 'Click to open the channel as a Catalog'
                     }, {
                         name: 'YouTube Channel',
-                        externalUrl: video.uploader_url,
+                        externalUrl: video.uploader_url ?? video.webpage_url,
                         description: 'Click to open the channel in the official YouTube Player'
                     }
                 ],
