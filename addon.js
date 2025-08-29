@@ -284,7 +284,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const channel = video._type === 'playlist';
         const title = video.title ?? 'Unknown Title';
         const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
-        const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00` : 0).toISOString();
+        const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
             const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
             return srt ? {
