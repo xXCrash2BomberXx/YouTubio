@@ -69,6 +69,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '--flat-playlist',
             '-J',
             '--default-search', 'ytsearch100',
+            '--extractor-args', 'generic:impersonate',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
     } finally {
