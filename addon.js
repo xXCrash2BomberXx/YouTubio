@@ -126,7 +126,7 @@ app.get('/:config/manifest.json', (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         return res.json({
             id: 'youtubio.elfhosted.com',
-            version: '0.4.2',
+            version: '0.4.4',
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
@@ -409,15 +409,18 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
+                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
                 <form id="config-form">
                     <div class="settings-section" style="text-align: center;">
-                        For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
-                        <details style="max-height: 20em; overflow: auto; resize: both;">
+                        <details>
                             <summary>
                                 This addon supports FAR more than just YouTube with links!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
-                            ${await supportedWebsites}
+                            <h5>(We block all NSFW platforms in this list on the public hosting)</h5>
+                            <div style="max-height: 20em; overflow: auto;">
+                                ${await supportedWebsites}
+                            </div>
                         </details>
                     </div>
                     <div class="settings-section">
