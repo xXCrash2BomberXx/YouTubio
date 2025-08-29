@@ -331,24 +331,24 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        })), {
+                        })), ...(videoId.match(/^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/) ? [{
                             name: 'Stremio Player',
                             ytId: videoId,
                             description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                        }, {
-                            name: 'YouTube Player',
+                        }] : []), {
+                            name: 'External Player',
                             externalUrl: video.webpage_url,
                             description: 'Click to watch in the official YouTube Player'
                         }
-                    ] : []), {
+                    ] : []), ...(video.uploader_id ? [{
                         name: 'YT-DLP Channel',
                         externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
-                    }, {
+                    }] : []), ...(video.uploader_url ? [{
                         name: 'YouTube Channel',
-                        externalUrl: video.uploader_url ?? video.webpage_url,
+                        externalUrl: video.uploader_url,
                         description: 'Click to open the channel in the official YouTube Player'
-                    }
+                    }] : [])
                 ],
                 episode: 1,
                 season: 1,
