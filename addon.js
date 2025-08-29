@@ -68,6 +68,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '--no-cache-dir',
             '--flat-playlist',
             '-J',
+            '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
             '--default-search', 'ytsearch100',
             '--extractor-args', 'generic:impersonate',
             ...(cookies ? ['--cookies', filename] : [])
