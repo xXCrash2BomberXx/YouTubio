@@ -227,11 +227,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             }
             break;
         }
+        const videos = await runYtDlpWithAuth(req.params.config, [
+            videoId,
+            '-I', `${skip + 1}:${skip + 100}:1`,
+        ]);
         return res.json({
-            metas: (await runYtDlpWithAuth(req.params.config, [
-                    videoId,
-                    '-I', `${skip + 1}:${skip + 100}:1`,
-                ])).entries.map(video => {
+            metas: (videos.entries ?? [ videos ]).map(video => {
                     const channel = video.ie_key === 'YoutubeTab';
                     return (channel ? video.uploader_id : (video.id ?? video.url)) ? {
                         id: prefix + (channel ? video.uploader_id : (video.id ?? video.url)),
