@@ -330,16 +330,16 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }] : []), {
                             name: 'External Player',
                             externalUrl: video.webpage_url,
-                            description: 'Click to watch in the official YouTube Player'
+                            description: 'Click to watch in the External Player'
                         }
                     ] : []), ...(video.uploader_id ? [{
                         name: 'YT-DLP Channel',
                         externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }] : []), ...(video.uploader_url ? [{
-                        name: 'YouTube Channel',
+                        name: 'External Channel',
                         externalUrl: video.uploader_url,
-                        description: 'Click to open the channel in the official YouTube Player'
+                        description: 'Click to open the channel in the External Player'
                     }] : [])
                 ],
                 episode: 1,
