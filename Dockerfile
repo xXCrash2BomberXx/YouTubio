@@ -7,7 +7,7 @@ FROM node:22-slim
 USER root
 RUN apt-get update && \
     apt-get install -y python3 python3-pip && \
-    pip3 install yt-dlp --break-system-packages && \
+    pip3 install "yt-dlp[default,curl-cffi]" --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 USER node
 
