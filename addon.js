@@ -130,9 +130,9 @@ app.get('/:config/manifest.json', (req, res) => {
             ]).concat([
                 // Add search unless explicitly disabled
                 ...(userConfig.search === false ? [] : [
-                    { type: 'YouTube', id: `${prefix}:ytsearch`, name: 'Mixed', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'YouTube', id: `${prefix}:ytsearch:video`, name: 'Video', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'YouTube', id: `${prefix}:ytsearch:channel`, name: 'Channel', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
+                    { type: 'YouTube', id: `${prefix}:ytsearch100`, name: 'Mixed', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'YouTube', id: `${prefix}:ytsearch100:video`, name: 'Video', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
+                    { type: 'YouTube', id: `${prefix}:ytsearch100:channel`, name: 'Channel', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
                 ])
             ]),
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
@@ -184,9 +184,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 break;
             default:
                 // YT-DLP Search
-                if (videoId.startsWith(':ytsearch')) {
+                if (videoId.startsWith(':ytsearch100')) {
                     if (!query?.search) throw new Error("Missing query parameter");
-                    switch(videoId.slice(':ytsearch'.length)) {
+                    switch(videoId.slice(':ytsearch100'.length)) {
                     // Video Search
                     case ':video':
                         command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
