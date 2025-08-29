@@ -15,6 +15,11 @@ const prefix = 'yt_id:';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
 
+const extractors = ytDlpWrap.getExtractors();
+const supportedWebsites = new Promise(async resolve => {
+    return resolve(`<ul style="list-style-type: none;">${(await extractors).map(extractor => '<li>'+extractor+'</li>').join('')}</ul>`);
+});
+
 function encrypt(text) {
     const salt = crypto.randomBytes(16);
     const iv = crypto.randomBytes(16);
@@ -47,23 +52,32 @@ function decrypt(encryptedData) {
 
 let counter = 0;
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
-    const auth = decryptConfig(encryptedConfig).encrypted?.auth;
-    // Implement better auth system
-    const cookies = auth;
-    const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
-    counter %= Number.MAX_SAFE_INTEGER;
+    const coreArgs = [
+        '-i',
+        '-q',
+        '--no-warnings',
+        '-s',
+        '--no-cache-dir',
+        '--flat-playlist',
+        '-J',
+        '--default-search', 'ytsearch100',
+    ];
     try {
+        const auth = decryptConfig(encryptedConfig).encrypted?.auth;
+        // Implement better auth system
+        const cookies = auth;
+        const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+        counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
-            '-i',
-            '-q',
-            '--no-warnings',
-            '-s',
-            '--no-cache-dir',
-            '--flat-playlist',
-            '-J',
+            ...coreArgs,
             ...(cookies ? ['--cookies', filename] : [])
+        ]));
+    } catch {
+        return JSON.parse(await ytDlpWrap.execPromise([
+            ...argsArray,
+            ...coreArgs
         ]));
     } finally {
         try {
@@ -102,7 +116,12 @@ app.post('/encrypt', (req, res) => {
 function decryptConfig(configParam, enableDecryption = true) {
     const config = JSON.parse(configParam);
     if (enableDecryption && config.encrypted) {
-        config.encrypted = JSON.parse(decrypt(config.encrypted));
+        try {
+            config.encrypted = JSON.parse(decrypt(config.encrypted));
+        } catch (error) {
+            if (process.env.DEV_LOGGING) console.error('Decryption error:', error);
+            config.encrypted = undefined;
+        }
     }
     return config;
 }
@@ -156,23 +175,23 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const catalogConfig = userConfig.catalogs.find(cat => cat.id === req.params.id);
-        const videoId = req.params.id?.slice(prefix.length);
+        let videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
-        let command;
+        const videoIdCopy = videoId;
         switch (catalogConfig?.channelType) {
         case 'video':
             // Saved Video Search
-            command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+            videoId = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(videoId)}`;
             break;
         case 'channel':
             // Saved Channel Search
-            command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+            videoId = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
             break;
         case 'auto':
         case undefined:
         default:
-            switch (videoId) {
+            switch (videoIdCopy) {
             // YT-DLP Playlists
             case ':ytfav':
             case ':ytwatchlater':
@@ -180,36 +199,35 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             case ':ythistory':
             case ':ytrec':
             case ':ytnotif':
-                command = videoId;
                 break;
             default:
                 // YT-DLP Search
-                if (videoId.startsWith(':ytsearch100')) {
+                if (videoIdCopy.startsWith(':ytsearch100')) {
                     if (!query?.search) throw new Error("Missing query parameter");
-                    switch(videoId.slice(':ytsearch100'.length)) {
+                    switch(videoIdCopy.slice(':ytsearch100'.length)) {
                     // Video Search
                     case ':video':
-                        command = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                        videoId = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
                         break;
                     // Channel Search
                     case ':channel':
-                        command = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
+                        videoId = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
                         break;
                     // Mixed Search
                     case '':
                     default:
-                        command = `ytsearch100:${query.search}`;
+                        videoId = query.search;
                         break;
                     // Channels
                     }
-                } else if ( (command = videoId.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/)) ) {
-                    command = `https://www.youtube.com/${command[0]}/videos`;
+                } else if ( (videoId = videoIdCopy.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
+                    videoId = `https://www.youtube.com/${videoId[0]}/videos`;
                 // Playlists
-                } else if ( (command = videoId.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/)) ) {
-                    command = `https://www.youtube.com/playlist?list=${command[0]}`;
+                } else if ( (videoId = videoIdCopy.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
+                    videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
                 // Saved YT-DLP Search
                 } else {
-                    command = `ytsearch100:${videoId}`;
+                    videoId = videoIdCopy;
                 }
                 break;
             }
@@ -217,17 +235,17 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         }
         return res.json({
             metas: (await runYtDlpWithAuth(req.params.config, [
-                    command,
+                    videoId,
                     '-I', `${skip + 1}:${skip + 100}:1`,
                 ])).entries.map(video => {
                     const channel = video.ie_key === 'YoutubeTab';
-                    return (channel ? video.uploader_id : video.id) ? {
-                        id: prefix + (channel ? video.uploader_id : video.id),
+                    return (channel ? video.uploader_id : (video.id ?? video.url)) ? {
+                        id: prefix + (channel ? video.uploader_id : (video.id ?? video.url)),
                         type: channel ? 'channel' : 'movie',
                         name: video.title ?? 'Unknown Title',
-                        poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url),
+                        poster: (channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? ''),
                         posterShape: channel ? 'square' : 'landscape',
-                        description: video.description,
+                        description: video.description ?? video.title,
                         releaseInfo: video.upload_date?.substring(0, 4)
                     } : null;
                 }).filter(meta => meta !== null),
@@ -248,7 +266,15 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
-        const command = `https://www.youtube.com/${videoId.startsWith('@') ? '' : 'watch?v='}${videoId}`;
+        let command;
+        if ( (command = videoId.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
+            command = `https://www.youtube.com/${videoId[0]}/videos`;
+        // Playlists
+        } else if ( (command = videoId.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
+            command = `https://www.youtube.com/watch?v=${videoId[0]}`;
+        } else {
+            command = videoId;
+        }
         const video = await runYtDlpWithAuth(req.params.config, [
             command,
             '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
@@ -285,8 +311,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             posterShape: channel ? 'square' : 'landscape',
             background: thumbnail,
             logo: thumbnail,
-            description: video.description,
-            releaseInfo: video.release_year ?? video.upload_date?.substring(0, 4),
+            description: video.description ?? title,
+            releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
             released: released,
             videos: [{
                 id: req.params.id + ':1:1',
@@ -311,7 +337,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             description: 'Click to watch using Stremio\'s built-in YouTube Player'
                         }, {
                             name: 'YouTube Player',
-                            externalUrl: video.original_url,
+                            externalUrl: video.webpage_url,
                             description: 'Click to watch in the official YouTube Player'
                         }
                     ] : []), {
@@ -326,11 +352,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 ],
                 episode: 1,
                 season: 1,
-                overview: video.description
+                overview: video.description ?? title
             }],
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
-            website: video.original_url,
+            website: video.webpage_url,
             behaviorHints: { defaultVideoId: req.params.id + ':1:1' }
         } });
     } catch (error) {
@@ -345,7 +371,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
 });
 
 // Configuration Page
-app.get(['/', '/:config?/configure'], (req, res) => {
+app.get(['/', '/:config?/configure'], async (req, res) => {
     let userConfig;
     try {
         userConfig = decryptConfig(req.params.config, false);
@@ -390,6 +416,10 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                 <h1>YouTubio | ElfHosted</h1>
                 ${process.env.EMBED || ""}
                 For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/yt-dlp/yt-dlp/wiki/Extractors</a>
+                <details style="max-height: 20em; overflow: auto; resize: both;">
+                    <summary>This addon supports FAR more than just YouTUbe with inks!</summary>
+                    ${await supportedWebsites}
+                </details>
                 <form id="config-form">
                     <div class="settings-section">
                         <h3>Cookies</h3>
@@ -483,19 +513,6 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                     cookies.value = "";
                     cookies.disabled = false;
                 });
-                function extractPlaylistId(input) {
-                    let match;
-                        // Channel URL
-                    if (( match = input.match(/@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]/) ) ||
-                        // Playlist ID / Playlist URL
-                        ( match = input.match(/PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})/) ))
-                        return decodeURIComponent(match[0].trim());
-                        // Search URL
-                    else if (input.match(/(?<=search_query=)[^&]+/))
-                        return new URLSearchParams((input.split('?', 2)[1] ?? input).trim()).get('search_query');
-                    // Search
-                    return input.trim();
-                }
                 function renderPlaylists() {
                     playlistTableBody.innerHTML = '';
                     playlists.forEach((pl, index) => {
@@ -510,7 +527,7 @@ app.get(['/', '/:config?/configure'], (req, res) => {
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
                         idInput.value = pl.id;
-                        idInput.addEventListener('change', () => pl.id = extractPlaylistId(idInput.value));
+                        idInput.addEventListener('change', () => pl.id = idInput.value);
                         idCell.appendChild(idInput);
                         // Name
                         const nameCell = document.createElement('td');
