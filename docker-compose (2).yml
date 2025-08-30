@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  youtubio:
+    build: .
+    container_name: youtubio-addon
+    ports:
+      - "7000:7000"
+    environment:
+      - NODE_ENV=production
+      - PORT=7000
+    volumes:
+      # Volume per persistere i dati dell'applicazione (cookies, configurazioni, ecc.)
+      - ./data:/app/data
+      # Volume per i logs (opzionale)
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - youtubio-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/manifest.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  youtubio-network:
+    driver: bridge
+
+volumes:
+  youtubio-data:
+    driver: local
