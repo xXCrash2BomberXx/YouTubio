@@ -59,17 +59,8 @@ async function runYtDlpWithAuth(configParam, argsArray) {
         const config = await decryptConfig(configParam);
         console.log(`[YT-DLP] Decrypted config keys: ${Object.keys(config)}`);
         
-        // Fix: i cookie possono essere salvati come stringa criptata diretta
-        let auth;
-        if (typeof config.encrypted === 'string') {
-            // Cookie salvati come stringa criptata diretta (nuovo formato)
-            auth = config.encrypted;
-        } else if (config.encrypted?.auth) {
-            // Cookie nell'oggetto encrypted.auth (vecchio formato)
-            auth = config.encrypted.auth;
-        } else {
-            auth = null;
-        }
+        // I cookie sono ora salvati come stringa criptata diretta
+        let auth = config.encrypted || null;
         
         console.log(`[YT-DLP] Extracted auth: ${auth ? `${auth.length} characters` : 'null/undefined'}`);
         console.log(`[YT-DLP] Config.encrypted type: ${typeof config.encrypted}`);
@@ -178,6 +169,7 @@ app.post('/test-cookies', async (req, res) => {
         } catch (error) {
             // Se la decrittazione fallisce, usa i cookie così come sono
             // (potrebbero essere già in formato testo)
+            console.log(`[TEST-COOKIES] Using cookies as-is (not encrypted or decryption failed)`);
         }
         
         await fs.writeFile(tempFile, decryptedCookies);
@@ -281,7 +273,13 @@ app.post('/test-cookies', async (req, res) => {
 // Config Encryption Endpoint
 app.post('/encrypt', (req, res) => {
     try {
-        res.send(encrypt(JSON.stringify(req.body)));
+        // Se viene inviato un campo 'auth', cripta solo quello (per i cookie)
+        // Altrimenti cripta tutto il body (per compatibilità)
+        if (req.body.auth) {
+            res.send(encrypt(req.body.auth));
+        } else {
+            res.send(encrypt(JSON.stringify(req.body)));
+        }
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Encryption error:', error);
         res.status(500).send('Encryption failed');
