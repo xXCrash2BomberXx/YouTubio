@@ -59,10 +59,23 @@ async function runYtDlpWithAuth(configParam, argsArray) {
         const config = await decryptConfig(configParam);
         console.log(`[YT-DLP] Decrypted config keys: ${Object.keys(config)}`);
         
-        const auth = config.encrypted?.auth;
-        console.log(`[YT-DLP] Extracted auth: ${auth ? `${auth.length} characters` : 'null/undefined'}`);
+        // Fix: i cookie possono essere salvati come stringa criptata diretta
+        let auth;
+        if (typeof config.encrypted === 'string') {
+            // Cookie salvati come stringa criptata diretta (nuovo formato)
+            auth = config.encrypted;
+        } else if (config.encrypted?.auth) {
+            // Cookie nell'oggetto encrypted.auth (vecchio formato)
+            auth = config.encrypted.auth;
+        } else {
+            auth = null;
+        }
         
-        // Implement better auth system
+        console.log(`[YT-DLP] Extracted auth: ${auth ? `${auth.length} characters` : 'null/undefined'}`);
+        console.log(`[YT-DLP] Config.encrypted type: ${typeof config.encrypted}`);
+        if (config.encrypted && typeof config.encrypted === 'object') {
+            console.log(`[YT-DLP] Config.encrypted keys: ${Object.keys(config.encrypted)}`);
+        }
         const cookies = auth;
         const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
         counter %= Number.MAX_SAFE_INTEGER;
