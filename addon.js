@@ -173,6 +173,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
         const videoIdCopy = videoId;
+        const isURL = s => {
+            try {
+                return Boolean(new URL(s));
+            } catch {
+                return false;
+            }
+        };
         switch (catalogConfig?.channelType) {
         case 'video':
             // Saved Video Search
@@ -210,7 +217,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     // Mixed Search
                     case '':
                     default:
-                        videoId = query.search;
+                        videoId = isURL(query.search) ? query.search : `ytsearch100:${query.search}`;
                         break;
                     // Channels
                     }
@@ -220,8 +227,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 } else if ( (videoId = videoIdCopy.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
                     videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
                 // Saved YT-DLP Search
-                } else {
+                } else if (isURL(videoIdCopy)) {
                     videoId = videoIdCopy;
+                // Saved YouTube Search
+                } else {
+                    videoId = `ytsearch100:${videoIdCopy}`;
                 }
                 break;
             }
