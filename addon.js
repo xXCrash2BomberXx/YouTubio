@@ -81,7 +81,18 @@ async function runYtDlpWithAuth(configParam, argsArray) {
         counter %= Number.MAX_SAFE_INTEGER;
         
         if (filename) {
-            await fs.writeFile(filename, cookies);
+            // Decripta i cookie prima di scriverli nel file
+            let decryptedCookies;
+            try {
+                decryptedCookies = decrypt(cookies);
+                console.log(`[YT-DLP] Cookies decrypted successfully`);
+            } catch (error) {
+                console.error(`[YT-DLP] Failed to decrypt cookies:`, error.message);
+                // Se la decrittazione fallisce, prova a usare i cookie così come sono
+                decryptedCookies = cookies;
+            }
+            
+            await fs.writeFile(filename, decryptedCookies);
             console.log(`[YT-DLP] Written cookies to: ${filename}`);
         } else {
             console.log(`[YT-DLP] NO COOKIES - filename is empty`);
@@ -159,7 +170,17 @@ app.post('/test-cookies', async (req, res) => {
 
         // Crea file temporaneo per i cookies
         const tempFile = path.join(tmpdir, `cookies-test-${Date.now()}-${Math.random()}.txt`);
-        await fs.writeFile(tempFile, cookies);
+        
+        // Decripta i cookie se sono criptati
+        let decryptedCookies = cookies;
+        try {
+            decryptedCookies = decrypt(cookies);
+        } catch (error) {
+            // Se la decrittazione fallisce, usa i cookie così come sono
+            // (potrebbero essere già in formato testo)
+        }
+        
+        await fs.writeFile(tempFile, decryptedCookies);
 
         try {
             // Test con gli stessi parametri usati in produzione
