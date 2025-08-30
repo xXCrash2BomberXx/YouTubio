@@ -316,7 +316,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...(video.formats ?? []).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
