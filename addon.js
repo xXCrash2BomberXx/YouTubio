@@ -654,7 +654,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         }
                     ] : []), ...(video.uploader_id ? [{
                         name: 'YT-DLP Channel',
-                        externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                        externalUrl: `${protocol}/discover/${manifestUrl}/catalog/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                         description: 'Click to open the channel as a Catalog'
                     }] : []), ...(video.uploader_url ? [{
                         name: 'External Channel',
