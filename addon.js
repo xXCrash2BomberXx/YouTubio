@@ -664,7 +664,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         console.log(`[META] Channel URL: ${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`);
                         return [{
                             name: 'YT-DLP Channel',
-                            externalUrl: `${protocol}/discover/${manifestUrl}/catalog/${encodeURIComponent(prefix + video.uploader_id)}`,
+                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                             description: 'Click to open the channel as a Catalog'
                         }];
                     })() : []), ...(video.uploader_url ? [{
@@ -755,7 +755,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         if (video.uploader_id) {
             streams.push({
                 name: 'YT-DLP Channel',
-                externalUrl: `${protocol}/discover/${manifestUrl}/catalog/${encodeURIComponent(prefix + video.uploader_id)}`,
+                externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                 description: 'Click to open the channel as a Catalog'
             });
         }
