@@ -32,4 +32,4 @@ EXPOSE 7000
 
 # Define the command to run your app
 # This uses the "start" script from your package.json
-CMD [ "npm", "start" ]
+CMD [ "./start.sh" ]
