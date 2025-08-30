@@ -640,7 +640,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 thumbnail: thumbnail,
                 streams: [
                     ...(!channel ? [
-                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
+                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).map(src => ({
                             name: `YT-DLP Player ${src.resolution}`,
                             url: src.url,
                             description: src.format,
@@ -664,7 +664,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         console.log(`[META] Channel URL: ${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`);
                         return [{
                             name: 'YT-DLP Channel',
-                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                            externalUrl: `${protocol}/discover/${manifestUrl}/catalog/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
                             description: 'Click to open the channel as a Catalog'
                         }];
                     })() : []), ...(video.uploader_url ? [{
@@ -697,6 +697,11 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
         
         const userConfig = await decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
+        
+        // Definisci protocol e manifestUrl per i link ai canali
+        const ref = req.query.ref;
+        const protocol = ref ? ref + '#' : 'stremio://';
+        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         
         // Estrai l'ID del video se è nel formato video:episode:season
         const videoMatch = videoId.match(/^(.+):(\d+):(\d+)$/);
@@ -745,6 +750,15 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             externalUrl: video.webpage_url,
             description: 'Click to watch in the External Player'
         });
+        
+        // Aggiungi il link al canale se disponibile
+        if (video.uploader_id) {
+            streams.push({
+                name: 'YT-DLP Channel',
+                externalUrl: `${protocol}/discover/${manifestUrl}/catalog/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                description: 'Click to open the channel as a Catalog'
+            });
+        }
         
         return res.json({ streams });
         
