@@ -593,6 +593,13 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '--ignore-no-formats-error',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
         ]);
+        
+        // Debug logging per capire cosa contiene il video
+        console.log(`[META] Video object keys: ${Object.keys(video)}`);
+        console.log(`[META] Video uploader_id: ${video.uploader_id}`);
+        console.log(`[META] Video uploader: ${video.uploader}`);
+        console.log(`[META] Video _type: ${video._type}`);
+        
         const channel = video._type === 'playlist';
         const title = video.title ?? 'Unknown Title';
         const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
@@ -652,11 +659,15 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                             externalUrl: video.webpage_url,
                             description: 'Click to watch in the External Player'
                         }
-                    ] : []), ...(video.uploader_id ? [{
-                        name: 'YT-DLP Channel',
-                        externalUrl: `${protocol}/discover/${manifestUrl}/catalog/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
-                        description: 'Click to open the channel as a Catalog'
-                    }] : []), ...(video.uploader_url ? [{
+                    ] : []), ...(video.uploader_id ? (() => {
+                        console.log(`[META] Creating channel link for uploader_id: ${video.uploader_id}`);
+                        console.log(`[META] Channel URL: ${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`);
+                        return [{
+                            name: 'YT-DLP Channel',
+                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                            description: 'Click to open the channel as a Catalog'
+                        }];
+                    })() : []), ...(video.uploader_url ? [{
                         name: 'External Channel',
                         externalUrl: video.uploader_url,
                         description: 'Click to open the channel in the External Player'
@@ -679,7 +690,68 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
 // Stremio Addon Stream Route
 app.get('/:config/stream/:type/:id.json', async (req, res) => {
-    return res.json({ streams: [] });
+    try {
+        if (!req.params.id?.startsWith(prefix)) {
+            return res.json({ streams: [] });
+        }
+        
+        const userConfig = await decryptConfig(req.params.config, false);
+        const videoId = req.params.id?.slice(prefix.length);
+        
+        // Estrai l'ID del video se è nel formato video:episode:season
+        const videoMatch = videoId.match(/^(.+):(\d+):(\d+)$/);
+        const actualVideoId = videoMatch ? videoMatch[1] : videoId;
+        
+        let command;
+        if ( (command = actualVideoId.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
+            command = `https://www.youtube.com/${command[0]}/videos`;
+        } else if ( (command = actualVideoId.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
+            command = `https://www.youtube.com/watch?v=${actualVideoId}`;
+        } else {
+            command = actualVideoId;
+        }
+        
+        const video = await runYtDlpWithAuth(req.params.config, [
+            command,
+            '--ignore-no-formats-error',
+            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+        ]);
+        
+        // Filtra i formati in base alle impostazioni
+        const streams = (video.formats ?? [video])
+            .filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none'))
+            .map(src => ({
+                name: `YT-DLP Player ${src.resolution}`,
+                url: src.url,
+                description: src.format,
+                behaviorHints: {
+                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                    videoSize: src.filesize_approx,
+                    filename: video.filename
+                }
+            }));
+        
+        // Aggiungi altri tipi di stream se disponibili
+        if (actualVideoId.match(/^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/)) {
+            streams.push({
+                name: 'Stremio Player',
+                ytId: actualVideoId,
+                description: 'Click to watch using Stremio\'s built-in YouTube Player'
+            });
+        }
+        
+        streams.push({
+            name: 'External Player',
+            externalUrl: video.webpage_url,
+            description: 'Click to watch in the External Player'
+        });
+        
+        return res.json({ streams });
+        
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Error in Stream handler:', error);
+        return res.json({ streams: [] });
+    }
 });
 
 // Configuration Page
