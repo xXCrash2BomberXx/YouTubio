@@ -5,6 +5,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const sessions = require('./sessions');
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
@@ -51,9 +52,10 @@ function decrypt(encryptedData) {
 }
 
 let counter = 0;
-async function runYtDlpWithAuth(encryptedConfig, argsArray) {
+async function runYtDlpWithAuth(configParam, argsArray) {
     try {
-        const auth = decryptConfig(encryptedConfig).encrypted?.auth;
+        const config = await decryptConfig(configParam);
+        const auth = config.encrypted?.auth;
         // Implement better auth system
         const cookies = auth;
         const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
@@ -88,7 +90,7 @@ app.use(express.json());
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') {
         return res.sendStatus(204);
@@ -106,24 +108,132 @@ app.post('/encrypt', (req, res) => {
     }
 });
 
-// Config Decryption
-function decryptConfig(configParam, enableDecryption = true) {
-    const config = JSON.parse(configParam);
-    if (enableDecryption && config.encrypted) {
-        try {
-            config.encrypted = JSON.parse(decrypt(config.encrypted));
-        } catch (error) {
-            if (process.env.DEV_LOGGING) console.error('Decryption error:', error);
-            config.encrypted = undefined;
+// Crea nuova sessione
+app.post('/session', async (req, res) => {
+    try {
+        const { config, password } = req.body;
+        if (!config || !password) {
+            return res.status(400).json({ error: 'Config and password are required' });
         }
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+        }
+        
+        const sessionId = await sessions.createSession(config, password);
+        console.log(`[SESSIONS] New session created: ${sessionId}`);
+        res.json({ sessionId });
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Session creation error:', error);
+        res.status(500).json({ error: 'Failed to create session' });
     }
-    return config;
+});
+
+// Aggiorna sessione esistente
+app.put('/session/:id', async (req, res) => {
+    try {
+        const { config, password } = req.body;
+        if (!config || !password) {
+            return res.status(400).json({ error: 'Config and password are required' });
+        }
+        
+        const success = await sessions.updateSession(req.params.id, password, config);
+        if (success) {
+            console.log(`[SESSIONS] Session updated: ${req.params.id}`);
+            res.json({ success: true });
+        } else {
+            console.log(`[SESSIONS] Failed to update session (invalid credentials): ${req.params.id}`);
+            res.status(401).json({ error: 'Invalid session ID or password' });
+        }
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Session update error:', error);
+        res.status(500).json({ error: 'Failed to update session' });
+    }
+});
+
+// Elimina sessione
+app.delete('/session/:id', async (req, res) => {
+    try {
+        const { password } = req.body;
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
+        
+        const success = await sessions.deleteSession(req.params.id, password);
+        if (success) {
+            console.log(`[SESSIONS] Session deleted: ${req.params.id}`);
+            res.json({ success: true });
+        } else {
+            console.log(`[SESSIONS] Failed to delete session (invalid credentials): ${req.params.id}`);
+            res.status(401).json({ error: 'Invalid session ID or password' });
+        }
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Session deletion error:', error);
+        res.status(500).json({ error: 'Failed to delete session' });
+    }
+});
+
+// Ottieni informazioni sessione (senza password)
+app.get('/session/:id/info', async (req, res) => {
+    try {
+        const sessionData = await sessions.getSession(req.params.id);
+        if (sessionData) {
+            if (sessionData.expired) {
+                return res.status(410).json({ error: 'Session expired', sessionId: sessionData.sessionId });
+            }
+            res.json({
+                id: sessionData.id,
+                createdAt: sessionData.createdAt,
+                lastAccessed: sessionData.lastAccessed,
+                expiresAt: sessionData.expiresAt
+            });
+        } else {
+            res.status(404).json({ error: 'Session not found' });
+        }
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Session info error:', error);
+        res.status(500).json({ error: 'Failed to get session info' });
+    }
+});
+
+// Config Decryption - Aggiornata per supportare sessioni
+async function decryptConfig(configParam, enableDecryption = true) {
+    // Se è un session ID, recupera la configurazione dalla sessione
+    if (sessions.isValidSessionId(configParam)) {
+        const sessionData = await sessions.getSession(configParam);
+        if (sessionData) {
+            if (sessionData.expired) {
+                console.log(`[SESSIONS] Attempted to use expired session: ${configParam}`);
+                return {};
+            }
+            return sessionData.config;
+        }
+        // Se la sessione non esiste, ritorna configurazione vuota
+        console.log(`[SESSIONS] Session not found: ${configParam}`);
+        return {};
+    }
+    
+    // Altrimenti usa il vecchio metodo di decrittazione
+    try {
+        const config = JSON.parse(configParam);
+        if (enableDecryption && config.encrypted) {
+            try {
+                config.encrypted = JSON.parse(decrypt(config.encrypted));
+            } catch (error) {
+                if (process.env.DEV_LOGGING) console.error('Decryption error:', error);
+                config.encrypted = undefined;
+            }
+        }
+        return config;
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Config parsing error:', error);
+        return {};
+    }
 }
 
 // Stremio Addon Manifest Route
-app.get('/:config/manifest.json', (req, res) => {
+app.get('/:config/manifest.json', async (req, res) => {
     try {
-        const userConfig = decryptConfig(req.params.config, false);
+        const userConfig = await decryptConfig(req.params.config, false);
         return res.json({
             id: 'youtubio.elfhosted.com',
             version: '0.4.4',
@@ -167,8 +277,8 @@ app.get('/:config/manifest.json', (req, res) => {
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
-        const userConfig = decryptConfig(req.params.config, false);
-        const catalogConfig = userConfig.catalogs.find(cat => cat.id === req.params.id);
+        const userConfig = await decryptConfig(req.params.config, false);
+        const catalogConfig = userConfig.catalogs?.find(cat => cat.id === req.params.id);
         let videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query?.skip ?? 0);
@@ -256,7 +366,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
-        const userConfig = decryptConfig(req.params.config, false);
+        const userConfig = await decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
@@ -369,7 +479,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
 app.get(['/', '/:config?/configure'], async (req, res) => {
     let userConfig;
     try {
-        userConfig = decryptConfig(req.params.config, false);
+        userConfig = req.params.config ? await decryptConfig(req.params.config, false) : {};
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
         userConfig = {};
@@ -398,6 +508,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 .instructions li { margin-bottom: 8px; }
                 #results { margin-top: 20px; }
                 .error { color: #d92323; margin-top: 10px; }
+                .success { color: #28a745; margin-top: 10px; }
                 .loading { color: #666; font-style: italic; }
                 .settings-section { text-align: left; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
                 .toggle-container { display: flex; align-items: center; margin: 10px 0; }
@@ -418,12 +529,29 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 This addon supports FAR more than just YouTube with links!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
-                            ${process.env.YTDLP_EXTRACTORS_EMBED}
+                            ${process.env.YTDLP_EXTRACTORS_EMBED || ""}
                             <div style="max-height: 20em; overflow: auto;">
                                 ${await supportedWebsites}
                             </div>
                         </details>
                     </div>
+                    
+                    <div class="settings-section">
+                        <h3>Session Management</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label for="session-password"><strong>Session Password:</strong></label>
+                            <input type="password" id="session-password" placeholder="Enter password (min 8 characters)" class="url-input" minlength="8" required>
+                            <div class="setting-description">This password will be required to modify your configuration in the future.</div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label for="existing-session"><strong>Load Existing Session (optional):</strong></label>
+                            <input type="text" id="existing-session" placeholder="Enter existing session ID to modify" class="url-input">
+                            <button type="button" id="load-session" class="install-button action-button">Load Session</button>
+                            <div class="setting-description">If you have an existing session ID, enter it here to load and modify your configuration.</div>
+                        </div>
+                    </div>
+
                     <div class="settings-section">
                         <h3>Cookies</h3>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
@@ -478,7 +606,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </tbody>
                         </table>
                     </div>
-                    <button type="submit" class="install-button" id="submit-btn">Generate Install Link</button>
+                    <button type="submit" class="install-button" id="submit-btn">Create Session</button>
                     <div id="error-message" class="error" style="display:none;"></div>
                 </form>
                 <div id="results" style="display:none;">
@@ -498,24 +626,101 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 const installUrlInput = document.getElementById('install-url');
                 const installWeb = document.getElementById('install-web');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
+                const sessionPasswordInput = document.getElementById('session-password');
+                const existingSessionInput = document.getElementById('existing-session');
+                const loadSessionBtn = document.getElementById('load-session');
+                
+                let currentSessionId = null;
+                let isUpdatingSession = false;
+                
                 const defaultPlaylists = [
                     { type: 'YouTube', id: ':ytrec', name: 'Discover', channelType: 'auto' },
                     { type: 'YouTube', id: ':ytsubs', name: 'Subscriptions', channelType: 'auto' },
                     { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later', channelType: 'auto' },
                     { type: 'YouTube', id: ':ythistory', name: 'History', channelType: 'auto' }
                 ];
+                
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
                     ...pl,
                     id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
                 }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
+
+                // Controlla se stiamo caricando una sessione esistente
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlSessionId = urlParams.get('session');
+                if (urlSessionId) {
+                    existingSessionInput.value = urlSessionId;
+                    loadSession();
+                }
+
+                // Inizializza i campi con i dati dell'utente
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
                 document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
+
+                // Carica sessione esistente
+                loadSessionBtn.addEventListener('click', loadSession);
+                
+                async function loadSession() {
+                    const sessionId = existingSessionInput.value.trim();
+                    if (!sessionId) {
+                        showError('Please enter a session ID');
+                        return;
+                    }
+                    
+                    try {
+                        loadSessionBtn.disabled = true;
+                        loadSessionBtn.textContent = 'Loading...';
+                        
+                        // Prima controlla se la sessione esiste
+                        const infoResponse = await fetch(\`/session/\${sessionId}/info\`);
+                        if (!infoResponse.ok) {
+                            const errorData = await infoResponse.json();
+                            if (infoResponse.status === 410) {
+                                throw new Error('Session expired');
+                            }
+                            throw new Error('Session not found or expired');
+                        }
+                        
+                        const sessionInfo = await infoResponse.json();
+                        currentSessionId = sessionId;
+                        isUpdatingSession = true;
+                        
+                        // Aggiorna il pulsante submit
+                        submitBtn.textContent = 'Update Session';
+                        
+                        // Mostra info sulla sessione
+                        showSuccess(\`Session loaded successfully. Created: \${new Date(sessionInfo.createdAt).toLocaleString()}\`);
+                        
+                    } catch (error) {
+                        showError(\`Failed to load session: \${error.message}\`);
+                        currentSessionId = null;
+                        isUpdatingSession = false;
+                    } finally {
+                        loadSessionBtn.disabled = false;
+                        loadSessionBtn.textContent = 'Load Session';
+                    }
+                }
+
+                // Funzioni per mostrare messaggi
+                function showError(message) {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    errorDiv.className = 'error';
+                }
+                
+                function showSuccess(message) {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    errorDiv.className = 'success';
+                }
+
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
                 });
+
                 function renderPlaylists() {
                     playlistTableBody.innerHTML = '';
                     playlists.forEach((pl, index) => {
@@ -591,62 +796,148 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         playlistTableBody.appendChild(row);
                     });
                 }
+
                 document.getElementById('add-playlist').addEventListener('click', () => {
                     playlists.push({ type: 'YouTube', id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
+
                 document.getElementById('add-defaults').addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
                     renderPlaylists();
                 });
+
                 document.getElementById('remove-defaults').addEventListener('click', () => {
                     playlists = playlists.filter(pl => !defaultPlaylists.some(def => def.id === pl.id));
                     renderPlaylists();
                 });
+
                 renderPlaylists();
+
+                // Submit form - ora gestisce sia creazione che aggiornamento sessioni
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
+                    
+                    const password = sessionPasswordInput.value.trim();
+                    if (!password || password.length < 8) {
+                        showError('Password must be at least 8 characters long');
+                        return;
+                    }
+                    
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
+                    
                     try {
-                        if (!cookies.disabled) {
-                            // Encrypt the sensitive data
+                        // Preparare la configurazione
+                        let encryptedCookies = cookies.value;
+                        
+                        // Se i cookie non sono già criptati, crittali
+                        if (!cookies.disabled && encryptedCookies) {
+                            submitBtn.textContent = 'Encrypting...';
                             const encryptResponse = await fetch('/encrypt', {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ 
-                                    auth: cookies.value,
-                                })
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ auth: encryptedCookies })
                             });
+                            
                             if (!encryptResponse.ok) {
                                 throw new Error(await encryptResponse.text() || 'Encryption failed');
                             }
-                            cookies.value = await encryptResponse.text();
-                            cookies.disabled = true;
+                            
+                            encryptedCookies = await encryptResponse.text();
                         }
-                        const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
-                            encrypted: cookies.value,
+
+                        const config = {
+                            encrypted: encryptedCookies,
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
                             )
-                        }))}/manifest.json\`;
-                        installStremio.href = 'stremio' + configString;
-                        installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
-                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
+                        };
+
+                        let sessionId;
+                        
+                        if (isUpdatingSession && currentSessionId) {
+                            // Aggiorna sessione esistente
+                            submitBtn.textContent = 'Updating Session...';
+                            
+                            const updateResponse = await fetch(\`/session/\${currentSessionId}\`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ config, password })
+                            });
+
+                            if (!updateResponse.ok) {
+                                const errorData = await updateResponse.json();
+                                throw new Error(errorData.error || 'Failed to update session');
+                            }
+
+                            sessionId = currentSessionId;
+                            showSuccess('Session updated successfully!');
+                            
+                        } else {
+                            // Crea nuova sessione
+                            submitBtn.textContent = 'Creating Session...';
+                            
+                            const sessionResponse = await fetch('/session', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ config, password })
+                            });
+
+                            if (!sessionResponse.ok) {
+                                const errorData = await sessionResponse.json();
+                                throw new Error(errorData.error || 'Failed to create session');
+                            }
+
+                            const sessionData = await sessionResponse.json();
+                            sessionId = sessionData.sessionId;
+                            
+                            currentSessionId = sessionId;
+                            isUpdatingSession = true;
+                            submitBtn.textContent = 'Update Session';
+                            
+                            showSuccess('Session created successfully!');
+                        }
+
+                        // Genera i link di installazione
+                        const manifestUrl = \`\${window.location.protocol}//\${window.location.host}/\${sessionId}/manifest.json\`;
+                        
+                        installStremio.href = \`stremio://\${window.location.host}/\${sessionId}/manifest.json\`;
+                        installUrlInput.value = manifestUrl;
+                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(manifestUrl)}\`;
+                        
+                        // Aggiorna URL per condivisione
+                        const shareUrl = \`\${window.location.protocol}//\${window.location.host}\${window.location.pathname}?session=\${sessionId}\`;
+                        
+                        // Aggiungi link per condivisione configurazione
+                        const shareContainer = document.getElementById('results');
+                        if (!document.getElementById('share-config')) {
+                            const shareLink = document.createElement('a');
+                            shareLink.id = 'share-config';
+                            shareLink.className = 'install-button';
+                            shareLink.textContent = 'Share Config URL';
+                            shareLink.href = shareUrl;
+                            shareLink.target = '_blank';
+                            shareContainer.appendChild(shareLink);
+                        } else {
+                            document.getElementById('share-config').href = shareUrl;
+                        }
+                        
                         document.getElementById('results').style.display = 'block';
+                        cookies.disabled = true;
+
                     } catch (error) {
-                        errorDiv.textContent = error.message;
-                        errorDiv.style.display = 'block';
+                        showError(error.message);
                     } finally {
+                        if (!isUpdatingSession) {
+                            submitBtn.textContent = 'Create Session';
+                        }
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Generate Install Link';
                     }
                 });
+
                 document.getElementById('copy-btn').addEventListener('click', async function() {
                     await navigator.clipboard.writeText(installUrlInput.value);
                     this.textContent = 'Copied!';
@@ -663,6 +954,15 @@ app.use((err, req, res, next) => {
     if (process.env.DEV_LOGGING) console.error('Express error:', err);
     res.status(500).json({ error: 'Internal server error', message: err.message });
 });
+
+// Pulizia sessioni scadute ogni ora
+setInterval(async () => {
+    try {
+        await sessions.cleanupExpiredSessions();
+    } catch (error) {
+        console.error('[SESSIONS] Error during cleanup:', error);
+    }
+}, 60 * 60 * 1000); // 1 ora
 
 // Start the Server
 app.listen(PORT, () => {
