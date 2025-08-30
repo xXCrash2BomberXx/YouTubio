@@ -227,11 +227,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 } else if ( (videoId = videoIdCopy.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
                     videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
                 // Saved YT-DLP Search
-                } else if (isURL(videoIdCopy)) {
-                    videoId = videoIdCopy;
-                // Saved YouTube Search
                 } else {
-                    videoId = `ytsearch100:${videoIdCopy}`;
+                    videoId = isURL(videoIdCopy) ? videoIdCopy : `ytsearch100:${videoIdCopy}`;
                 }
                 break;
             }
