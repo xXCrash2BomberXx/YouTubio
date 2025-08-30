@@ -172,6 +172,35 @@ app.delete('/session/:id', async (req, res) => {
     }
 });
 
+// Ottieni configurazione sessione con password
+app.post('/session/:id/config', async (req, res) => {
+    try {
+        const { password } = req.body;
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
+        
+        const sessionData = await sessions.getSession(req.params.id, password);
+        if (sessionData) {
+            if (sessionData.expired) {
+                return res.status(410).json({ error: 'Session expired', sessionId: sessionData.sessionId });
+            }
+            res.json({
+                id: sessionData.id,
+                config: sessionData.config,
+                createdAt: sessionData.createdAt,
+                lastAccessed: sessionData.lastAccessed,
+                expiresAt: sessionData.expiresAt
+            });
+        } else {
+            res.status(401).json({ error: 'Invalid session ID or password' });
+        }
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Session config error:', error);
+        res.status(500).json({ error: 'Failed to get session config' });
+    }
+});
+
 // Ottieni informazioni sessione (senza password)
 app.get('/session/:id/info', async (req, res) => {
     try {
@@ -477,9 +506,23 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
-    let userConfig;
+    let userConfig = {};
+    let sessionId = null;
+    let isSessionConfig = false;
+    
     try {
-        userConfig = req.params.config ? await decryptConfig(req.params.config, false) : {};
+        if (req.params.config) {
+            // Controlla se è un session ID
+            if (sessions.isValidSessionId(req.params.config)) {
+                sessionId = req.params.config;
+                isSessionConfig = true;
+                console.log(`[SESSIONS] Configure page accessed with session ID: ${sessionId}`);
+                // Non carichiamo la configurazione qui, sarà caricata dal frontend con password
+            } else {
+                // Vecchio sistema di configurazione
+                userConfig = await decryptConfig(req.params.config, false);
+            }
+        }
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
         userConfig = {};
@@ -509,6 +552,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 #results { margin-top: 20px; }
                 .error { color: #d92323; margin-top: 10px; }
                 .success { color: #28a745; margin-top: 10px; }
+                .info { color: #007bff; margin-top: 10px; }
                 .loading { color: #666; font-style: italic; }
                 .settings-section { text-align: left; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
                 .toggle-container { display: flex; align-items: center; margin: 10px 0; }
@@ -645,13 +689,24 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
                 }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
 
-                // Controlla se stiamo caricando una sessione esistente
+                // Gestione session ID dal URL
+                ${isSessionConfig ? `
+                const preloadedSessionId = '${sessionId}';
+                existingSessionInput.value = preloadedSessionId;
+                currentSessionId = preloadedSessionId;
+                
+                // Mostra che stiamo caricando una sessione esistente
+                showInfo('Please enter your password to load the session configuration.');
+                sessionPasswordInput.focus();
+                ` : `
+                // Controlla se stiamo caricando una sessione esistente tramite query parameter
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlSessionId = urlParams.get('session');
                 if (urlSessionId) {
                     existingSessionInput.value = urlSessionId;
                     loadSession();
                 }
+                `}
 
                 // Inizializza i campi con i dati dell'utente
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
@@ -714,6 +769,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     errorDiv.textContent = message;
                     errorDiv.style.display = 'block';
                     errorDiv.className = 'success';
+                }
+                
+                function showInfo(message) {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    errorDiv.className = 'info';
                 }
 
                 document.getElementById('clear-cookies').addEventListener('click', () => {
@@ -828,6 +889,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     errorDiv.style.display = 'none';
                     
                     try {
+                        // Se abbiamo un session ID precaricato ma non abbiamo ancora caricato la configurazione
+                        if (currentSessionId && !isUpdatingSession) {
+                            await loadSessionWithPassword(currentSessionId, password);
+                            return;
+                        }
+                        
                         // Preparare la configurazione
                         let encryptedCookies = cookies.value;
                         
@@ -896,8 +963,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             
                             currentSessionId = sessionId;
                             isUpdatingSession = true;
-                            submitBtn.textContent = 'Update Session';
                             
+                            // Mostra l'ID della sessione nel campo
+                            existingSessionInput.value = sessionId;
+                            
+                            submitBtn.textContent = 'Update Session';
                             showSuccess('Session created successfully!');
                         }
 
@@ -907,23 +977,6 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         installStremio.href = \`stremio://\${window.location.host}/\${sessionId}/manifest.json\`;
                         installUrlInput.value = manifestUrl;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(manifestUrl)}\`;
-                        
-                        // Aggiorna URL per condivisione
-                        const shareUrl = \`\${window.location.protocol}//\${window.location.host}\${window.location.pathname}?session=\${sessionId}\`;
-                        
-                        // Aggiungi link per condivisione configurazione
-                        const shareContainer = document.getElementById('results');
-                        if (!document.getElementById('share-config')) {
-                            const shareLink = document.createElement('a');
-                            shareLink.id = 'share-config';
-                            shareLink.className = 'install-button';
-                            shareLink.textContent = 'Share Config URL';
-                            shareLink.href = shareUrl;
-                            shareLink.target = '_blank';
-                            shareContainer.appendChild(shareLink);
-                        } else {
-                            document.getElementById('share-config').href = shareUrl;
-                        }
                         
                         document.getElementById('results').style.display = 'block';
                         cookies.disabled = true;
@@ -937,6 +990,69 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         submitBtn.disabled = false;
                     }
                 });
+
+                // Funzione per caricare sessione con password (quando viene dal URL)
+                async function loadSessionWithPassword(sessionId, password) {
+                    try {
+                        submitBtn.textContent = 'Loading Session...';
+                        
+                        // Carica la configurazione con password
+                        const configResponse = await fetch(\`/session/\${sessionId}/config\`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: password })
+                        });
+                        
+                        if (!configResponse.ok) {
+                            const errorData = await configResponse.json();
+                            if (configResponse.status === 410) {
+                                throw new Error('Session expired');
+                            }
+                            if (configResponse.status === 401) {
+                                throw new Error('Invalid password');
+                            }
+                            throw new Error(errorData.error || 'Failed to load session');
+                        }
+                        
+                        const sessionData = await configResponse.json();
+                        
+                        // Popola i campi con i dati della sessione
+                        if (sessionData.config.encrypted) {
+                            cookies.value = sessionData.config.encrypted;
+                            cookies.disabled = true;
+                        }
+                        
+                        if (sessionData.config.catalogs) {
+                            playlists = sessionData.config.catalogs.map(pl => ({
+                                ...pl,
+                                id: pl.id.startsWith('${prefix}') ? pl.id.slice('${prefix}'.length) : pl.id
+                            }));
+                            renderPlaylists();
+                        }
+                        
+                        // Imposta le altre opzioni
+                        document.getElementById('markWatchedOnLoad').checked = sessionData.config.markWatchedOnLoad === true;
+                        document.getElementById('search').checked = sessionData.config.search !== false;
+                        document.getElementById('showBrokenLinks').checked = sessionData.config.showBrokenLinks === true;
+                        
+                        isUpdatingSession = true;
+                        submitBtn.textContent = 'Update Session';
+                        showSuccess('Session loaded successfully!');
+                        
+                        // Genera i link di installazione immediati
+                        const manifestUrl = \`\${window.location.protocol}//\${window.location.host}/\${sessionId}/manifest.json\`;
+                        installStremio.href = \`stremio://\${window.location.host}/\${sessionId}/manifest.json\`;
+                        installUrlInput.value = manifestUrl;
+                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(manifestUrl)}\`;
+                        document.getElementById('results').style.display = 'block';
+                        
+                    } catch (error) {
+                        showError(\`Failed to load session: \${error.message}\`);
+                        currentSessionId = null;
+                        isUpdatingSession = false;
+                        submitBtn.textContent = 'Create Session';
+                    }
+                }
 
                 document.getElementById('copy-btn').addEventListener('click', async function() {
                     await navigator.clipboard.writeText(installUrlInput.value);
