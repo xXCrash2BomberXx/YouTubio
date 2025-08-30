@@ -54,14 +54,27 @@ function decrypt(encryptedData) {
 let counter = 0;
 async function runYtDlpWithAuth(configParam, argsArray) {
     try {
+        console.log(`[YT-DLP] Received configParam: ${configParam} (length: ${configParam.length})`);
+        
         const config = await decryptConfig(configParam);
+        console.log(`[YT-DLP] Decrypted config keys: ${Object.keys(config)}`);
+        
         const auth = config.encrypted?.auth;
+        console.log(`[YT-DLP] Extracted auth: ${auth ? `${auth.length} characters` : 'null/undefined'}`);
+        
         // Implement better auth system
         const cookies = auth;
         const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
         counter %= Number.MAX_SAFE_INTEGER;
-        if (filename) await fs.writeFile(filename, cookies);
-        return JSON.parse(await ytDlpWrap.execPromise([
+        
+        if (filename) {
+            await fs.writeFile(filename, cookies);
+            console.log(`[YT-DLP] Written cookies to: ${filename}`);
+        } else {
+            console.log(`[YT-DLP] NO COOKIES - filename is empty`);
+        }
+        
+        const fullArgs = [
             ...argsArray,
             '-i',
             '-q',
@@ -74,7 +87,28 @@ async function runYtDlpWithAuth(configParam, argsArray) {
             '--default-search', 'ytsearch100',
             '--extractor-args', 'generic:impersonate',
             ...(cookies ? ['--cookies', filename] : [])
-        ]));
+        ];
+        
+        // Debug logging
+        console.log(`[YT-DLP] Command: yt-dlp ${fullArgs.join(' ')}`);
+        
+        const result = await ytDlpWrap.execPromise(fullArgs);
+        const parsed = JSON.parse(result);
+        
+        // Debug risultato
+        if (parsed.entries) {
+            console.log(`[YT-DLP] Success: Found ${parsed.entries.length} entries`);
+        } else if (parsed.title) {
+            console.log(`[YT-DLP] Success: Single video - ${parsed.title}`);
+        } else {
+            console.log(`[YT-DLP] Success: Raw result`, typeof parsed);
+        }
+        
+        return parsed;
+        
+    } catch (error) {
+        console.error(`[YT-DLP] Error:`, error.message);
+        throw error;
     } finally {
         try {
             if (filename) await fs.unlink(filename);
@@ -115,17 +149,21 @@ app.post('/test-cookies', async (req, res) => {
         await fs.writeFile(tempFile, cookies);
 
         try {
-            // Test semplice: prova ad accedere alla watch later
+            // Test con gli stessi parametri usati in produzione
             const result = await ytDlpWrap.execPromise([
                 ':ytwatchlater',
+                '-I', '1:5:1', // Test solo i primi 5 per velocità
                 '--cookies', tempFile,
-                '--flat-playlist',
-                '--playlist-end', '1',
-                '-J',
+                '-i',
                 '-q',
                 '--no-warnings',
+                '-s',
                 '--no-cache-dir',
-                '--ignore-no-formats-error'
+                '--flat-playlist',
+                '-J',
+                '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
+                '--default-search', 'ytsearch100',
+                '--extractor-args', 'generic:impersonate'
             ]);
 
             // Se arriviamo qui, i cookie sono validi
