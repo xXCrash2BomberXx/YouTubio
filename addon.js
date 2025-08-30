@@ -98,6 +98,114 @@ app.use((req, res, next) => {
     next();
 });
 
+// Test validità cookie
+app.post('/test-cookies', async (req, res) => {
+    try {
+        const { cookies } = req.body;
+        if (!cookies || !cookies.trim()) {
+            return res.json({ 
+                valid: true, 
+                message: 'No cookies provided - basic functionality will work',
+                details: 'Search and public playlists will work. Personal playlists (Watch Later, Subscriptions, History) will not be available.'
+            });
+        }
+
+        // Crea file temporaneo per i cookies
+        const tempFile = path.join(tmpdir, `cookies-test-${Date.now()}-${Math.random()}.txt`);
+        await fs.writeFile(tempFile, cookies);
+
+        try {
+            // Test semplice: prova ad accedere alla watch later
+            const result = await ytDlpWrap.execPromise([
+                ':ytwatchlater',
+                '--cookies', tempFile,
+                '--flat-playlist',
+                '--playlist-end', '1',
+                '-J',
+                '-q',
+                '--no-warnings',
+                '--no-cache-dir',
+                '--ignore-no-formats-error'
+            ]);
+
+            // Se arriviamo qui, i cookie sono validi
+            const data = JSON.parse(result);
+            const hasEntries = data.entries && data.entries.length > 0;
+            
+            return res.json({
+                valid: true,
+                authenticated: true,
+                message: hasEntries 
+                    ? `Cookies valid! Found ${data.entries.length} items in Watch Later`
+                    : 'Cookies valid! Watch Later is empty, but authentication works',
+                details: 'All personal playlists (Watch Later, Subscriptions, History, Recommendations) will be available.'
+            });
+
+        } catch (error) {
+            const errorMessage = error.message || error.toString();
+            
+            // Analizza il tipo di errore
+            if (errorMessage.includes('The playlist does not exist') || 
+                errorMessage.includes('This playlist is private') ||
+                errorMessage.includes('Sign in to confirm') ||
+                errorMessage.includes('Please sign in')) {
+                
+                return res.json({
+                    valid: false,
+                    authenticated: false,
+                    message: 'Cookies are invalid or expired',
+                    details: 'Personal playlists will not work. Please update your cookies. Search and public playlists will still work.',
+                    error: 'Authentication failed'
+                });
+            }
+
+            // Test fallback: prova una ricerca semplice per vedere se i cookie sono almeno parsabili
+            try {
+                await ytDlpWrap.execPromise([
+                    'ytsearch1:test',
+                    '--cookies', tempFile,
+                    '--flat-playlist',
+                    '-J',
+                    '-q',
+                    '--no-warnings'
+                ]);
+
+                return res.json({
+                    valid: true,
+                    authenticated: false,
+                    message: 'Cookies format valid but authentication failed',
+                    details: 'Search and public playlists will work. Personal playlists may not work properly.',
+                    warning: errorMessage
+                });
+
+            } catch (fallbackError) {
+                return res.json({
+                    valid: false,
+                    authenticated: false,
+                    message: 'Cookies format is invalid',
+                    details: 'Please check your cookies.txt format. Basic functionality will still work.',
+                    error: fallbackError.message
+                });
+            }
+        }
+
+    } catch (error) {
+        if (process.env.DEV_LOGGING) console.error('Cookie test error:', error);
+        return res.json({
+            valid: false,
+            authenticated: false,
+            message: 'Failed to test cookies',
+            details: 'There was an error testing your cookies. Basic functionality will still work.',
+            error: error.message
+        });
+    } finally {
+        // Pulizia del file temporaneo
+        try {
+            if (tempFile) await fs.unlink(tempFile);
+        } catch (error) {}
+    }
+});
+
 // Config Encryption Endpoint
 app.post('/encrypt', (req, res) => {
     try {
@@ -599,7 +707,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     <div class="settings-section">
                         <h3>Cookies</h3>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                            <button type="button" class="install-button action-button" id="test-cookies">Test Cookies</button>
+                        </div>
+                        <div id="cookie-test-result" style="display: none; margin-top: 10px; padding: 10px; border-radius: 5px;"></div>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
@@ -673,6 +785,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 const sessionPasswordInput = document.getElementById('session-password');
                 const existingSessionInput = document.getElementById('existing-session');
                 const loadSessionBtn = document.getElementById('load-session');
+                const testCookiesBtn = document.getElementById('test-cookies');
+                const cookieTestResult = document.getElementById('cookie-test-result');
                 
                 let currentSessionId = null;
                 let isUpdatingSession = false;
@@ -719,8 +833,15 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 
                 async function loadSession() {
                     const sessionId = existingSessionInput.value.trim();
+                    const password = sessionPasswordInput.value.trim();
+                    
                     if (!sessionId) {
                         showError('Please enter a session ID');
+                        return;
+                    }
+                    
+                    if (!password) {
+                        showError('Please enter your password to load the session');
                         return;
                     }
                     
@@ -728,25 +849,56 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         loadSessionBtn.disabled = true;
                         loadSessionBtn.textContent = 'Loading...';
                         
-                        // Prima controlla se la sessione esiste
-                        const infoResponse = await fetch(\`/session/\${sessionId}/info\`);
-                        if (!infoResponse.ok) {
-                            const errorData = await infoResponse.json();
-                            if (infoResponse.status === 410) {
+                        // Carica la configurazione con password
+                        const configResponse = await fetch(\`/session/\${sessionId}/config\`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: password })
+                        });
+                        
+                        if (!configResponse.ok) {
+                            const errorData = await configResponse.json();
+                            if (configResponse.status === 410) {
                                 throw new Error('Session expired');
                             }
-                            throw new Error('Session not found or expired');
+                            if (configResponse.status === 401) {
+                                throw new Error('Invalid password');
+                            }
+                            throw new Error(errorData.error || 'Failed to load session');
                         }
                         
-                        const sessionInfo = await infoResponse.json();
+                        const sessionData = await configResponse.json();
+                        
+                        // Popola i campi con i dati della sessione
+                        if (sessionData.config.encrypted) {
+                            cookies.value = sessionData.config.encrypted;
+                            cookies.disabled = true;
+                        }
+                        
+                        if (sessionData.config.catalogs) {
+                            playlists = sessionData.config.catalogs.map(pl => ({
+                                ...pl,
+                                id: pl.id.startsWith('${prefix}') ? pl.id.slice('${prefix}'.length) : pl.id
+                            }));
+                            renderPlaylists();
+                        }
+                        
+                        // Imposta le altre opzioni
+                        document.getElementById('markWatchedOnLoad').checked = sessionData.config.markWatchedOnLoad === true;
+                        document.getElementById('search').checked = sessionData.config.search !== false;
+                        document.getElementById('showBrokenLinks').checked = sessionData.config.showBrokenLinks === true;
+                        
                         currentSessionId = sessionId;
                         isUpdatingSession = true;
-                        
-                        // Aggiorna il pulsante submit
                         submitBtn.textContent = 'Update Session';
+                        showSuccess(\`Session loaded successfully. Created: \${new Date(sessionData.createdAt).toLocaleString()}\`);
                         
-                        // Mostra info sulla sessione
-                        showSuccess(\`Session loaded successfully. Created: \${new Date(sessionInfo.createdAt).toLocaleString()}\`);
+                        // Genera i link di installazione immediati
+                        const manifestUrl = \`\${window.location.protocol}//\${window.location.host}/\${sessionId}/manifest.json\`;
+                        installStremio.href = \`stremio://\${window.location.host}/\${sessionId}/manifest.json\`;
+                        installUrlInput.value = manifestUrl;
+                        installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(manifestUrl)}\`;
+                        document.getElementById('results').style.display = 'block';
                         
                     } catch (error) {
                         showError(\`Failed to load session: \${error.message}\`);
@@ -777,10 +929,77 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     errorDiv.className = 'info';
                 }
 
+                function showWarning(message) {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                    errorDiv.className = 'warning';
+                }
+
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
+                    // Nascondi risultato test precedente
+                    cookieTestResult.style.display = 'none';
                 });
+
+                // Test cookies functionality
+                testCookiesBtn.addEventListener('click', testCookies);
+
+                async function testCookies() {
+                    const cookieData = cookies.value.trim();
+                    
+                    try {
+                        testCookiesBtn.disabled = true;
+                        testCookiesBtn.textContent = 'Testing...';
+                        cookieTestResult.style.display = 'none';
+
+                        const response = await fetch('/test-cookies', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ cookies: cookieData })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+                        }
+
+                        const result = await response.json();
+                        displayCookieTestResult(result);
+
+                    } catch (error) {
+                        displayCookieTestResult({
+                            valid: false,
+                            authenticated: false,
+                            message: 'Test failed',
+                            details: \`Error testing cookies: \${error.message}\`,
+                            error: error.message
+                        });
+                    } finally {
+                        testCookiesBtn.disabled = false;
+                        testCookiesBtn.textContent = 'Test Cookies';
+                    }
+                }
+
+                function displayCookieTestResult(result) {
+                    cookieTestResult.style.display = 'block';
+                    
+                    let className = 'cookie-result ';
+                    if (result.valid && result.authenticated) {
+                        className += 'success';
+                    } else if (result.valid && !result.authenticated) {
+                        className += 'warning';
+                    } else {
+                        className += 'error';
+                    }
+                    
+                    cookieTestResult.className = className;
+                    cookieTestResult.innerHTML = \`
+                        <div class="cookie-result-title">\${result.message}</div>
+                        <div class="cookie-result-details">\${result.details}</div>
+                        \${result.error ? \`<div class="cookie-result-details" style="margin-top: 5px;"><strong>Error:</strong> \${result.error}</div>\` : ''}
+                        \${result.warning ? \`<div class="cookie-result-details" style="margin-top: 5px;"><strong>Warning:</strong> \${result.warning}</div>\` : ''}
+                    \`;
+                }
 
                 function renderPlaylists() {
                     playlistTableBody.innerHTML = '';
@@ -893,6 +1112,39 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         if (currentSessionId && !isUpdatingSession) {
                             await loadSessionWithPassword(currentSessionId, password);
                             return;
+                        }
+
+                        // Test automatico dei cookie se forniti (solo per nuove sessioni o aggiornamenti significativi)
+                        if (cookies.value.trim() && !cookies.disabled) {
+                            submitBtn.textContent = 'Testing Cookies...';
+                            const cookieTestResult = await fetch('/test-cookies', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ cookies: cookies.value.trim() })
+                            });
+
+                            if (cookieTestResult.ok) {
+                                const testResult = await cookieTestResult.json();
+                                
+                                // Mostra risultato del test
+                                displayCookieTestResult(testResult);
+                                
+                                // Se i cookie sono completamente invalidi, chiedi conferma
+                                if (!testResult.valid) {
+                                    const confirmProceed = confirm(
+                                        'Cookie test failed: ' + testResult.message + '\\n\\n' +
+                                        'Do you want to proceed anyway? Basic functionality will still work but personal playlists may not be available.'
+                                    );
+                                    if (!confirmProceed) {
+                                        return;
+                                    }
+                                }
+                                
+                                // Se i cookie sono validi ma non autenticati, mostra warning
+                                if (testResult.valid && !testResult.authenticated) {
+                                    showWarning('Cookies are valid but authentication failed. Personal playlists may not work properly.');
+                                }
+                            }
                         }
                         
                         // Preparare la configurazione
