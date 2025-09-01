@@ -255,7 +255,7 @@ function toYouTubeURL(userConfig, videoId, query) {
     let temp;
     const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs).find(cat => [videoId, prefix + videoId].includes(cat.id));
     /** @type {string?} */
-    const videoId2 = query.search ?? videoId;
+    const videoId2 = (query.search ?? videoId).trim();
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
     if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch100:video')
@@ -278,6 +278,8 @@ function toYouTubeURL(userConfig, videoId, query) {
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
+    else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
+        return videoId2;
     return isURL(videoId2) ?
         videoId :
         `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
@@ -298,7 +300,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const videos = await runYtDlpWithAuth(req.params.config, [
             '-I', query.genre?.startsWith(reversedPrefix) ? `${-(skip + 1)}:${-(skip + 100)}:-1` : `${skip + 1}:${skip + 100}:1`,
             '--yes-playlist',
-            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length), query)
+            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length).trim(), query)
         ]);
         return res.json({
             metas: (videos.entries ?? [videos]).map(video => {
@@ -327,7 +329,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         /** @type {string?} */
-        const videoId = req.params.id?.slice(prefix.length);
+        const videoId = req.params.id?.slice(prefix.length).trim();
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',  // Only fetch the first video since this never needs more than one
