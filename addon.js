@@ -150,7 +150,7 @@ app.get('/:config/manifest.json', (req, res) => {
                 ] }))
             ].map(c => ({
                 ...c,
-                id: c.id.startsWith(prefix) ? c.id : prefix + c.id,
+                id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
                 type: c.type ?? 'YouTube',
                 extra: [ ...(c.extra ?? []), { name: 'skip', isRequired: false } ]
             })),
