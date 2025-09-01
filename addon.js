@@ -132,25 +132,28 @@ app.get('/:config/manifest.json', (req, res) => {
             resources: ['catalog', 'stream', 'meta'],
             types: ['movie', 'channel'],
             idPrefixes: [prefix],
-            catalogs: (userConfig.catalogs?.map(c => ({
-                ...c,
-                extra: [ { name: 'skip', isRequired: false } ]
-            })) ?? [
-                { type: 'YouTube', id: `${prefix}:ytrec`, name: 'Discover', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'YouTube', id: `${prefix}:ytsubs`, name: 'Subscriptions', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'YouTube', id: `${prefix}:ytwatchlater`, name: 'Watch Later', extra: [ { name: 'skip', isRequired: false } ] },
-                { type: 'YouTube', id: `${prefix}:ythistory`, name: 'History', extra: [ { name: 'skip', isRequired: false } ] }
-            ]).concat([
+            catalogs: [
+                ...(userConfig.catalogs ?? [
+                    { id: ':ytrec', name: 'Discover' },
+                    { id: ':ytsubs', name: 'Subscriptions' },
+                    { id: ':ytwatchlater', name: 'Watch Later' },
+                    { id: ':ythistory', name: 'History' }
+                ]),
                 // Add search unless explicitly disabled
                 ...(userConfig.search === false ? [] : [
-                    { type: 'YouTube', id: `${prefix}:ytsearch100:video`, name: 'Video' },
-                    { type: 'YouTube', id: `${prefix}:ytsearch100:channel`, name: 'Channel' }
-                ].map(c => ({ ...c, extra: [
+                    { id: ':ytsearch100:video', name: 'Video' },
+                    { id: ':ytsearch100:channel', name: 'Channel' }
+                ]).map(c => ({ ...c, extra: [
+                    ...(c.extra ?? []),
                     { name: 'search', isRequired: true },
-                    { name: 'skip', isRequired: false },
                     { name: "genre", isRequired: false, options: ['Relevance', 'Upload Date', 'View Count', 'Rating'] }
-                ] })))
-            ]),
+                ] }))
+            ].map(c => ({
+                ...c,
+                id: c.id.startsWith(prefix) ? c.id : prefix + c.id,
+                type: c.type ?? 'YouTube',
+                extra: [ ...(c.extra ?? []), { name: 'skip', isRequired: false } ]
+            })),
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
             behaviorHints: {
                 configurable: true
@@ -237,7 +240,14 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
                 // Saved YT-DLP Search
                 } else {
-                    videoId = isURL(videoIdCopy) ? videoIdCopy : `ytsearch100:${videoIdCopy}`;
+                    videoId = isURL(videoIdCopy) ?
+                        videoIdCopy :
+                        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoIdCopy)}&sp=${{
+                            'Relevance': 'CAASAhAB',
+                            'Upload Date': 'CAISAhAB',
+                            'View Count': 'CAMSAhAB',
+                            'Rating': 'CAESAhAB'
+                        }[query.genre ?? 'Relevance']}`;
                 }
                 break;
             }
