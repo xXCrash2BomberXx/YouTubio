@@ -186,11 +186,21 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         switch (catalogConfig?.channelType) {
         case 'video':
             // Saved Video Search
-            videoId = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+            videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+                'Relevance': 'CAASAhAB',
+                'Upload Date': 'CAISAhAB',
+                'View Count': 'CAMSAhAB',
+                'Rating': 'CAESAhAB'
+            }[query.genre ?? 'Relevance']}`;
             break;
         case 'channel':
             // Saved Channel Search
-            videoId = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(videoId)}`;
+            videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+                'Relevance': 'CAASAhAC',
+                'Upload Date': 'CAISAhAC',
+                'View Count': 'CAMSAhAC',
+                'Rating': 'CAESAhAC'
+            }[query.genre ?? 'Relevance']}`;
             break;
         case 'auto':
         case undefined:
@@ -209,17 +219,17 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 if (videoIdCopy.startsWith(':ytsearch100')) {
                     if (!query.search) throw new Error("Missing query parameter");
                     videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=${
-                        (videoIdCopy.slice(':ytsearch100'.length).startsWith(':channel') ? {
-                            'Relevance': 'CAASAhAC',
-                            'Upload Date': 'CAISAhAC',
-                            'View Count': 'CAMSAhAC',
-                            'Rating': 'CAESAhAC'
-                        } : {
-                            'Relevance': 'CAASAhAB',
-                            'Upload Date': 'CAISAhAB',
-                            'View Count': 'CAMSAhAB',
-                            'Rating': 'CAESAhAB'
-                        })[query.genre ?? 'Relevance']}`;
+                    (videoIdCopy.slice(':ytsearch100'.length).startsWith(':channel') ? {
+                        'Relevance': 'CAASAhAC',
+                        'Upload Date': 'CAISAhAC',
+                        'View Count': 'CAMSAhAC',
+                        'Rating': 'CAESAhAC'
+                    } : {
+                        'Relevance': 'CAASAhAB',
+                        'Upload Date': 'CAISAhAB',
+                        'View Count': 'CAMSAhAB',
+                        'Rating': 'CAESAhAB'
+                    })[query.genre ?? 'Relevance']}`;
                 } else if ( (videoId = videoIdCopy.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
                     videoId = `https://www.youtube.com/${videoId[0]}/videos`;
                 // Playlists
@@ -247,7 +257,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                         poster: ((channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? '')) ?? undefined,
                         posterShape: channel ? 'square' : 'landscape',
                         description: video.description ?? video.title,
-                        releaseInfo: video.upload_date?.substring(0, 4)
+                        releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
                     } : null;
                 }).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
