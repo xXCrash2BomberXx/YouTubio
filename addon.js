@@ -6,12 +6,14 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 // const util = require('util');
+process.env.DEV_LOGGING = true;
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
 const postfix = ':1:1';
+const reversedPrefix = 'Reversed';
 const channelRegex = /^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/;
 const playlistRegex = /^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/;
 const videoRegex = /^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/;
@@ -66,14 +68,16 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         return JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
             '-i',
+            '--default-search', 'ytsearch100',
+            '--no-plugin-dirs',
+            '--flat-playlist',
+            '--no-cache-dir',
             '-q',
             '--no-warnings',
             '-s',
-            '--no-cache-dir',
-            '--flat-playlist',
+            '--ignore-no-formats-error',
             '-J',
             '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
-            '--default-search', 'ytsearch100',
             '--extractor-args', 'generic:impersonate',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
@@ -171,9 +175,19 @@ app.get('/:config/manifest.json', (req, res) => {
                 id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
                 type: c.type ?? 'YouTube',
                 extra: [
-                    ...(c.extra ?? []),
-                    ...(canGenre(c) ? [{ name: 'genre', isRequired: false, options: ['Relevance', 'Upload Date', 'View Count', 'Rating'] }] : []),
-                    { name: 'skip', isRequired: false }
+                    ...(
+                        c.extra ?? []
+                    ), {
+                        name: 'genre',
+                        isRequired: false,
+                        options : [reversedPrefix.trim()].concat(  // Add default reversed
+                                (canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])  // Add YouTube sorting options
+                                .flatMap(x => [x, `${reversedPrefix} ${x}`])  // Create reversed of each option
+                            )
+                    }, {
+                        name: 'skip',
+                        isRequired: false
+                    }
                 ]
             })),
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
@@ -195,20 +209,21 @@ function toYouTubeURL(userConfig, videoId, query) {
     let temp;
     const catalogConfig = userConfig.catalogs.find(cat => [videoId, prefix + videoId].includes(cat.id));
     const videoId2 = query.search ?? videoId;
+    const genre = query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre;
     if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch100:video')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
-        }[ query.genre ?? 'Relevance' ]}`;
+        }[ genre?.trim() ?? 'Relevance' ]}`;
     else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch100:channel')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
-        }[ query.genre ?? 'Relevance' ]}`;
+        }[ genre?.trim() ?? 'Relevance' ]}`;
     else if ( (temp = videoId2.match(channelRegex)) )
         return `https://www.youtube.com/${temp[0]}/videos`;
     else if ( (temp = videoId2.match(playlistRegex)) )
@@ -216,13 +231,13 @@ function toYouTubeURL(userConfig, videoId, query) {
     else if ( (temp = videoId2.match(videoRegex)) )
         return `https://www.youtube.com/watch?v=${temp[0]}`;
     return isURL(videoId2) ?
-        videoIdCopys :
+        videoId :
         `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
-        }[ query.genre ?? 'Relevance' ]}`;
+        }[ genre?.trim() ?? 'Relevance' ]}`;
 }
 
 // Stremio Addon Catalog Route
@@ -233,8 +248,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query.skip ?? 0);
         const videos = await runYtDlpWithAuth(req.params.config, [
-            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length), query),
-            '-I', `${skip + 1}:${skip + 100}:1`,
+            '-I', query.genre?.startsWith(reversedPrefix) ? `${-(skip + 1)}:${-(skip + 100)}:-1` : `${skip + 1}:${skip + 100}:1`,
+            '--yes-playlist',
+            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length), query)
         ]);
         return res.json({
             metas: (videos.entries ?? [ videos ]).map(video => {
@@ -264,10 +280,10 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
         const video = await runYtDlpWithAuth(req.params.config, [
-            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? ''))),
-            '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
-            '--ignore-no-formats-error',
-            ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
+            userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            '-I', ':1',  // Only fetch the first video since this never needs more than one
+            '--no-playlist',
+            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')))
         ]);
         const channel = video._type === 'playlist';
         const title = video.title ?? 'Unknown Title';
