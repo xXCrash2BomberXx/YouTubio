@@ -6,7 +6,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 // const util = require('util');
-process.env.DEV_LOGGING = true;
 
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
@@ -150,7 +149,7 @@ app.get('/:config/manifest.json', (req, res) => {
         }
         return res.json({
             id: 'youtubio.elfhosted.com',
-            version: '0.4.9',
+            version: '0.5.0',
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
