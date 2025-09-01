@@ -272,14 +272,14 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
+    else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
+        return videoId2;
     else if ((temp = videoId2.match(channelRegex)))
         return `https://www.youtube.com/${temp[0]}/videos`;
     else if ((temp = videoId2.match(playlistRegex)))
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
-    else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
-        return videoId2;
     return isURL(videoId2) ?
         videoId :
         `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
