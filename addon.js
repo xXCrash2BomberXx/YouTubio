@@ -126,7 +126,7 @@ app.get('/:config/manifest.json', (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         return res.json({
             id: 'youtubio.elfhosted.com',
-            version: '0.4.4',
+            version: '0.4.5',
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
@@ -176,6 +176,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query.skip ?? 0);
         const videoIdCopy = videoId;
+        const isURL = s => {
+            try {
+                return Boolean(new URL(s));
+            } catch {
+                return false;
+            }
+        };
         switch (catalogConfig?.channelType) {
         case 'video':
             // Saved Video Search
@@ -220,7 +227,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
                 // Saved YT-DLP Search
                 } else {
-                    videoId = videoIdCopy;
+                    videoId = isURL(videoIdCopy) ? videoIdCopy : `ytsearch100:${videoIdCopy}`;
                 }
                 break;
             }
