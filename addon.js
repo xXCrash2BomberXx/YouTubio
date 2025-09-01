@@ -37,7 +37,7 @@ const supportedWebsites = new Promise(async resolve =>
 */
 function encrypt(text) {
     const salt = crypto.randomBytes(16);
-    const iv = crypto.randomBytes(16);
+    const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv(
         ALGORITHM,
         crypto.createHash('sha256').update(Buffer.concat([ENCRYPTION_KEY, salt])).digest(),
@@ -78,13 +78,14 @@ let counter = 0;
  * @returns {Object}
  */
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
+    let filename = '';
     try {
         /** @type {object?} */
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
         // Implement better auth system
         const cookies = auth;
         /** @type {string} */
-        const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+        filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
         counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise([
@@ -94,9 +95,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '--no-plugin-dirs',
             '--flat-playlist',
             '--no-cache-dir',
-            '-q',
             '--no-warnings',
-            '-s',
             '--ignore-no-formats-error',
             '-J',
             '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
@@ -253,7 +252,7 @@ app.get('/:config/manifest.json', (req, res) => {
 function toYouTubeURL(userConfig, videoId, query) {
     /** @type {RegExpMatchArray?} */
     let temp;
-    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs).find(cat => [videoId, prefix + videoId].includes(cat.id));
+    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => [videoId, prefix + videoId].includes(cat.id));
     /** @type {string?} */
     const videoId2 = (query.search ?? videoId).trim();
     /** @type {string} */
@@ -281,7 +280,7 @@ function toYouTubeURL(userConfig, videoId, query) {
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
     return isURL(videoId2) ?
-        videoId :
+        videoId2 :
         `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
