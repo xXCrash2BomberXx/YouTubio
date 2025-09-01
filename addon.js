@@ -125,6 +125,18 @@ function decryptConfig(configParam, enableDecryption = true) {
 app.get('/:config/manifest.json', (req, res) => {
     try {
         const userConfig = decryptConfig(req.params.config, false);
+        const canGenre = c => {
+            if (c.channelType !== 'auto') return true;
+            if (c.id?.startsWith(prefix)) c.id = c.id.slice(prefix.length);
+            if (c.id?.startsWith(':ytsearch100')) return true;
+            if (c.id?.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) return false;
+            if (c.id?.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) return false;
+            try {
+                return !Boolean(new URL(s));
+            } catch {
+                return true;
+            }
+        }
         return res.json({
             id: 'youtubio.elfhosted.com',
             version: '0.4.7',
@@ -146,13 +158,16 @@ app.get('/:config/manifest.json', (req, res) => {
                 ]).map(c => ({ ...c, extra: [
                     ...(c.extra ?? []),
                     { name: 'search', isRequired: true },
-                    { name: "genre", isRequired: false, options: ['Relevance', 'Upload Date', 'View Count', 'Rating'] }
                 ] }))
             ].map(c => ({
                 ...c,
                 id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
                 type: c.type ?? 'YouTube',
-                extra: [ ...(c.extra ?? []), { name: 'skip', isRequired: false } ]
+                extra: [
+                    ...(c.extra ?? []),
+                    ...(canGenre(c) ? [{ name: 'genre', isRequired: false, options: ['Relevance', 'Upload Date', 'View Count', 'Rating'] }] : []),
+                    { name: 'skip', isRequired: false }
+                ]
             })),
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
             behaviorHints: {
