@@ -75,7 +75,7 @@ let counter = 0;
  * Runs yt-dlp with authentication
  * @param {string} encryptedConfig 
  * @param {string[]} argsArray 
- * @returns {JSON}
+ * @returns {Object}
  */
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
     try {
@@ -140,10 +140,10 @@ app.post('/encrypt', (req, res) => {
  * Parse a config parameter, decrypting if necessary
  * @param {string} configParam 
  * @param {boolean=true} enableDecryption 
- * @returns {JSON}
+ * @returns {Object}
  */
 function decryptConfig(configParam, enableDecryption = true) {
-    /** @type {JSON} */
+    /** @type {Object} */
     const config = JSON.parse(configParam);
     if (enableDecryption && config.encrypted) {
         try {
@@ -173,7 +173,7 @@ function isURL(s) {
 app.get('/:config/manifest.json', (req, res) => {
     try {
         const userConfig = decryptConfig(req.params.config, false);
-        const canGenre = /** @param {JSON} c */ (c) => {
+        const canGenre = /** @param {Object} c */ (c) => {
             if (c.channelType !== 'auto') return true;
             const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
             if (id.startsWith(':ytsearch100')) return true;
@@ -245,7 +245,7 @@ app.get('/:config/manifest.json', (req, res) => {
 
 /**
  * Converts a YouTube video ID and query parameters into a YouTube URL.
- * @param {JSON} userConfig 
+ * @param {Object} userConfig 
  * @param {string} videoId 
  * @param {Object} query 
  * @returns {string}
@@ -253,7 +253,7 @@ app.get('/:config/manifest.json', (req, res) => {
 function toYouTubeURL(userConfig, videoId, query) {
     /** @type {RegExpMatchArray?} */
     let temp;
-    const catalogConfig = /** @type {JSON[]} */ (userConfig.catalogs).find(cat => [videoId, prefix + videoId].includes(cat.id));
+    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs).find(cat => [videoId, prefix + videoId].includes(cat.id));
     /** @type {string?} */
     const videoId2 = query.search ?? videoId;
     /** @type {string} */
@@ -434,7 +434,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
-    /** @type {JSON?} */
+    /** @type {Object?} */
     let userConfig;
     try {
         userConfig = decryptConfig(req.params.config, false);
@@ -542,7 +542,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 <tr>
                                     <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks"></td>
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
-                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on vidoes without it enabled.</td>
+                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on videos without it enabled.</td>
                                 </tr>
                             </tbody>
                         </table>
