@@ -11,6 +11,7 @@ const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
+const postfix = ':1:1';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
@@ -335,7 +336,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
             released: released,
             videos: [{
-                id: req.params.id + ':1:1',
+                id: req.params.id + postfix,
                 title: title,
                 released: released,
                 thumbnail: thumbnail,
@@ -377,7 +378,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
             language: video.language,
             website: video.webpage_url,
-            behaviorHints: { defaultVideoId: req.params.id + ':1:1' }
+            behaviorHints: { defaultVideoId: req.params.id + postfix }
         } });
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
