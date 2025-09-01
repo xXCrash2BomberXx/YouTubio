@@ -179,10 +179,12 @@ app.get('/:config/manifest.json', (req, res) => {
                     ), {
                         name: 'genre',
                         isRequired: false,
-                        options : [reversedPrefix.trim()].concat(  // Add default reversed
-                                (canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])  // Add YouTube sorting options
-                                .flatMap(x => [x, `${reversedPrefix} ${x}`])  // Create reversed of each option
-                            )
+                        options : [
+                            '',
+                            // Add YouTube sorting options
+                            ...(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
+                        ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
+                            .slice(1)  // Remove default sorting option
                     }, {
                         name: 'skip',
                         isRequired: false
@@ -208,21 +210,21 @@ function toYouTubeURL(userConfig, videoId, query) {
     let temp;
     const catalogConfig = userConfig.catalogs.find(cat => [videoId, prefix + videoId].includes(cat.id));
     const videoId2 = query.search ?? videoId;
-    const genre = query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre;
+    const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
     if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch100:video')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
-        }[ genre?.trim() ?? 'Relevance' ]}`;
+        }[genre]}`;
     else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch100:channel')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
-        }[ genre?.trim() ?? 'Relevance' ]}`;
+        }[genre]}`;
     else if ( (temp = videoId2.match(channelRegex)) )
         return `https://www.youtube.com/${temp[0]}/videos`;
     else if ( (temp = videoId2.match(playlistRegex)) )
@@ -236,7 +238,7 @@ function toYouTubeURL(userConfig, videoId, query) {
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
-        }[ genre?.trim() ?? 'Relevance' ]}`;
+        }[genre]}`;
 }
 
 // Stremio Addon Catalog Route
