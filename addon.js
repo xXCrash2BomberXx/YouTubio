@@ -12,14 +12,17 @@ const ytDlpWrap = new YTDlpWrap();
 const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
 const postfix = ':1:1';
+const channelRegex = /^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/;
+const playlistRegex = /^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/;
+const videoRegex = /^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/;
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
 const ALGORITHM = 'aes-256-gcm';
 
 const extractors = ytDlpWrap.getExtractors();
-const supportedWebsites = new Promise(async resolve => {
-    return resolve(`<ul style="list-style-type: none;">${(await extractors).map(extractor => '<li>'+extractor+'</li>').join('')}</ul>`);
-});
+const supportedWebsites = new Promise(async resolve =>
+    resolve(`<ul style="list-style-type: none;">${(await extractors).map(extractor => '<li>'+extractor+'</li>').join('')}</ul>`)
+);
 
 function encrypt(text) {
     const salt = crypto.randomBytes(16);
@@ -91,9 +94,8 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') {
+    if (req.method === 'OPTIONS')
         return res.sendStatus(204);
-    }
     next();
 });
 
@@ -121,21 +123,26 @@ function decryptConfig(configParam, enableDecryption = true) {
     return config;
 }
 
+function isURL(s) {
+    try {
+        return Boolean(new URL(s));
+    } catch {
+        return false;
+    }
+}
+
 // Stremio Addon Manifest Route
 app.get('/:config/manifest.json', (req, res) => {
     try {
         const userConfig = decryptConfig(req.params.config, false);
         const canGenre = c => {
             if (c.channelType !== 'auto') return true;
-            if (c.id?.startsWith(prefix)) c.id = c.id.slice(prefix.length);
-            if (c.id?.startsWith(':ytsearch100')) return true;
-            if (c.id?.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) return false;
-            if (c.id?.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) return false;
-            try {
-                return !Boolean(new URL(s));
-            } catch {
-                return true;
-            }
+            const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
+            if (id.startsWith(':ytsearch100')) return true;
+            if (id.match(channelRegex)) return false;
+            if (id.match(playlistRegex)) return false;
+            if (id.match(videoRegex)) return false;
+            return !isURL(id);
         }
         return res.json({
             id: 'youtubio.elfhosted.com',
@@ -184,92 +191,62 @@ app.get('/:config/manifest.json', (req, res) => {
     }
 });
 
+function toYouTubeURL(userConfig, videoId, query) {
+    let temp;
+    const catalogConfig = userConfig.catalogs.find(cat => [videoId, prefix + videoId].includes(cat.id));
+    if (catalogConfig?.channelType === 'video')
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+            'Relevance': 'CAASAhAB',
+            'Upload Date': 'CAISAhAB',
+            'View Count': 'CAMSAhAB',
+            'Rating': 'CAESAhAB'
+        }[ query.genre ?? 'Relevance' ]}`;
+    else if (catalogConfig?.channelType === 'channel')
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+            'Relevance': 'CAASAhAC',
+            'Upload Date': 'CAISAhAC',
+            'View Count': 'CAMSAhAC',
+            'Rating': 'CAESAhAC'
+        }[ query.genre ?? 'Relevance' ]}`;
+    else if (videoId.startsWith(':ytsearch100')) {
+        if (!query.search) throw new Error("Missing query parameter");
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=${
+        (videoId.slice(':ytsearch100'.length).startsWith(':channel') ? {
+            'Relevance': 'CAASAhAC',
+            'Upload Date': 'CAISAhAC',
+            'View Count': 'CAMSAhAC',
+            'Rating': 'CAESAhAC'
+        } : {
+            'Relevance': 'CAASAhAB',
+            'Upload Date': 'CAISAhAB',
+            'View Count': 'CAMSAhAB',
+            'Rating': 'CAESAhAB'
+        })[ query.genre ?? 'Relevance' ]}`;
+    } else if ( (temp = videoId.match(channelRegex)) )
+        return `https://www.youtube.com/${temp[0]}/videos`;
+    else if ( (temp = videoId.match(playlistRegex)) )
+        return `https://www.youtube.com/playlist?list=${temp[0]}`;
+    else if ( (temp = videoId.match(videoRegex)) )
+        return `https://www.youtube.com/watch?v=${temp[0]}`;
+    return isURL(videoId) ?
+        videoIdCopys :
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+            'Relevance': 'CAASAhAB',
+            'Upload Date': 'CAISAhAB',
+            'View Count': 'CAMSAhAB',
+            'Rating': 'CAESAhAB'
+        }[ query.genre ?? 'Relevance' ]}`;
+}
+
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
-        const catalogConfig = userConfig.catalogs.find(cat => cat.id === req.params.id);
-        let videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query.skip ?? 0);
-        const videoIdCopy = videoId;
-        const isURL = s => {
-            try {
-                return Boolean(new URL(s));
-            } catch {
-                return false;
-            }
-        };
-        switch (catalogConfig?.channelType) {
-        case 'video':
-            // Saved Video Search
-            videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
-                'Relevance': 'CAASAhAB',
-                'Upload Date': 'CAISAhAB',
-                'View Count': 'CAMSAhAB',
-                'Rating': 'CAESAhAB'
-            }[ query.genre ?? 'Relevance' ]}`;
-            break;
-        case 'channel':
-            // Saved Channel Search
-            videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
-                'Relevance': 'CAASAhAC',
-                'Upload Date': 'CAISAhAC',
-                'View Count': 'CAMSAhAC',
-                'Rating': 'CAESAhAC'
-            }[ query.genre ?? 'Relevance' ]}`;
-            break;
-        case 'auto':
-        case undefined:
-        default:
-            switch (videoIdCopy) {
-            // YT-DLP Playlists
-            case ':ytfav':
-            case ':ytwatchlater':
-            case ':ytsubs':
-            case ':ythistory':
-            case ':ytrec':
-            case ':ytnotif':
-                break;
-            default:
-                // YT-DLP Search
-                if (videoIdCopy.startsWith(':ytsearch100')) {
-                    if (!query.search) throw new Error("Missing query parameter");
-                    videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=${
-                    (videoIdCopy.slice(':ytsearch100'.length).startsWith(':channel') ? {
-                        'Relevance': 'CAASAhAC',
-                        'Upload Date': 'CAISAhAC',
-                        'View Count': 'CAMSAhAC',
-                        'Rating': 'CAESAhAC'
-                    } : {
-                        'Relevance': 'CAASAhAB',
-                        'Upload Date': 'CAISAhAB',
-                        'View Count': 'CAMSAhAB',
-                        'Rating': 'CAESAhAB'
-                    })[ query.genre ?? 'Relevance' ]}`;
-                } else if ( (videoId = videoIdCopy.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
-                    videoId = `https://www.youtube.com/${videoId[0]}/videos`;
-                // Playlists
-                } else if ( (videoId = videoIdCopy.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
-                    videoId = `https://www.youtube.com/playlist?list=${videoId[0]}`;
-                // Saved YT-DLP Search
-                } else {
-                    videoId = isURL(videoIdCopy) ?
-                        videoIdCopy :
-                        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoIdCopy)}&sp=${{
-                            'Relevance': 'CAASAhAB',
-                            'Upload Date': 'CAISAhAB',
-                            'View Count': 'CAMSAhAB',
-                            'Rating': 'CAESAhAB'
-                        }[ query.genre ?? 'Relevance' ]}`;
-                }
-                break;
-            }
-            break;
-        }
         const videos = await runYtDlpWithAuth(req.params.config, [
-            videoId,
+            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length), query),
             '-I', `${skip + 1}:${skip + 100}:1`,
         ]);
         return res.json({
@@ -299,20 +276,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const videoId = req.params.id?.slice(prefix.length);
-        const ref = req.get('Referrer');
-        const protocol = ref ? ref + '#' : 'stremio://';
-        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
-        let command;
-        if ( (command = videoId.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
-            command = `https://www.youtube.com/${command[0]}/videos`;
-        // Playlists
-        } else if ( (command = videoId.match(/^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/)) ) {
-            command = `https://www.youtube.com/watch?v=${command[0]}`;
-        } else {
-            command = videoId;
-        }
         const video = await runYtDlpWithAuth(req.params.config, [
-            command,
+            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? ''))),
             '--playlist-end', '1',  // Only fetch the first video since this never needs more than one
             '--ignore-no-formats-error',
             ...(userConfig.markWatchedOnLoad ? ['--mark-watched'] : [])
@@ -338,6 +303,9 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
+        const ref = req.get('Referrer');
+        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+        const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({ meta: {
             id: req.params.id,
             type: req.params.type,
@@ -367,7 +335,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        })), ...(videoId.match(/^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/) ? [{
+                        })), ...(videoId.match(videoRegex) ? [{
                             name: 'Stremio Player',
                             ytId: videoId,
                             description: 'Click to watch using Stremio\'s built-in YouTube Player'
