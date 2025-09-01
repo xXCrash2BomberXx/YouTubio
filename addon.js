@@ -143,10 +143,13 @@ app.get('/:config/manifest.json', (req, res) => {
             ]).concat([
                 // Add search unless explicitly disabled
                 ...(userConfig.search === false ? [] : [
-                    { type: 'YouTube', id: `${prefix}:ytsearch100`, name: 'Mixed', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'YouTube', id: `${prefix}:ytsearch100:video`, name: 'Video', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] },
-                    { type: 'YouTube', id: `${prefix}:ytsearch100:channel`, name: 'Channel', extra: [ { name: 'search', isRequired: true }, { name: 'skip', isRequired: false } ] }
-                ])
+                    { type: 'YouTube', id: `${prefix}:ytsearch100:video`, name: 'Video' },
+                    { type: 'YouTube', id: `${prefix}:ytsearch100:channel`, name: 'Channel' }
+                ].map(c => ({ ...c, extra: [
+                    { name: 'search', isRequired: true },
+                    { name: 'skip', isRequired: false },
+                    { name: "genre", isRequired: false, options: ['Relevance', 'Upload Date', 'View Count', 'Rating'] }
+                ] })))
             ]),
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
             behaviorHints: {
@@ -171,7 +174,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const catalogConfig = userConfig.catalogs.find(cat => cat.id === req.params.id);
         let videoId = req.params.id?.slice(prefix.length);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
-        const skip = parseInt(query?.skip ?? 0);
+        const skip = parseInt(query.skip ?? 0);
         const videoIdCopy = videoId;
         switch (catalogConfig?.channelType) {
         case 'video':
@@ -197,23 +200,19 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             default:
                 // YT-DLP Search
                 if (videoIdCopy.startsWith(':ytsearch100')) {
-                    if (!query?.search) throw new Error("Missing query parameter");
-                    switch(videoIdCopy.slice(':ytsearch100'.length)) {
-                    // Video Search
-                    case ':video':
-                        videoId = `https://www.youtube.com/results?sp=EgIQAQ%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-                        break;
-                    // Channel Search
-                    case ':channel':
-                        videoId = `https://www.youtube.com/results?sp=EgIQAg%253D%253D&search_query=${encodeURIComponent(query.search)}`;
-                        break;
-                    // Mixed Search
-                    case '':
-                    default:
-                        videoId = query.search;
-                        break;
-                    // Channels
-                    }
+                    if (!query.search) throw new Error("Missing query parameter");
+                    videoId = `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=${
+                        (videoIdCopy.slice(':ytsearch100'.length).startsWith(':channel') ? {
+                            'Relevance': 'CAASAhAC',
+                            'Upload Date': 'CAISAhAC',
+                            'View Count': 'CAMSAhAC',
+                            'Rating': 'CAESAhAC'
+                        } : {
+                            'Relevance': 'CAASAhAB',
+                            'Upload Date': 'CAISAhAB',
+                            'View Count': 'CAMSAhAB',
+                            'Rating': 'CAESAhAB'
+                        })[query.genre ?? 'Relevance']}`;
                 } else if ( (videoId = videoIdCopy.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
                     videoId = `https://www.youtube.com/${videoId[0]}/videos`;
                 // Playlists
