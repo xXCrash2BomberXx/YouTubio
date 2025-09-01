@@ -138,9 +138,8 @@ app.get('/:config/manifest.json', (req, res) => {
                     { id: ':ytsubs', name: 'Subscriptions' },
                     { id: ':ytwatchlater', name: 'Watch Later' },
                     { id: ':ythistory', name: 'History' }
-                ]),
                 // Add search unless explicitly disabled
-                ...(userConfig.search === false ? [] : [
+                ]), ...(userConfig.search === false ? [] : [
                     { id: ':ytsearch100:video', name: 'Video' },
                     { id: ':ytsearch100:channel', name: 'Channel' }
                 ]).map(c => ({ ...c, extra: [
