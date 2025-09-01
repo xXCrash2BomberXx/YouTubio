@@ -194,7 +194,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 'Upload Date': 'CAISAhAB',
                 'View Count': 'CAMSAhAB',
                 'Rating': 'CAESAhAB'
-            }[query.genre ?? 'Relevance']}`;
+            }[ query.genre ?? 'Relevance' ]}`;
             break;
         case 'channel':
             // Saved Channel Search
@@ -203,7 +203,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 'Upload Date': 'CAISAhAC',
                 'View Count': 'CAMSAhAC',
                 'Rating': 'CAESAhAC'
-            }[query.genre ?? 'Relevance']}`;
+            }[ query.genre ?? 'Relevance' ]}`;
             break;
         case 'auto':
         case undefined:
@@ -232,7 +232,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                         'Upload Date': 'CAISAhAB',
                         'View Count': 'CAMSAhAB',
                         'Rating': 'CAESAhAB'
-                    })[query.genre ?? 'Relevance']}`;
+                    })[ query.genre ?? 'Relevance' ]}`;
                 } else if ( (videoId = videoIdCopy.match(/^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/)) ) {
                     videoId = `https://www.youtube.com/${videoId[0]}/videos`;
                 // Playlists
@@ -247,7 +247,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                             'Upload Date': 'CAISAhAB',
                             'View Count': 'CAMSAhAB',
                             'Rating': 'CAESAhAB'
-                        }[query.genre ?? 'Relevance']}`;
+                        }[ query.genre ?? 'Relevance' ]}`;
                 }
                 break;
             }
