@@ -194,43 +194,30 @@ app.get('/:config/manifest.json', (req, res) => {
 function toYouTubeURL(userConfig, videoId, query) {
     let temp;
     const catalogConfig = userConfig.catalogs.find(cat => [videoId, prefix + videoId].includes(cat.id));
-    if (catalogConfig?.channelType === 'video')
-        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+    const videoId2 = query.search ?? videoId;
+    if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch100:video')
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
         }[ query.genre ?? 'Relevance' ]}`;
-    else if (catalogConfig?.channelType === 'channel')
-        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+    else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch100:channel')
+        return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[ query.genre ?? 'Relevance' ]}`;
-    else if (videoId.startsWith(':ytsearch100')) {
-        if (!query.search) throw new Error("Missing query parameter");
-        return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search)}&sp=${
-        (videoId.slice(':ytsearch100'.length).startsWith(':channel') ? {
-            'Relevance': 'CAASAhAC',
-            'Upload Date': 'CAISAhAC',
-            'View Count': 'CAMSAhAC',
-            'Rating': 'CAESAhAC'
-        } : {
-            'Relevance': 'CAASAhAB',
-            'Upload Date': 'CAISAhAB',
-            'View Count': 'CAMSAhAB',
-            'Rating': 'CAESAhAB'
-        })[ query.genre ?? 'Relevance' ]}`;
-    } else if ( (temp = videoId.match(channelRegex)) )
+    else if ( (temp = videoId2.match(channelRegex)) )
         return `https://www.youtube.com/${temp[0]}/videos`;
-    else if ( (temp = videoId.match(playlistRegex)) )
+    else if ( (temp = videoId2.match(playlistRegex)) )
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
-    else if ( (temp = videoId.match(videoRegex)) )
+    else if ( (temp = videoId2.match(videoRegex)) )
         return `https://www.youtube.com/watch?v=${temp[0]}`;
-    return isURL(videoId) ?
+    return isURL(videoId2) ?
         videoIdCopys :
-        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
