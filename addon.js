@@ -472,6 +472,23 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 .toggle-container input[type="checkbox"] { margin-right: 1rem; }
                 .toggle-container label { cursor: pointer; }
                 .setting-description { color: #666; }
+                @media (prefers-color-scheme: dark) {
+                    body { background: #121212; color: #e0e0e0; }
+                    .container { background: #1e1e1e; }
+                    h1 { color: #ff6b6b; }
+                    textarea, #playlist-table input, select { 
+                        background: #2a2a2a; 
+                        color: #e0e0e0; 
+                        border: 0.1rem solid #555; 
+                    }
+                    #playlist-table th, #playlist-table td { border: 0.1rem solid #555; }
+                    .install-button { background-color: #6a5acd; }
+                    .install-button:hover { background-color: #5941a9; }
+                    .install-button:disabled { background-color: #555; }
+                    .error { color: #ff6b6b; }
+                    .settings-section { background: #1e1e1e; border: 0.1rem solid #333; }
+                    .setting-description { color: #aaa; }
+                }
             </style>
         </head>
         <body>
@@ -665,6 +682,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const actionsCell = document.createElement('td');
                         const upBtn = document.createElement('button');
                         upBtn.textContent = '↑';
+                        upBtn.classList.add('install-button');
+                        upBtn.style.margin = '0';
                         upBtn.addEventListener('click', () => {
                             if (index > 0) {
                                 [playlists[index - 1], playlists[index]] = [playlists[index], playlists[index - 1]];
@@ -673,6 +692,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         });
                         const downBtn = document.createElement('button');
                         downBtn.textContent = '↓';
+                        downBtn.classList.add('install-button');
+                        downBtn.style.margin = '0';
                         downBtn.addEventListener('click', () => {
                             if (index < playlists.length - 1) {
                                 [playlists[index + 1], playlists[index]] = [playlists[index], playlists[index + 1]];
@@ -681,6 +702,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         });
                         const removeBtn = document.createElement('button');
                         removeBtn.textContent = 'Remove';
+                        removeBtn.classList.add('install-button');
+                        removeBtn.style.margin = '0';
                         removeBtn.addEventListener('click', () => {
                             playlists.splice(index, 1);
                             renderPlaylists();
