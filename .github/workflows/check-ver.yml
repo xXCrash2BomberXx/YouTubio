@@ -1,0 +1,52 @@
+name: Check `package.json` Version
+
+on:
+  push:
+    branches:
+      - main  # or your release branch
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current package.json version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(jq -r .version package.json)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest release version
+        id: latest_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const latest = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            }).catch(() => null);
+
+            // If no release exists, default to 0.0.0
+            const version = latest ? latest.data.tag_name.replace(/^v/, '') : "0.0.0";
+            return version;
+          result-encoding: string
+
+      - name: Check if version increased
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          LATEST="${{ steps.latest_release.outputs.result }}"
+
+          echo "Current version: $CURRENT"
+          echo "Latest release version: $LATEST"
+
+          node -e "
+            const semver = require('semver');
+            if (!semver.gt('${CURRENT}', '${LATEST}')) {
+              console.error(`❌ package.json version must be bumped above latest release. Latest: ${LATEST}, Current: ${CURRENT}`);
+              process.exit(1);
+            }
+          "
