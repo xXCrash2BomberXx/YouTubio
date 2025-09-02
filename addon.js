@@ -457,31 +457,21 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         <head>
             <title>YouTubio | ElfHosted</title>
             <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px; background: #f4f4f8; color: #333; }
-                .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                body { text-align: center; padding: 2rem; background: #f4f4f8; color: #333; }
+                .container { max-width: 50rem; margin: auto; background: white; padding: 2rem; border-radius: 1rem; }
                 h1 { color: #d92323; }
-                p { font-size: 1.1em; line-height: 1.6; }
-                details { text-align: center; }
-                textarea { width: 100%; height: 150px; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
-                #playlist-table th, #playlist-table td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+                textarea { width: 100%; height: 15rem; padding: 1rem; border-radius: 1rem; border: 0.1rem solid #ccc; box-sizing: border-box; resize: vertical; }
+                #playlist-table th, #playlist-table td { border: 0.1rem solid #ccc; padding: 1rem; text-align: left; }
                 #playlist-table input { width: 100%; box-sizing: border-box; }
-                .install-button { display: inline-block; margin-top: 20px; padding: 15px 30px; background-color: #5835b0; color: white; text-decoration: none; font-size: 1.2em; border-radius: 5px; transition: background-color 0.3s; border: none; cursor: pointer; }
+                .install-button { margin-top: 1rem; display: inline-block; padding: 0.2rem; background-color: #5835b0; color: white; border-radius: 0.2rem; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
-                .action-button { padding: 5px 10px; font-size: 0.9em; }
-                .url-input { width: 100%; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-                .instructions { text-align: left; margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
-                .instructions summary { font-weight: bold; cursor: pointer; }
-                .instructions ul { padding-left: 20px; }
-                .instructions li { margin-bottom: 8px; }
-                #results { margin-top: 20px; }
-                .error { color: #d92323; margin-top: 10px; }
-                .loading { color: #666; font-style: italic; }
-                .settings-section { text-align: left; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
-                .toggle-container { display: flex; align-items: center; margin: 10px 0; }
-                .toggle-container input[type="checkbox"] { margin-right: 10px; }
-                .toggle-container label { font-weight: normal; cursor: pointer; }
-                .setting-description { font-size: 0.9em; color: #666; margin-top: 5px; line-height: 1.4; }
+                .error { color: #d92323; margin-top: 1rem; }
+                .settings-section { text-align: left; margin-top: 2rem; padding: 1rem; border: 0.1rem solid #ddd; border-radius: 1rem; background: #f9f9f9; }
+                .toggle-container { display: flex; align-items: center; margin: 1rem 0; }
+                .toggle-container input[type="checkbox"] { margin-right: 1rem; }
+                .toggle-container label { cursor: pointer; }
+                .setting-description { color: #666; }
             </style>
         </head>
         <body>
@@ -492,13 +482,13 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio#%EF%B8%8F-quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
                 <form id="config-form">
                     <div class="settings-section">
-                        <details>
+                        <details style="text-align: center;">
                             <summary>
                                 This addon supports FAR more than just YouTube with links!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
                             ${process.env.YTDLP_EXTRACTORS_EMBED ?? ""}
-                            <div style="max-height: 20em; overflow: auto;">
+                            <div style="max-height: 20rem; overflow: auto;">
                                 ${await supportedWebsites}
                             </div>
                         </details>
@@ -506,7 +496,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     <div class="settings-section">
                         <h3>Cookies</h3>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
-                        <button type="button" class="install-button action-button" id="clear-cookies">Clear</button>
+                        <button type="button" class="install-button" id="clear-cookies">Clear</button>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
@@ -527,10 +517,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query={term}</code>
                             </small>
                         </details>
-                        <div style="margin-bottom: 10px;">
-                            <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
-                            <button type="button" id="remove-defaults" class="install-button action-button">Remove Defaults</button>
-                            <button type="button" id="add-playlist" class="install-button action-button">Add Playlist</button>
+                        <div style="margin-bottom: 1rem;">
+                            <button type="button" id="add-defaults" class="install-button">Add Defaults</button>
+                            <button type="button" id="remove-defaults" class="install-button">Remove Defaults</button>
+                            <button type="button" id="add-playlist" class="install-button">Add Playlist</button>
                         </div>
                         <table id="playlist-table" style="width:100%;border-collapse:collapse;">
                             <thead>
