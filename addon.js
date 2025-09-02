@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
+const VERSION = require('./package.json').version;
 const express = require('express');
 const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 // const util = require('util');
-
-const VERSION = '0.6.2';
 
 /** @type {string} */
 const tmpdir = require('os').tmpdir();
