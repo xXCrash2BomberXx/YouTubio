@@ -1,3 +1,5 @@
+<img src="./YouTubio.png" /><br> 
+
 # 📺 YouTubio: Stremio YouTube Addon
 
 A **Stremio addon** that lets you watch YouTube videos and access your **subscriptions**, **Watch Later list**, and **history** directly inside Stremio.
