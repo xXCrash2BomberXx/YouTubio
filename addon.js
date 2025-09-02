@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 // const util = require('util');
 
-const VERSION = '0.6.0';
+const VERSION = '0.6.2';
 
 /** @type {string} */
 const tmpdir = require('os').tmpdir();
