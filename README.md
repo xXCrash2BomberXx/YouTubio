@@ -16,7 +16,7 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 
 ---
 
-## Quick Setup with Cookies
+## ⏱️ Quick Setup with Cookies
 For more detailed instructions or other platforms, go to the [YT-DLP cookie extraction guide](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)
 1. Install the Addon [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) in a Chromium browser (or [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) for Firefox)<br>
 <img width="1366" height="768" alt="Click the `Get` Button" src="https://github.com/user-attachments/assets/b60986e1-7484-412d-84af-f4d90973ab83" /><br>
