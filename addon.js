@@ -463,7 +463,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 textarea { width: 100%; height: 15rem; padding: 1rem; border-radius: 1rem; border: 0.1rem solid #ccc; box-sizing: border-box; resize: vertical; }
                 #playlist-table th, #playlist-table td { border: 0.1rem solid #ccc; padding: 1rem; text-align: left; }
                 #playlist-table input { width: 100%; box-sizing: border-box; }
-                .install-button { margin-top: 1rem; display: inline-block; padding: 0.2rem; background-color: #5835b0; color: white; border-radius: 0.2rem; cursor: pointer; }
+                .install-button { margin-top: 1rem; border-width: 0; display: inline-block; padding: 0.5rem; background-color: #5835b0; color: white; border-radius: 0.2rem; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
                 .error { color: #d92323; margin-top: 1rem; }
@@ -510,14 +510,16 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     </div>
                     <div class="settings-section">
                         <h3>Cookies</h3>
+                        <hr>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
                         <button type="button" class="install-button" id="clear-cookies">Clear</button>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
+                        <hr>
                         <details>
                             <summary>Advanced Usage</summary>
-                            <small>
+                            <p>
                                 &#128712;
                                 <b>Search Type</b> determines how the backend interprets the <b>Playlist ID / URL</b>.
                                 <ul style="margin-top: 0; font-size: small;">
@@ -525,12 +527,13 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <li><b>Video</b>: Treats the <b>Playlist ID / URL</b> as though it were typed directly into the YouTube search bar.</li>
                                     <li><b>Channel</b>: Treats the <b>Playlist ID / URL</b> as though it were typed directly into the YouTube search bar with the channel filter enabled.</li>
                                 </ul>
-                            </small><br>
-                            <small>
+                            </p>
+                            <p>
                                 &#128712;
                                 You can use <b><code>{term}</code></b> in the <b>Playlist ID / URL</b> for custom search catalogs in places the encoded URI search component is used.
                                 ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query={term}</code>
-                            </small>
+                            </p>
+                            <hr>
                         </details>
                         <div style="margin-bottom: 1rem;">
                             <button type="button" id="add-defaults" class="install-button">Add Defaults</button>
@@ -552,6 +555,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     </div>
                     <div class="settings-section" id="addon-settings">
                         <h3>Settings</h3>
+                        <hr>
                         <table>
                             <thead>
                                 <tr>
@@ -681,7 +685,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const upBtn = document.createElement('button');
                         upBtn.textContent = '↑';
                         upBtn.classList.add('install-button');
-                        upBtn.style.margin = '0';
+                        upBtn.style.margin = '0.2rem';
                         upBtn.addEventListener('click', () => {
                             if (index > 0) {
                                 [playlists[index - 1], playlists[index]] = [playlists[index], playlists[index - 1]];
@@ -691,7 +695,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const downBtn = document.createElement('button');
                         downBtn.textContent = '↓';
                         downBtn.classList.add('install-button');
-                        downBtn.style.margin = '0';
+                        downBtn.style.margin = '0.2rem';
                         downBtn.addEventListener('click', () => {
                             if (index < playlists.length - 1) {
                                 [playlists[index + 1], playlists[index]] = [playlists[index], playlists[index + 1]];
@@ -701,7 +705,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const removeBtn = document.createElement('button');
                         removeBtn.textContent = 'Remove';
                         removeBtn.classList.add('install-button');
-                        removeBtn.style.margin = '0';
+                        removeBtn.style.margin = '0.2rem';
                         removeBtn.addEventListener('click', () => {
                             playlists.splice(index, 1);
                             renderPlaylists();
