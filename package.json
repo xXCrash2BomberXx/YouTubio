@@ -1,7 +1,7 @@
 {
-  "name": "stremio-youtube-addon",
-  "version": "6.0.0",
-  "description": "A Stremio addon for YouTube, deployable on Hugging Face.",
+  "name": "YouTubio",
+  "version": "0.6.2",
+  "description": "Watch YouTube videos, subscriptions, watch later, and history in Stremio.",
   "main": "addon.js",
   "scripts": {
     "start": "node addon.js"
