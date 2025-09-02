@@ -174,7 +174,7 @@ app.get('/:config/manifest.json', (req, res) => {
         const canGenre = /** @param {Object} c */ (c) => {
             if (c.channelType !== 'auto') return true;
             const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
-            if (id.startsWith(':ytsearch100')) return true;
+            if (id.startsWith(':ytsearch')) return true;
             if (id.match(channelRegex)) return false;
             if (id.match(playlistRegex)) return false;
             if (id.match(videoRegex)) return false;
@@ -192,7 +192,9 @@ app.get('/:config/manifest.json', (req, res) => {
                 ...(userConfig.catalogs?.map(c => ({
                     ...c, extra: [
                         ...(c.extra ?? []),
-                        ...(c.id.includes('{term}') ? [{ name: 'search', isRequired: true }] : [])
+                        ...(c.channelType === 'auto' &&
+                            (c.id.includes('{term}') || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
+                            [{ name: 'search', isRequired: true }] : [])
                     ]
                 })) ?? [
                         { id: ':ytrec', name: 'Discover' },
@@ -201,8 +203,8 @@ app.get('/:config/manifest.json', (req, res) => {
                         { id: ':ythistory', name: 'History' }
                         // Add search unless explicitly disabled
                     ]), ...(userConfig.search === false ? [] : [
-                        { id: ':ytsearch100:video', name: 'Video' },
-                        { id: ':ytsearch100:channel', name: 'Channel' }
+                        { id: ':ytsearch', name: 'Video' },
+                        { id: ':ytsearch:channel', name: 'Channel' }
                     ]).map(c => ({
                         ...c, extra: [
                             ...(c.extra ?? []),
@@ -262,14 +264,14 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     const videoId2 = (query.search ?? videoId).trim();
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
-    if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch100:video')
+    if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
         }[genre]}`;
-    else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch100:channel')
+    else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch:channel')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
