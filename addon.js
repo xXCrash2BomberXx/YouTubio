@@ -483,7 +483,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             <div class="container">
                 <h1>YouTubio | ElfHosted</h1>
                 <h3 style="color: #f5a623;">v${VERSION}</h3>
-                ${process.env.EMBED || ""}
+                ${process.env.EMBED ?? ""}
                 For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
                 <form id="config-form">
                     <div class="settings-section" style="text-align: center;">
@@ -492,7 +492,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 This addon supports FAR more than just YouTube with links!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
-                            ${process.env.YTDLP_EXTRACTORS_EMBED}
+                            ${process.env.YTDLP_EXTRACTORS_EMBED ?? ""}
                             <div style="max-height: 20em; overflow: auto;">
                                 ${await supportedWebsites}
                             </div>
