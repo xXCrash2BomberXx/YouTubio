@@ -286,7 +286,7 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
     else if (videoId2.includes('{term}') || isURL(videoId2))
-        videoId2.replaceAll('{term}', encodeURIComponent(query.search ?? ''));
+        return videoId2.replaceAll('{term}', encodeURIComponent(query.search ?? ''));
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
         'Relevance': 'CAASAhAB',
         'Upload Date': 'CAISAhAB',
