@@ -568,6 +568,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
+                const resultsDiv = document.getElementById('results');
+                function configChanged() {
+                    resultsDiv.style.display = 'none';
+                }
                 const installStremio = document.getElementById('install-stremio');
                 const installUrlInput = document.getElementById('install-url');
                 const installWeb = document.getElementById('install-web');
@@ -589,7 +593,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
+                    configChanged();
                 });
+                cookies.addEventListener('input', configChanged);
+                addonSettings.querySelectorAll("input, select").forEach(e => e.addEventListener('change', configChanged));
                 function renderPlaylists() {
                     playlistTableBody.innerHTML = '';
                     playlists.forEach((pl, index) => {
@@ -598,19 +605,28 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
                         typeInput.value = pl.type;
-                        typeInput.addEventListener('input', () => pl.type = typeInput.value.trim());
+                        typeInput.addEventListener('input', () => {
+                            pl.type = typeInput.value.trim();
+                            configChanged();
+                        });
                         typeCell.appendChild(typeInput);
                         // ID
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
                         idInput.value = pl.id;
-                        idInput.addEventListener('change', () => pl.id = idInput.value);
+                        idInput.addEventListener('change', () => {
+                            pl.id = idInput.value;
+                            configChanged();
+                        });
                         idCell.appendChild(idInput);
                         // Name
                         const nameCell = document.createElement('td');
                         const nameInput = document.createElement('input');
                         nameInput.value = pl.name;
-                        nameInput.addEventListener('input', () => pl.name = nameInput.value.trim());
+                        nameInput.addEventListener('input', () => {
+                            pl.name = nameInput.value.trim();
+                            configChanged();
+                        });
                         nameCell.appendChild(nameInput);
                         // Channel Search
                         const channelTypeCell = document.createElement('td');
@@ -628,7 +644,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         optChannel.textContent = 'Channel';
                         channelTypeInput.appendChild(optChannel);
                         channelTypeInput.value = pl.channelType;
-                        channelTypeInput.addEventListener('change', () => pl.channelType = channelTypeInput.value);
+                        channelTypeInput.addEventListener('change', () => {
+                            pl.channelType = channelTypeInput.value;
+                            configChanged();
+                        });
                         channelTypeCell.appendChild(channelTypeInput);
                         // Actions
                         const actionsCell = document.createElement('td');
@@ -664,6 +683,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         row.appendChild(actionsCell);
                         playlistTableBody.appendChild(row);
                     });
+                    configChanged();
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
                     playlists.push({ type: 'YouTube', id: '', name: '', channelType: 'auto' });
@@ -712,7 +732,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         installStremio.href = 'stremio' + configString;
                         installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
-                        document.getElementById('results').style.display = 'block';
+                        resultsDiv.style.display = 'block';
                     } catch (error) {
                         errorDiv.textContent = error.message;
                         errorDiv.style.display = 'block';
