@@ -79,7 +79,7 @@ let counter = 0;
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
     let filename = '';
     try {
-        /** @type {object?} */
+        /** @type {Object?} */
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
         // Implement better auth system
         const cookies = auth;
@@ -190,7 +190,12 @@ app.get('/:config/manifest.json', (req, res) => {
             types: ['movie', 'channel'],
             idPrefixes: [prefix],
             catalogs: [
-                ...(userConfig.catalogs ?? [
+                ...(userConfig.catalogs?.map(c => ({
+                    ...c, extra: [
+                        ...(c.extra ?? []),
+                        ...(c.id.includes('{term}') ? [{ name: 'search', isRequired: true }] : [])
+                    ]
+                })) ?? [
                     { id: ':ytrec', name: 'Discover' },
                     { id: ':ytsubs', name: 'Subscriptions' },
                     { id: ':ytwatchlater', name: 'Watch Later' },
@@ -280,9 +285,9 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
-    return isURL(videoId2) ?
-        videoId2 :
-        `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
+    else if (videoId2.includes('{term}') || isURL(videoId2))
+        videoId2.replaceAll('{term}', encodeURIComponent(query.search ?? ''));
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
@@ -456,6 +461,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
                 h1 { color: #d92323; }
                 p { font-size: 1.1em; line-height: 1.6; }
+                details { text-align: center; }
                 textarea { width: 100%; height: 150px; padding: 10px; margin-top: 15px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; resize: vertical; }
                 #playlist-table th, #playlist-table td { border: 1px solid #ccc; padding: 5px; text-align: left; }
                 #playlist-table input { width: 100%; box-sizing: border-box; }
@@ -485,7 +491,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 ${process.env.EMBED ?? ""}
                 For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio#%EF%B8%8F-quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
                 <form id="config-form">
-                    <div class="settings-section" style="text-align: center;">
+                    <div class="settings-section">
                         <details>
                             <summary>
                                 This addon supports FAR more than just YouTube with links!<br>
@@ -504,6 +510,23 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
+                        <details>
+                            <summary>Advanced Usage</summary>
+                            <small>
+                                &#128712;
+                                <b>Search Type</b> determines how the backend interprets the <b>Playlist ID / URL</b>.
+                                <ul style="margin-top: 0; font-size: small;">
+                                    <li><b>Auto</b>: The backend will attempt to determine the type of the input automatically.</li>
+                                    <li><b>Video</b>: Treats the <b>Playlist ID / URL</b> as though it were typed directly into the YouTube search bar.</li>
+                                    <li><b>Channel</b>: Treats the <b>Playlist ID / URL</b> as though it were typed directly into the YouTube search bar with the channel filter enabled.</li>
+                                </ul>
+                            </small><br>
+                            <small>
+                                &#128712;
+                                You can use <b><code>{term}</code></b> in the <b>Playlist ID / URL</b> for custom search catalogs in places the encoded URI search component is used.
+                                ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query={term}</code>
+                            </small>
+                        </details>
                         <div style="margin-bottom: 10px;">
                             <button type="button" id="add-defaults" class="install-button action-button">Add Defaults</button>
                             <button type="button" id="remove-defaults" class="install-button action-button">Remove Defaults</button>
