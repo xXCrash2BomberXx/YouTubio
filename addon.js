@@ -484,7 +484,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 <h1>YouTubio | ElfHosted</h1>
                 <h3 style="color: #f5a623;">v${VERSION}</h3>
                 ${process.env.EMBED ?? ""}
-                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio/tree/main?tab=readme-ov-file#quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
+                For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio#%EF%B8%8F-quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
                 <form id="config-form">
                     <div class="settings-section" style="text-align: center;">
                         <details>
