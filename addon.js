@@ -90,7 +90,6 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         return JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
             '-i',
-            '--default-search', 'ytsearch100',
             '--no-plugin-dirs',
             '--flat-playlist',
             '--no-cache-dir',
@@ -285,8 +284,10 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoRegex)))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
-    else if (videoId2.includes('{term}') || isURL(videoId2))
-        return videoId2.replaceAll('{term}', encodeURIComponent(query.search ?? ''));
+    else if (catalogConfig?.id.includes('{term}'))
+        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll('{term}', encodeURIComponent(query.search ?? ''));
+    else if (isURL(videoId2))
+        return videoId2;
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
         'Relevance': 'CAASAhAB',
         'Upload Date': 'CAISAhAB',
