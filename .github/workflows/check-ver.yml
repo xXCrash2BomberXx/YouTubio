@@ -1,4 +1,4 @@
-name: Check `package.json` Version
+name: Check package.json Version
 
 on:
   push:
@@ -43,10 +43,11 @@ jobs:
           echo "Current version: $CURRENT"
           echo "Latest release version: $LATEST"
 
+          npm install semver
           node -e "
             const semver = require('semver');
             if (!semver.gt('${CURRENT}', '${LATEST}')) {
-              console.error(`❌ package.json version must be bumped above latest release. Latest: ${LATEST}, Current: ${CURRENT}`);
+              console.error(`package.json version must be bumped above latest release. Latest: ${LATEST}, Current: ${CURRENT}`);
               process.exit(1);
             }
           "
