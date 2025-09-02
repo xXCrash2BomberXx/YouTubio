@@ -6,8 +6,7 @@ on:
       - main
 
 permissions:
-  contents: read     # needed to read package.json
-  releases: read     # needed to fetch latest release
+  contents: read
 
 jobs:
   check-version-bump:
