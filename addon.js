@@ -442,7 +442,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
     /** @type {Object?} */
     let userConfig;
     try {
-        userConfig = decryptConfig(req.params.config, false);
+        userConfig = req.params.config ? decryptConfig(req.params.config, false) : {};
     } catch (error) {
         if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
         userConfig = {};
