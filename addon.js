@@ -100,6 +100,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '-J',
             '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
             '--extractor-args', 'generic:impersonate',
+            '--compat-options', 'no-youtube-channel-redirect',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
     } finally {
@@ -247,9 +248,10 @@ app.get('/:config/manifest.json', (req, res) => {
  * @param {Object} userConfig 
  * @param {string} videoId 
  * @param {Object} query 
+ * @param {boolean=false} includeLive 
  * @returns {string}
  */
-function toYouTubeURL(userConfig, videoId, query) {
+function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     /** @type {RegExpMatchArray?} */
     let temp;
     const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => [videoId, prefix + videoId].includes(cat.id));
@@ -274,7 +276,7 @@ function toYouTubeURL(userConfig, videoId, query) {
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
         return videoId2;
     else if ((temp = videoId2.match(channelRegex)))
-        return `https://www.youtube.com/${temp[0]}/videos`;
+        return `https://www.youtube.com/${temp[0]}/${includeLive ? 'live' : 'videos'}`;
     else if ((temp = videoId2.match(playlistRegex)))
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoRegex)))
@@ -333,7 +335,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',  // Only fetch the first video since this never needs more than one
             '--no-playlist',
-            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')))
+            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')), true)
         ]);
         const channel = video._type === 'playlist';
         /** @type {string} */
@@ -359,6 +361,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
+        /** @type {boolean} */
+        const isLive = video.is_live ?? false;
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         /** @type {string?} */
         const ref = req.get('Referrer');
@@ -382,22 +386,22 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                     released: released,
                     thumbnail: thumbnail,
                     streams: [
-                        ...(!channel ? [
-                            ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).toReversed().map(src => ({
-                                name: `YT-DLP Player ${src.resolution}`,
-                                url: src.url,
-                                description: src.format,
-                                subtitles: subtitles,
-                                behaviorHints: {
-                                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                    videoSize: src.filesize_approx,
-                                    filename: video.filename
-                                }
-                            })), ...(videoId.match(videoRegex) ? [{
+                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
+                            name: `YT-DLP Player ${src.resolution}`,
+                            url: src.url,
+                            description: src.format,
+                            subtitles: subtitles,
+                            behaviorHints: {
+                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                videoSize: src.filesize_approx,
+                                filename: video.filename
+                            }
+                        })), ...(isLive || !channel ? [
+                            {
                                 name: 'Stremio Player',
-                                ytId: videoId,
+                                ytId: video.id,
                                 description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                            }] : []), {
+                            }, {
                                 name: 'External Player',
                                 externalUrl: video.webpage_url,
                                 description: 'Click to watch in the External Player'
