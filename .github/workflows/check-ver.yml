@@ -3,7 +3,11 @@ name: Check package.json Version
 on:
   push:
     branches:
-      - main  # or your release branch
+      - main
+
+permissions:
+  contents: read     # needed to read package.json
+  releases: read     # needed to fetch latest release
 
 jobs:
   check-version-bump:
@@ -18,7 +22,7 @@ jobs:
         id: current_version
         run: |
           CURRENT_VERSION=$(jq -r .version package.json)
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Get latest release version
         id: latest_release
@@ -30,10 +34,12 @@ jobs:
               repo: context.repo.repo
             }).catch(() => null);
 
-            // If no release exists, default to 0.0.0
             const version = latest ? latest.data.tag_name.replace(/^v/, '') : "0.0.0";
             return version;
           result-encoding: string
+
+      - name: Install semver
+        run: npm install semver
 
       - name: Check if version increased
         run: |
@@ -43,11 +49,10 @@ jobs:
           echo "Current version: $CURRENT"
           echo "Latest release version: $LATEST"
 
-          npm install semver
           node -e "
             const semver = require('semver');
             if (!semver.gt('${CURRENT}', '${LATEST}')) {
-              console.error(`package.json version must be bumped above latest release. Latest: ${LATEST}, Current: ${CURRENT}`);
+              console.error('package.json version must be bumped above latest release. Latest: ${LATEST}, Current: ${CURRENT}');
               process.exit(1);
             }
           "
