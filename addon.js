@@ -196,20 +196,20 @@ app.get('/:config/manifest.json', (req, res) => {
                         ...(c.id.includes('{term}') ? [{ name: 'search', isRequired: true }] : [])
                     ]
                 })) ?? [
-                    { id: ':ytrec', name: 'Discover' },
-                    { id: ':ytsubs', name: 'Subscriptions' },
-                    { id: ':ytwatchlater', name: 'Watch Later' },
-                    { id: ':ythistory', name: 'History' }
-                    // Add search unless explicitly disabled
-                ]), ...(userConfig.search === false ? [] : [
-                    { id: ':ytsearch100:video', name: 'Video' },
-                    { id: ':ytsearch100:channel', name: 'Channel' }
-                ]).map(c => ({
-                    ...c, extra: [
-                        ...(c.extra ?? []),
-                        { name: 'search', isRequired: true },
-                    ]
-                }))
+                        { id: ':ytrec', name: 'Discover' },
+                        { id: ':ytsubs', name: 'Subscriptions' },
+                        { id: ':ytwatchlater', name: 'Watch Later' },
+                        { id: ':ythistory', name: 'History' }
+                        // Add search unless explicitly disabled
+                    ]), ...(userConfig.search === false ? [] : [
+                        { id: ':ytsearch100:video', name: 'Video' },
+                        { id: ':ytsearch100:channel', name: 'Channel' }
+                    ]).map(c => ({
+                        ...c, extra: [
+                            ...(c.extra ?? []),
+                            { name: 'search', isRequired: true },
+                        ]
+                    }))
             ].map(c => ({
                 ...c,
                 id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
@@ -288,11 +288,11 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     else if (videoId2.includes('{term}') || isURL(videoId2))
         videoId2.replaceAll('{term}', encodeURIComponent(query.search ?? ''));
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
-            'Relevance': 'CAASAhAB',
-            'Upload Date': 'CAISAhAB',
-            'View Count': 'CAMSAhAB',
-            'Rating': 'CAESAhAB'
-        }[genre]}`;
+        'Relevance': 'CAASAhAB',
+        'Upload Date': 'CAISAhAB',
+        'View Count': 'CAMSAhAB',
+        'Rating': 'CAESAhAB'
+    }[genre]}`;
 }
 
 // Stremio Addon Catalog Route
@@ -475,7 +475,6 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 @media (prefers-color-scheme: dark) {
                     body { background: #121212; color: #e0e0e0; }
                     .container { background: #1e1e1e; }
-                    h1 { color: #ff6b6b; }
                     textarea, #playlist-table input, select { 
                         background: #2a2a2a; 
                         color: #e0e0e0; 
@@ -485,7 +484,6 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     .install-button { background-color: #6a5acd; }
                     .install-button:hover { background-color: #5941a9; }
                     .install-button:disabled { background-color: #555; }
-                    .error { color: #ff6b6b; }
                     .settings-section { background: #1e1e1e; border: 0.1rem solid #333; }
                     .setting-description { color: #aaa; }
                 }
