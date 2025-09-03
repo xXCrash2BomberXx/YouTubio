@@ -174,10 +174,11 @@ app.get('/:config/manifest.json', (req, res) => {
         const canGenre = /** @param {Object} c */ (c) => {
             if (c.channelType !== 'auto') return true;
             const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
-            if ([':ytsearch', ':ytsearch:channel'].includes(id)) return true;
+            if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(id)) return false;
             if (id.match(channelRegex)) return false;
             if (id.match(playlistRegex)) return false;
             if (id.match(videoRegex)) return false;
+            if ([':ytsearch', ':ytsearch:channel'].includes(id)) return true;
             return !isURL(id);
         }
         return res.json({
