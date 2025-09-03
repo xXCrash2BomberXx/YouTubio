@@ -459,9 +459,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         <!DOCTYPE html>
         <html>
         <head>
+            <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
             <title>YouTubio | ElfHosted</title>
             <style>
-                body { text-align: center; padding: 2rem; background: #f4f4f8; color: #333; }
+                body { font-family: 'Ubuntu', Helvetica, Arial, sans-serif; text-align: center; padding: 2rem; background: #f4f4f8; color: #333; }
                 .container { max-width: 50rem; margin: auto; background: white; padding: 2rem; border-radius: 1rem; }
                 h1 { color: #d92323; }
                 textarea { width: 100%; height: 15rem; padding: 1rem; border-radius: 1rem; border: 0.1rem solid #ccc; box-sizing: border-box; resize: vertical; }
