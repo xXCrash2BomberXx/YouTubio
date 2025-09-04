@@ -320,7 +320,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.json({
             metas: (videos._type === 'playlist' ? videos.entries : [videos]).map(video => {
                 const channel = video.ie_key === 'YoutubeTab';
-                const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
+                const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 return (useID ? video.id : video.url) ? {
                     id: prefix + (useID ? video.id : video.url),
                     type: channel ? 'channel' : 'movie',
@@ -354,11 +354,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         /** @type {string} */
         const title = video.title ?? 'Unknown Title';
         /** @type {string?} */
-        const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
+        const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-            const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
             return srt ? {
                 id: srt.name,
                 url: srt.url,
@@ -366,7 +366,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             } : null;
         }).concat(
             Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                const srt = v.find?.(x => x.ext == 'srt') ?? v[0];
+                const srt = v.find(x => x.ext == 'srt') ?? v[0];
                 return srt ? {
                     id: `Auto ${srt.name}`,
                     url: srt.url,
