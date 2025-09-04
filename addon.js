@@ -263,9 +263,9 @@ app.get('/:config/manifest.json', (req, res) => {
 function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     /** @type {RegExpMatchArray?} */
     let temp;
-    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => [videoId, prefix + videoId].includes(cat.id));
+    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => videoId === cat.id);
     /** @type {string?} */
-    const videoId2 = (query.search ?? videoId).trim();
+    const videoId2 = query.search ?? (videoId.startsWith(prefix) ? videoId.slice(prefix.length) : videoId);
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
     if (catalogConfig?.channelType === 'video' || videoId2 === ':ytsearch')
@@ -314,7 +314,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const videos = await runYtDlpWithAuth(req.params.config, [
             '-I', query.genre?.startsWith(reversedPrefix) ? `${-(skip + 1)}:${-(skip + 100)}:-1` : `${skip + 1}:${skip + 100}:1`,
             '--yes-playlist',
-            toYouTubeURL(userConfig, req.params.id?.slice(prefix.length).trim(), query)
+            toYouTubeURL(userConfig, req.params.id, query)
         ]);
         return res.json({
             metas: (videos.entries ?? [videos]).map(video => {
@@ -342,13 +342,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
-        /** @type {string?} */
-        const videoId = req.params.id?.slice(prefix.length).trim();
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',  // Only fetch the first video since this never needs more than one
             '--no-playlist',
-            toYouTubeURL(userConfig, videoId, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')), true)
+            toYouTubeURL(userConfig, req.params.id, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')), true)
         ]);
         const channel = video._type === 'playlist';
         /** @type {string} */
