@@ -18,7 +18,7 @@ const postfix = ':1:1';
 const reversedPrefix = 'Reversed';
 const channelRegex = /^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
 const channelIDRegex = /^(https:\/\/www\.youtube\.com\/channel\/)?(?<id>UC[A-Za-z0-9_-]{21}[AQgw])/
-const playlistIDRegex = /^(https:\/\/www\.youtube\.com\/playlist\?list=)?(?<id>PL[0-9A-F]{16}|[A-Za-z0-9_-]{32})/;
+const playlistIDRegex = /^(https:\/\/www\.youtube\.com\/playlist\?list=)?(?<id>PL([0-9A-F]{16}|[A-Za-z0-9_-]{32}))/;
 const videoIDRegex = /^(https:\/\/www\.youtube\.com\/watch\?v=)?(?<id>[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048])/;
 
 /** @type {Buffer} */
@@ -287,13 +287,13 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
         return videoId2;
     else if ((temp = videoId2.match(channelRegex)?.groups.id))
-        return `https://www.youtube.com/${temp[0]}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/${temp}/${includeLive ? 'live' : 'videos'}`;
     else if ((temp = videoId2.match(channelIDRegex)?.groups.id))
-        return `https://www.youtube.com/channel/${temp[0]}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/channel/${temp}/${includeLive ? 'live' : 'videos'}`;
     else if ((temp = videoId2.match(playlistIDRegex)?.groups.id))
-        return `https://www.youtube.com/playlist?list=${temp[0]}`;
+        return `https://www.youtube.com/playlist?list=${temp}`;
     else if ((temp = videoId2.match(videoIDRegex)?.groups.id))
-        return `https://www.youtube.com/watch?v=${temp[0]}`;
+        return `https://www.youtube.com/watch?v=${temp}`;
     else if (isURL(videoId2))
         return videoId2;
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
