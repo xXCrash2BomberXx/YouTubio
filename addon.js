@@ -373,6 +373,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
+        const useID = video.webpage_url_domain === 'youtube.com';
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         /** @type {string?} */
         const ref = req.get('Referrer');
@@ -406,7 +407,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        })), ...(video.webpage_url_domain === 'youtube.com' && ((video.is_live ?? false) || !channel) ? [
+                        })), ...(useID && ((video.is_live ?? false) || !channel) ? [
                             {
                                 name: 'Stremio Player',
                                 ytId: video.id,
@@ -416,13 +417,13 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 externalUrl: video.webpage_url,
                                 description: 'Click to watch in the External Player'
                             }
-                        ] : []), ...(video.uploader_id ? [{
+                        ] : []), ...(useID ? video.channel_id : video.channel_url ? [{
                             name: 'YT-DLP Channel',
-                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + video.uploader_id)}`,
+                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
                             description: 'Click to open the channel as a Catalog'
-                        }] : []), ...(video.uploader_url ? [{
+                        }] : []), ...(video.channel_url ? [{
                             name: 'External Channel',
-                            externalUrl: video.uploader_url,
+                            externalUrl: video.channel_url,
                             description: 'Click to open the channel in the External Player'
                         }] : [])
                     ],
