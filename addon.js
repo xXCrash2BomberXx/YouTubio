@@ -16,9 +16,10 @@ const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
 const postfix = ':1:1';
 const reversedPrefix = 'Reversed';
-const channelRegex = /^@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9]$/;
-const playlistRegex = /^PL([0-9A-F]{16}|[A-Za-z0-9_-]{32})$/;
-const videoRegex = /^[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048]$/;
+const channelRegex = (/^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
+const channelIDRegex = /^(https:\/\/www\.youtube\.com\/channel\/)?(?<id>UC[A-Za-z0-9_-]{21}[AQgw])/
+const playlistIDRegex = /^(https:\/\/www\.youtube\.com\/playlist\?list=)?(?<id>PL[0-9A-F]{16}|[A-Za-z0-9_-]{32})/;
+const videoIDRegex = /^(https:\/\/www\.youtube\.com\/watch\?v=)?(?<id>[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048])/;
 
 /** @type {Buffer} */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
@@ -175,9 +176,10 @@ app.get('/:config/manifest.json', (req, res) => {
             if (c.channelType !== 'auto') return true;
             const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
             if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(id)) return false;
-            if (id.match(channelRegex)) return false;
-            if (id.match(playlistRegex)) return false;
-            if (id.match(videoRegex)) return false;
+            if (id.match(channelRegex)?.groups.id) return false;
+            if (id.match(channelIDRegex)?.groups.id) return false;
+            if (id.match(playlistIDRegex)?.groups.id) return false;
+            if (id.match(videoIDRegex)?.groups.id) return false;
             if ([':ytsearch', ':ytsearch:channel'].includes(id)) return true;
             return !isURL(id);
         }
@@ -281,11 +283,13 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
         }[genre]}`;
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
         return videoId2;
-    else if ((temp = videoId2.match(channelRegex)))
+    else if ((temp = videoId2.match(channelRegex)?.groups.id))
         return `https://www.youtube.com/${temp[0]}/${includeLive ? 'live' : 'videos'}`;
-    else if ((temp = videoId2.match(playlistRegex)))
+    else if ((temp = videoId2.match(channelIDRegex)?.groups.id))
+        return `https://www.youtube.com/channel/${temp[0]}/${includeLive ? 'live' : 'videos'}`;
+    else if ((temp = videoId2.match(playlistIDRegex)?.groups.id))
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
-    else if ((temp = videoId2.match(videoRegex)))
+    else if ((temp = videoId2.match(videoIDRegex)?.groups.id))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
     else if (catalogConfig?.id.includes('{term}'))
         return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll('{term}', encodeURIComponent(query.search ?? ''));
