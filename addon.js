@@ -311,19 +311,19 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--yes-playlist',
             toYouTubeURL(userConfig, req.params.id?.slice(prefix.length).trim(), query)
         ]);
+        const channel = videos.extractor_key === 'YoutubeTab';
         return res.json({
-            metas: (videos.entries ?? [videos]).map(video => {
-                const channel = video.ie_key === 'YoutubeTab';
-                return (channel ? video.uploader_id : (video.id ?? video.url)) ? {
-                    id: prefix + (channel ? video.uploader_id : (video.id ?? video.url)),
+            metas: ((channel ? undefined : videos.entries) ?? [videos]).map(video => (
+                (channel ? video.uploader_id : (video.id ?? video.url)) ? {
+                    id: videos.webpage_url_domain == 'youtube.com' ? prefix + (channel ? video.uploader_id : (video.id ?? video.url)) : videos.entries ? prefix + video.url : req.params.id,
                     type: channel ? 'channel' : 'movie',
                     name: video.title ?? 'Unknown Title',
-                    poster: ((channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? '')) ?? undefined,
+                    poster: video.thumbnail ?? video.thumbnails?.at(-1)?.url,
                     posterShape: channel ? 'square' : 'landscape',
                     description: video.description ?? video.title,
                     releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
-                } : null;
-            }).filter(meta => meta !== null),
+                } : null
+            )).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
     } catch (error) {
