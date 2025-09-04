@@ -176,11 +176,12 @@ app.get('/:config/manifest.json', (req, res) => {
             if (c.channelType !== 'auto') return true;
             const id = c.id?.startsWith(prefix) ? c.id.slice(prefix.length) : c.id ?? '';
             if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(id)) return false;
-            if (id.match(channelRegex)?.groups.id) return false;
-            if (id.match(channelIDRegex)?.groups.id) return false;
-            if (id.match(playlistIDRegex)?.groups.id) return false;
-            if (id.match(videoIDRegex)?.groups.id) return false;
+            if (channelRegex.test(id)) return false;
+            if (channelIDRegex.test(id)) return false;
+            if (playlistIDRegex.test(id)) return false;
+            if (videoIDRegex.test(id)) return false;
             if ([':ytsearch', ':ytsearch:channel'].includes(id)) return true;
+            if (id.startsWith('https://www.youtube.com/results?search_query=')) return true;
             return !isURL(id);
         }
         return res.json({
@@ -267,20 +268,22 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     const videoId2 = (query.search ?? videoId).trim();
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
-    if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch')
+    if (catalogConfig?.channelType === 'video' || videoId2 === ':ytsearch')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
         }[genre]}`;
-    else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch:channel')
+    else if (catalogConfig?.channelType === 'channel' || videoId2 === ':ytsearch:channel')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
+    else if (catalogConfig?.id.includes('{term}'))
+        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll('{term}', encodeURIComponent(query.search ?? ''));
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId2))
         return videoId2;
     else if ((temp = videoId2.match(channelRegex)?.groups.id))
@@ -291,8 +294,6 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
         return `https://www.youtube.com/playlist?list=${temp[0]}`;
     else if ((temp = videoId2.match(videoIDRegex)?.groups.id))
         return `https://www.youtube.com/watch?v=${temp[0]}`;
-    else if (catalogConfig?.id.includes('{term}'))
-        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll('{term}', encodeURIComponent(query.search ?? ''));
     else if (isURL(videoId2))
         return videoId2;
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId2)}&sp=${{
