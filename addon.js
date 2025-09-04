@@ -406,7 +406,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        })), ...(videos.webpage_url_domain === 'youtube.com' && ((video.is_live ?? false) || !channel) ? [
+                        })), ...(video.webpage_url_domain === 'youtube.com' && ((video.is_live ?? false) || !channel) ? [
                             {
                                 name: 'Stremio Player',
                                 ytId: video.id,
