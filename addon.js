@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
 const postfix = ':1:1';
 const reversedPrefix = 'Reversed';
-const channelRegex = (/^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
+const channelRegex = /^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
 const channelIDRegex = /^(https:\/\/www\.youtube\.com\/channel\/)?(?<id>UC[A-Za-z0-9_-]{21}[AQgw])/
 const playlistIDRegex = /^(https:\/\/www\.youtube\.com\/playlist\?list=)?(?<id>PL[0-9A-F]{16}|[A-Za-z0-9_-]{32})/;
 const videoIDRegex = /^(https:\/\/www\.youtube\.com\/watch\?v=)?(?<id>[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048])/;
@@ -346,7 +346,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',  // Only fetch the first video since this never needs more than one
             '--no-playlist',
-            toYouTubeURL(userConfig, req.params.id, Object.fromEntries(new URLSearchParams(req.params.extra ?? '')), true)
+            toYouTubeURL(userConfig, req.params.id, {}, true)
         ]);
         const channel = video._type === 'playlist';
         /** @type {string} */
@@ -372,8 +372,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 } : null;
             })
         ).filter(srt => srt !== null);
-        /** @type {boolean} */
-        const isLive = video.is_live ?? false;
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         /** @type {string?} */
         const ref = req.get('Referrer');
@@ -407,7 +405,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 videoSize: src.filesize_approx,
                                 filename: video.filename
                             }
-                        })), ...(isLive || !channel ? [
+                        })), ...((video.is_live ?? false) || !channel ? [
                             {
                                 name: 'Stremio Player',
                                 ytId: video.id,
