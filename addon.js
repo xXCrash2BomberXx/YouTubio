@@ -316,11 +316,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             '--yes-playlist',
             toYouTubeURL(userConfig, req.params.id, query)
         ]);
+        const useID = videos.webpage_url_domain === 'youtube.com';
         return res.json({
-            metas: (videos.entries ?? [videos]).map(video => {
+            metas: (videos._type === 'playlist' ? videos.entries : [videos]).map(video => {
                 const channel = video.ie_key === 'YoutubeTab';
-                return (channel ? video.uploader_id : (video.id ?? video.url)) ? {
-                    id: prefix + (channel ? video.uploader_id : (video.id ?? video.url)),
+                return (useID ? video.id : video.url) ? {
+                    id: prefix + (useID ? video.id : video.url),
                     type: channel ? 'channel' : 'movie',
                     name: video.title ?? 'Unknown Title',
                     poster: ((channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? '')) ?? undefined,
