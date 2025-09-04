@@ -417,15 +417,17 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                                 externalUrl: video.webpage_url,
                                 description: 'Click to watch in the External Player'
                             }
-                        ] : []), ...(useID ? video.channel_id : video.channel_url ? [{
-                            name: 'YT-DLP Channel',
-                            externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
-                            description: 'Click to open the channel as a Catalog'
-                        }] : []), ...(video.channel_url ? [{
-                            name: 'External Channel',
-                            externalUrl: video.channel_url,
-                            description: 'Click to open the channel in the External Player'
-                        }] : [])
+                        ] : []), ...(video.channel_url ? [
+                            {
+                                name: 'YT-DLP Channel',
+                                externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                                description: 'Click to open the channel as a Catalog'
+                            }, {
+                                name: 'External Channel',
+                                externalUrl: video.channel_url,
+                                description: 'Click to open the channel in the External Player'
+                            }
+                        ] : [])
                     ],
                     episode: 1,
                     season: 1,
