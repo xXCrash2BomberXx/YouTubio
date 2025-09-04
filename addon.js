@@ -320,11 +320,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.json({
             metas: (videos._type === 'playlist' ? videos.entries : [videos]).map(video => {
                 const channel = video.ie_key === 'YoutubeTab';
+                const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1).url;
                 return (useID ? video.id : video.url) ? {
                     id: prefix + (useID ? video.id : video.url),
                     type: channel ? 'channel' : 'movie',
                     name: video.title ?? 'Unknown Title',
-                    poster: ((channel ? 'https:' : '') + (video.thumbnail ?? video.thumbnails?.at(-1)?.url ?? '')) ?? undefined,
+                    poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
                     description: video.description ?? video.title,
                     releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
