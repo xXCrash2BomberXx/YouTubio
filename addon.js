@@ -208,21 +208,21 @@ app.get('/:config/manifest.json', (req, res) => {
                             [{ name: 'search', isRequired: true }] : [])
                     ]
                     // Add defaults if cookies were provided
-                })) ?? (userConfig.encrypted ?  [
-                        { id: ':ytrec', name: 'Discover' },
-                        { id: ':ytsubs', name: 'Subscriptions' },
-                        { id: ':ytwatchlater', name: 'Watch Later' },
-                        { id: ':ythistory', name: 'History' }
-                        // Add search unless explicitly disabled
-                    ] : [])), ...(!userConfig.search ? [] : [
-                        { id: ':ytsearch', name: 'Video' },
-                        { id: ':ytsearch:channel', name: 'Channel' }
-                    ]).map(c => ({
-                        ...c, extra: [
-                            ...(c.extra ?? []),
-                            { name: 'search', isRequired: true },
-                        ]
-                    }))
+                })) ?? (userConfig.encrypted ? [
+                    { id: ':ytrec', name: 'Discover' },
+                    { id: ':ytsubs', name: 'Subscriptions' },
+                    { id: ':ytwatchlater', name: 'Watch Later' },
+                    { id: ':ythistory', name: 'History' }
+                    // Add search unless explicitly disabled
+                ] : [])), ...(userConfig.search === false ? [] : [
+                    { id: ':ytsearch', name: 'Video' },
+                    { id: ':ytsearch:channel', name: 'Channel' }
+                ]).map(c => ({
+                    ...c, extra: [
+                        ...(c.extra ?? []),
+                        { name: 'search', isRequired: true },
+                    ]
+                }))
             ].map(c => ({
                 ...c,
                 id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
