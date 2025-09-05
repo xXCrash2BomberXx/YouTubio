@@ -294,9 +294,9 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
-        return `https://www.youtube.com/${temp}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/${temp}/videos`;  // ${includeLive ? 'live' : 'videos'}`;
     else if ((temp = videoId.match(channelIDRegex)?.groups.id))
-        return `https://www.youtube.com/channel/${temp}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/channel/${temp}/videos`;  // ${includeLive ? 'live' : 'videos'}`;
     else if ((temp = videoId.match(playlistIDRegex)?.groups.id))
         return `https://www.youtube.com/playlist?list=${temp}`;
     else if ((temp = videoId.match(videoIDRegex)?.groups.id))
@@ -353,7 +353,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '-I', ':1',  // Only fetch the first video since this never needs more than one
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {}, true)
         ]);
@@ -399,52 +398,60 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released: released,
-                videos: [{
-                    id: req.params.id + postfix,
-                    title: title,
-                    released: released,
-                    thumbnail: thumbnail,
-                    streams: [
-                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
-                            name: `YT-DLP Player ${src.resolution}`,
-                            url: src.url,
-                            description: src.format,
-                            subtitles: subtitles,
-                            behaviorHints: {
-                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                videoSize: src.filesize_approx,
-                                filename: video.filename
-                            }
-                        })), ...(useID && ((video.is_live ?? false) || !channel) ? [
-                            {
-                                name: 'Stremio Player',
-                                ytId: video.id,
-                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                            }, {
-                                name: 'External Player',
-                                externalUrl: video.webpage_url,
-                                description: 'Click to watch in the External Player'
-                            }
-                        ] : []), ...(video.channel_url ? [
-                            {
-                                name: 'YT-DLP Channel',
-                                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
-                                description: 'Click to open the channel as a Catalog'
-                            }, {
-                                name: 'External Channel',
-                                externalUrl: video.channel_url,
-                                description: 'Click to open the channel in the External Player'
-                            }
-                        ] : [])
-                    ],
-                    episode: 1,
-                    season: 1,
-                    overview: video.description ?? title
-                }],
+                videos: [
+                    {
+                        id: req.params.id + postfix,
+                        title: title,
+                        released: released,
+                        thumbnail: thumbnail,
+                        streams: [
+                            ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
+                                name: `YT-DLP Player ${src.resolution}`,
+                                url: src.url,
+                                description: src.format,
+                                subtitles: subtitles,
+                                behaviorHints: {
+                                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                                    videoSize: src.filesize_approx,
+                                    filename: video.filename
+                                }
+                            })), ...(useID && ((video.is_live ?? false) || !channel) ? [
+                                {
+                                    name: 'Stremio Player',
+                                    ytId: video.id,
+                                    description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                                }, {
+                                    name: 'External Player',
+                                    externalUrl: video.webpage_url,
+                                    description: 'Click to watch in the External Player'
+                                }
+                            ] : []), ...(video.channel_url ? [
+                                {
+                                    name: 'YT-DLP Channel',
+                                    externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                                    description: 'Click to open the channel as a Catalog'
+                                }, {
+                                    name: 'External Channel',
+                                    externalUrl: video.channel_url,
+                                    description: 'Click to open the channel in the External Player'
+                                }
+                            ] : [])
+                        ],
+                        episode: 1,
+                        season: 1,
+                        overview: video.description ?? title
+                    }, ...(video.entries?.map((x, i) => ({
+                        id: prefix + x.id,
+                        title: x.title,
+                        released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
+                        thumbnail: x.thumbnail ?? x.thumbnails?.at(-1)?.url,
+                        episode: i + 3,
+                        season: 1
+                    })) ?? [])
+                ],
                 runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
                 language: video.language,
                 website: video.webpage_url,
-                behaviorHints: { defaultVideoId: req.params.id + postfix }
             }
         });
     } catch (error) {
@@ -455,6 +462,70 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
 // Stremio Addon Stream Route
 app.get('/:config/stream/:type/:id.json', async (req, res) => {
+    const userConfig = decryptConfig(req.params.config, false);
+    const video = await runYtDlpWithAuth(req.params.config, [
+        userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+        '--no-playlist',
+        toYouTubeURL(userConfig, req.params.id, {}, true)
+    ]);
+    const channel = video._type === 'playlist';
+    const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+        const srt = v.find(x => x.ext == 'srt') ?? v[0];
+        return srt ? {
+            id: srt.name,
+            url: srt.url,
+            lang: k
+        } : null;
+    }).concat(
+        Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: `Auto ${srt.name}`,
+                url: srt.url,
+                lang: k
+            } : null;
+        })
+    ).filter(srt => srt !== null);
+    const useID = video.webpage_url_domain === 'youtube.com';
+    const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+    /** @type {string?} */
+    const ref = req.get('Referrer');
+    const protocol = ref ? ref + '#' : 'stremio://';
+    return res.json({
+        streams: [
+            ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
+                name: `YT-DLP Player ${src.resolution}`,
+                url: src.url,
+                description: src.format,
+                subtitles: subtitles,
+                behaviorHints: {
+                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                    videoSize: src.filesize_approx,
+                    filename: video.filename
+                }
+            })), ...(useID && ((video.is_live ?? false) || !channel) ? [
+                {
+                    name: 'Stremio Player',
+                    ytId: video.id,
+                    description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                }, {
+                    name: 'External Player',
+                    externalUrl: video.webpage_url,
+                    description: 'Click to watch in the External Player'
+                }
+            ] : []), ...(video.channel_url ? [
+                {
+                    name: 'YT-DLP Channel',
+                    externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                    description: 'Click to open the channel as a Catalog'
+                }, {
+                    name: 'External Channel',
+                    externalUrl: video.channel_url,
+                    description: 'Click to open the channel in the External Player'
+                }
+            ] : [])
+        ]
+    })
     return res.json({ streams: [] });
 });
 
