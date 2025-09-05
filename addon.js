@@ -405,8 +405,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '--no-playlist',
             ...((userConfig.showVideosInChannel ?? true) ? [] : ['-I', ':1']),
+            '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const channel = channelIDRegex.test(video.id);
@@ -422,8 +422,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const protocol = ref ? ref + '#' : 'stremio://';
         const live = (userConfig.showLiveInChannel ?? true) && channelIDRegex.test(video.id) ? await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '--no-playlist',
             '-I', ':1',
+            '--no-playlist',
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
         let episode = 1;
