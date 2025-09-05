@@ -426,7 +426,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '--no-playlist',
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
-        let episode = 1;
+        let episode = 0;
         return res.json({
             meta: {
                 id: req.params.id,
@@ -442,20 +442,20 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 released: released,
                 videos: [
                     ...[video, ...(live?.is_live ? [live] : [])].map(video2 => ({
-                        id: `${req.params.id}:1:${episode}`,
+                        id: `${req.params.id}:1:${++episode}`,
                         title: episode === 1 ? 'Channel Options' : video2.title,
                         released: released,
                         thumbnail: thumbnail,
                         streams: parseStream(userConfig, video2, manifestUrl, protocol),
-                        episode: episode++,
+                        episode: episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
-                    })), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map((x, i) => ({
+                    })), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map(x => ({
                         id: prefix + x.id,
                         title: x.title,
                         released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
                         thumbnail: x.thumbnail ?? x.thumbnails?.at(-1)?.url,
-                        episode: i + episode++,
+                        episode: ++episode,
                         season: 1
                     })) ?? [])
                 ],
