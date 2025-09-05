@@ -14,7 +14,6 @@ const ytDlpWrap = new YTDlpWrap();
 /** @type {number} */
 const PORT = process.env.PORT || 7000;
 const prefix = 'yt_id:';
-const postfix = ':1:1';
 const reversedPrefix = 'Reversed';
 const channelRegex = /^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
 const channelIDRegex = /^(https:\/\/www\.youtube\.com\/channel\/)?(?<id>UC[A-Za-z0-9_-]{21}[AQgw])/
@@ -214,10 +213,10 @@ app.get('/:config/manifest.json', (req, res) => {
                     { id: ':ytwatchlater', name: 'Watch Later' },
                     { id: ':ythistory', name: 'History' }
                     // Add search unless explicitly disabled
-                ] : [])), ...(userConfig.search === false ? [] : [
+                ] : [])), ...((userConfig.search ?? true) ? [
                     { id: ':ytsearch', name: 'Video' },
                     { id: ':ytsearch:channel', name: 'Channel' }
-                ]).map(c => ({
+                ] : []).map(c => ({
                     ...c, extra: [
                         ...(c.extra ?? []),
                         { name: 'search', isRequired: true },
@@ -265,10 +264,9 @@ app.get('/:config/manifest.json', (req, res) => {
  * @param {Object} userConfig 
  * @param {string} videoId 
  * @param {Object} query 
- * @param {boolean=false} includeLive 
  * @returns {string}
  */
-function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
+function toYouTubeURL(userConfig, videoId, query) {
     /** @type {RegExpMatchArray?} */
     let temp;
     const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => videoId === cat.id);
@@ -294,13 +292,13 @@ function toYouTubeURL(userConfig, videoId, query, includeLive = false) {
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
-        return `https://www.youtube.com/${temp}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/${temp}/videos`;
     else if ((temp = videoId.match(channelIDRegex)?.groups.id))
-        return `https://www.youtube.com/channel/${temp}/${includeLive ? 'live' : 'videos'}`;
+        return `https://www.youtube.com/channel/${temp}/videos`;
     else if ((temp = videoId.match(playlistIDRegex)?.groups.id))
-        return `https://www.youtube.com/playlist?list=${temp}`;
+        return 'https://www.youtube.com/playlist?list=' + temp;
     else if ((temp = videoId.match(videoIDRegex)?.groups.id))
-        return `https://www.youtube.com/watch?v=${temp}`;
+        return 'https://www.youtube.com/watch?v=' + temp;
     else if (isURL(videoId))
         return videoId;
     return `https://www.youtube.com/results?search_query=${encodeURIComponent(videoId)}&sp=${{
@@ -346,6 +344,60 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
     }
 });
 
+function parseStream(userConfig, video, manifestUrl, protocol) {
+    const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+        const srt = v.find(x => x.ext == 'srt') ?? v[0];
+        return srt ? {
+            id: srt.name,
+            url: srt.url,
+            lang: k
+        } : null;
+    }).concat(
+        Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: `Auto ${srt.name}`,
+                url: srt.url,
+                lang: k
+            } : null;
+        })
+    ).filter(srt => srt !== null);
+    const useID = video.webpage_url_domain === 'youtube.com';
+    return [
+        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
+            name: `YT-DLP Player ${src.resolution}`,
+            url: src.url,
+            description: src.format,
+            subtitles: subtitles,
+            behaviorHints: {
+                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                videoSize: src.filesize_approx,
+                filename: video.filename
+            }
+        })), ...(useID && ((video.is_live ?? false) || !channelIDRegex.test(video.id)) ? [
+            {
+                name: 'Stremio Player',
+                ytId: video.id,
+                description: 'Click to watch using Stremio\'s built-in YouTube Player'
+            }, {
+                name: 'External Player',
+                externalUrl: video.webpage_url,
+                description: 'Click to watch in the External Player'
+            }
+        ] : []), ...(video.channel_url ? [
+            {
+                name: 'YT-DLP Channel',
+                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                description: 'Click to open the channel as a Catalog'
+            }, {
+                name: 'External Channel',
+                externalUrl: video.channel_url,
+                description: 'Click to open the channel in the External Player'
+            }
+        ] : [])
+    ];
+}
+
 // Stremio Addon Meta Route
 app.get('/:config/meta/:type/:id.json', async (req, res) => {
     try {
@@ -353,39 +405,28 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '-I', ':1',  // Only fetch the first video since this never needs more than one
+            ...((userConfig.showVideosInChannel ?? true) ? [] : ['-I', ':1']),
             '--no-playlist',
-            toYouTubeURL(userConfig, req.params.id, {}, true)
+            toYouTubeURL(userConfig, req.params.id, {})
         ]);
-        const channel = video._type === 'playlist';
+        const channel = channelIDRegex.test(video.id);
         /** @type {string} */
-        const title = video.title ?? 'Unknown Title';
+        const title = channel ? video.channel : video.title ?? 'Unknown Title';
         /** @type {string?} */
         const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
-        const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-            const srt = v.find(x => x.ext == 'srt') ?? v[0];
-            return srt ? {
-                id: srt.name,
-                url: srt.url,
-                lang: k
-            } : null;
-        }).concat(
-            Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-                const srt = v.find(x => x.ext == 'srt') ?? v[0];
-                return srt ? {
-                    id: `Auto ${srt.name}`,
-                    url: srt.url,
-                    lang: k
-                } : null;
-            })
-        ).filter(srt => srt !== null);
-        const useID = video.webpage_url_domain === 'youtube.com';
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
         /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
+        const live = (userConfig.showLiveInChannel ?? true) && channelIDRegex.test(video.id) ? await runYtDlpWithAuth(req.params.config, [
+            userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            '-I', ':1',
+            '--no-playlist',
+            `https://www.youtube.com/channel/${video.id}/live`
+        ]) : undefined;
+        let episode = 1;
         return res.json({
             meta: {
                 id: req.params.id,
@@ -399,52 +440,29 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released: released,
-                videos: [{
-                    id: req.params.id + postfix,
-                    title: title,
-                    released: released,
-                    thumbnail: thumbnail,
-                    streams: [
-                        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
-                            name: `YT-DLP Player ${src.resolution}`,
-                            url: src.url,
-                            description: src.format,
-                            subtitles: subtitles,
-                            behaviorHints: {
-                                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                                videoSize: src.filesize_approx,
-                                filename: video.filename
-                            }
-                        })), ...(useID && ((video.is_live ?? false) || !channel) ? [
-                            {
-                                name: 'Stremio Player',
-                                ytId: video.id,
-                                description: 'Click to watch using Stremio\'s built-in YouTube Player'
-                            }, {
-                                name: 'External Player',
-                                externalUrl: video.webpage_url,
-                                description: 'Click to watch in the External Player'
-                            }
-                        ] : []), ...(video.channel_url ? [
-                            {
-                                name: 'YT-DLP Channel',
-                                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
-                                description: 'Click to open the channel as a Catalog'
-                            }, {
-                                name: 'External Channel',
-                                externalUrl: video.channel_url,
-                                description: 'Click to open the channel in the External Player'
-                            }
-                        ] : [])
-                    ],
-                    episode: 1,
-                    season: 1,
-                    overview: video.description ?? title
-                }],
+                videos: [
+                    ...[video, ...(live?.is_live ? [live] : [])].map(video2 => ({
+                        id: `${req.params.id}:1:${episode}`,
+                        title: episode === 1 ? 'Channel Options' : video2.title,
+                        released: released,
+                        thumbnail: thumbnail,
+                        streams: parseStream(userConfig, video2, manifestUrl, protocol),
+                        episode: episode++,
+                        season: 1,
+                        overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
+                    })), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map((x, i) => ({
+                        id: prefix + x.id,
+                        title: x.title,
+                        released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
+                        thumbnail: x.thumbnail ?? x.thumbnails?.at(-1)?.url,
+                        episode: i + episode++,
+                        season: 1
+                    })) ?? [])
+                ],
                 runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
                 language: video.language,
                 website: video.webpage_url,
-                behaviorHints: { defaultVideoId: req.params.id + postfix }
+                ...(channel ? {} : { behaviorHints: { defaultVideoId: req.params.id + ':1:1' } })
             }
         });
     } catch (error) {
@@ -455,7 +473,19 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 
 // Stremio Addon Stream Route
 app.get('/:config/stream/:type/:id.json', async (req, res) => {
-    return res.json({ streams: [] });
+    const userConfig = decryptConfig(req.params.config, false);
+    const video = await runYtDlpWithAuth(req.params.config, [
+        userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+        '--no-playlist',
+        toYouTubeURL(userConfig, req.params.id, {})
+    ]);
+    const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+    /** @type {string?} */
+    const ref = req.get('Referrer');
+    const protocol = ref ? ref + '#' : 'stremio://';
+    return res.json({
+        streams: parseStream(userConfig, video, manifestUrl, protocol)
+    });
 });
 
 // Configuration Page
@@ -590,9 +620,19 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" ${userConfig.search === false ? '' : 'checked'}></td>
+                                    <td><input type="checkbox" id="search" name="search" ${userConfig.search ?? true ? 'checked' : ''}></td>
                                     <td><label for="search">Allow searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><label for="showLiveInChannel">Show Livestream in Channel Search Items</label></td>
+                                    <td class="setting-description">When enabled, live videos will be displayed within their respective channels.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" ${userConfig.showVideosInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><label for="showVideosInChannel">Show Videos in Channel Search Items</label></td>
+                                    <td class="setting-description">When enabled, videos will be displayed within their respective channels.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
