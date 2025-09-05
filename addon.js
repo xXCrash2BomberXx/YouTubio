@@ -405,7 +405,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            ...((userConfig.showVideosInChannel ?? true) ? [] : ['-I', ':1']),
+            '-I', userConfig.showVideosInChannel ?? true ? ':100' : ':1',
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
