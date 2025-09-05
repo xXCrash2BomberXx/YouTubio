@@ -200,13 +200,14 @@ app.get('/:config/manifest.json', (req, res) => {
                             (c.id.includes('{term}') || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
                             [{ name: 'search', isRequired: true }] : [])
                     ]
-                })) ?? [
+                    // Add defaults if cookies were provided
+                })) ?? userConfig.encrypted ?  [
                         { id: ':ytrec', name: 'Discover' },
                         { id: ':ytsubs', name: 'Subscriptions' },
                         { id: ':ytwatchlater', name: 'Watch Later' },
                         { id: ':ythistory', name: 'History' }
                         // Add search unless explicitly disabled
-                    ]), ...(userConfig.search === false ? [] : [
+                    ] : []), ...(userConfig.search === false ? [] : [
                         { id: ':ytsearch', name: 'Video' },
                         { id: ':ytsearch:channel', name: 'Channel' }
                     ]).map(c => ({
@@ -606,12 +607,14 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             </div>
             <script>
                 const cookies = document.getElementById('cookie-data');
+                const addDefaults = document.getElementById('add-defaults');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-message');
                 const resultsDiv = document.getElementById('results');
                 function configChanged() {
                     resultsDiv.style.display = 'none';
+                    addDefaults.disabled = cookies.value.length <= 0;
                 }
                 const installStremio = document.getElementById('install-stremio');
                 const installUrlInput = document.getElementById('install-url');
@@ -626,7 +629,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
         ...pl,
         id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
-    }))) : 'JSON.parse(JSON.stringify(defaultPlaylists))'};
+    }))) : '[]'};
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
@@ -645,7 +648,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         // Type
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
-                        typeInput.value = pl.type;
+                        typeInput.defaultValue = pl.type;
                         typeInput.addEventListener('input', () => {
                             pl.type = typeInput.value.trim();
                             configChanged();
@@ -655,6 +658,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
                         idInput.value = pl.id;
+                        idInput.required = true;
                         idInput.addEventListener('change', () => {
                             pl.id = idInput.value;
                             configChanged();
@@ -664,12 +668,13 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const nameCell = document.createElement('td');
                         const nameInput = document.createElement('input');
                         nameInput.value = pl.name;
+                        nameInput.required = true;
                         nameInput.addEventListener('input', () => {
                             pl.name = nameInput.value.trim();
                             configChanged();
                         });
                         nameCell.appendChild(nameInput);
-                        // Channel Search
+                        // Search Type
                         const channelTypeCell = document.createElement('td');
                         const channelTypeInput = document.createElement('select');
                         const optAuto = document.createElement('option');
@@ -684,7 +689,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         optChannel.value = 'channel';
                         optChannel.textContent = 'Channel';
                         channelTypeInput.appendChild(optChannel);
-                        channelTypeInput.value = pl.channelType;
+                        channelTypeInput.defaultValue = pl.channelType;
                         channelTypeInput.addEventListener('change', () => {
                             pl.channelType = channelTypeInput.value;
                             configChanged();
@@ -736,7 +741,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     playlists.push({ type: 'YouTube', id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
-                document.getElementById('add-defaults').addEventListener('click', () => {
+                addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
                     renderPlaylists();
                 });
@@ -751,9 +756,9 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
-                        if (!cookies.disabled) {
-                            // Encrypt the sensitive data
-                            const encryptResponse = await fetch('/encrypt', {
+                        // Encrypt the sensitive data
+                        if (cookies.value && !cookies.disabled)
+                            cookies.value = await (await fetch('/encrypt', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -761,19 +766,19 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 body: JSON.stringify({ 
                                     auth: cookies.value,
                                 })
-                            });
-                            if (!encryptResponse.ok) {
-                                throw new Error(await encryptResponse.text() || 'Encryption failed');
-                            }
-                            cookies.value = await encryptResponse.text();
-                            cookies.disabled = true;
-                        }
-                        const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
-                            encrypted: cookies.value,
+                            })).text();
+                        cookies.disabled = true;
+                        const configString = \`${req.protocol}://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
+                            ...(cookies.value ? {encrypted: cookies.value} : {}),
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
-                                    .map(x => [x.name, x.type === 'checkbox' ? x.checked : x.value])
+                                    .map(x => {
+                                        const checkbox = x.type === 'checkbox';
+                                        const value = checkbox ? (x.checked ? 1 : 0) : x.value;
+                                        const defaultValue = checkbox ? (x.defaultChecked ? 1 : 0) : x.defaultValue;
+                                        return value !== defaultValue ? [x.name, value] : null;
+                                    }).filter(x => x !== null)
                             )
                         }))}/manifest.json\`;
                         installStremio.href = 'stremio' + configString;
