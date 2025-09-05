@@ -585,17 +585,17 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" value=${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark watched on load</label></td>
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" checked value=${userConfig.search ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="search" name="search" ${userConfig.search ? 'checked' : ''}></td>
                                     <td><label for="search">Allow searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" value=${userConfig.showBrokenLinks ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
                                     <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on videos without it enabled.</td>
                                 </tr>
@@ -615,6 +615,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     <a href="#" target="_blank" id="install-stremio" class="install-button">Stremio</a>
                     <a href="#" target="_blank" id="install-web" class="install-button">Stremio Web</a>
                     <a id="copy-btn" class="install-button">Copy URL</a>
+                    <a href="#" id="reload" class="install-button">Reload</a>
                     <input type="text" id="install-url" style="display: none;" readonly class="url-input">
                 </div>
             </div>
@@ -630,8 +631,9 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     addDefaults.disabled = cookies.value.length <= 0;
                 }
                 const installStremio = document.getElementById('install-stremio');
-                const installUrlInput = document.getElementById('install-url');
                 const installWeb = document.getElementById('install-web');
+                const reload = document.getElementById('reload');
+                const installUrlInput = document.getElementById('install-url');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
                 const defaultPlaylists = [
                     { type: ${catalogType}, id: ':ytrec', name: 'Discover', channelType: 'auto' },
@@ -783,9 +785,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                         return value !== defaultValue ? [x.name, value] : null;
                                     }).filter(x => x !== null)
                             )
-                        }))}/manifest.json\`;
-                        installStremio.href = 'stremio' + configString;
-                        installUrlInput.value = ${JSON.stringify(req.protocol)} + configString;
+                        }))}/\`;
+                        const protocol = ${JSON.stringify(req.protocol)};
+                        const manifestString = configString + 'manifest.json';
+                        installStremio.href = 'stremio' + manifestString;
+                        reload.href = \`\${protocol}\${configString}configure\`;
+                        installUrlInput.value = protocol + manifestString;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         resultsDiv.style.display = 'block';
                     } catch (error) {
