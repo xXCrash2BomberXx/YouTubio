@@ -20,6 +20,11 @@ const channelRegex = /^(https:\/\/www\.youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z
 const channelIDRegex = /^(https:\/\/www\.youtube\.com\/channel\/)?(?<id>UC[A-Za-z0-9_-]{21}[AQgw])/
 const playlistIDRegex = /^(https:\/\/www\.youtube\.com\/playlist\?list=)?(?<id>PL([0-9A-F]{16}|[A-Za-z0-9_-]{32}))/;
 const videoIDRegex = /^(https:\/\/www\.youtube\.com\/watch\?v=)?(?<id>[A-Za-z0-9_-]{10}[AEIMQUYcgkosw048])/;
+const channelTypeArray = [
+    'auto',
+    'video',
+    'channel'
+];
 
 /** @type {Buffer} */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
@@ -152,6 +157,7 @@ function decryptConfig(configParam, enableDecryption = true) {
             config.encrypted = undefined;
         }
     }
+    config.catalogs.forEach(c => c.channelType = channelTypeArray[c.channelType] ?? c.channelType);
     return config;
 }
 
@@ -677,19 +683,13 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         // Search Type
                         const channelTypeCell = document.createElement('td');
                         const channelTypeInput = document.createElement('select');
-                        const optAuto = document.createElement('option');
-                        optAuto.value = 'auto';
-                        optAuto.textContent = 'Auto';
-                        channelTypeInput.appendChild(optAuto);
-                        const optVideo = document.createElement('option');
-                        optVideo.value = 'video';
-                        optVideo.textContent = 'Video';
-                        channelTypeInput.appendChild(optVideo);
-                        const optChannel = document.createElement('option');
-                        optChannel.value = 'channel';
-                        optChannel.textContent = 'Channel';
-                        channelTypeInput.appendChild(optChannel);
-                        channelTypeInput.defaultValue = pl.channelType;
+                        ${JSON.stringify(channelTypeArray)}.forEach((type, index) => {
+                            const option = document.createElement('option');
+                            option.value = index;
+                            option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                            channelTypeInput.appendChild(option);
+                        });
+                        channelTypeInput.defaultValue = 0;
                         channelTypeInput.addEventListener('change', () => {
                             pl.channelType = channelTypeInput.value;
                             configChanged();
@@ -768,7 +768,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 })
                             })).text();
                         cookies.disabled = true;
-                        const configString = \`${req.protocol}://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
+                        const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
                             ...(cookies.value ? {encrypted: cookies.value} : {}),
                             catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
                             ...Object.fromEntries(
@@ -819,4 +819,3 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
-
