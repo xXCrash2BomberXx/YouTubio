@@ -25,6 +25,7 @@ const channelTypeArray = [
     'video',
     'channel'
 ];
+const defaultCatalogType = 'YouTube';
 
 /** @type {Buffer} */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
@@ -225,7 +226,7 @@ app.get('/:config/manifest.json', (req, res) => {
             ].map(c => ({
                 ...c,
                 id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
-                type: c.type ?? 'YouTube',
+                type: c.type ?? defaultCatalogType,
                 extra: [
                     ...(
                         c.extra ?? []
@@ -427,7 +428,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         ] : []), ...(video.channel_url ? [
                             {
                                 name: 'YT-DLP Channel',
-                                externalUrl: `${protocol}/discover/${manifestUrl}/YouTube/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
                                 description: 'Click to open the channel as a Catalog'
                             }, {
                                 name: 'External Channel',
@@ -467,6 +468,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
         userConfig = {};
     }
+    const catalogType = JSON.stringify(userConfig.catalogType ?? defaultCatalogType);
     res.send(`
         <!DOCTYPE html>
         <html>
@@ -528,7 +530,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     <div class="settings-section">
                         <h3>Cookies</h3>
                         <hr>
-                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."></textarea>
+                        <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."${userConfig.encrypted ? ` disabled>${userConfig.encrypted ?? ''}` : '>'}</textarea>
                         <button type="button" class="install-button" id="clear-cookies">Clear</button>
                     </div>
                     <div class="settings-section">
@@ -583,19 +585,24 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad"></td>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" value=${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark watched on load</label></td>
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" checked></td>
+                                    <td><input type="checkbox" id="search" name="search" checked value=${userConfig.search ? 'checked' : ''}></td>
                                     <td><label for="search">Allow searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks"></td>
+                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" value=${userConfig.showBrokenLinks ? 'checked' : ''}></td>
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
                                     <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on videos without it enabled.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="text" id="catalogType" name="catalogType" value=${catalogType} style="width: 5rem;"></td>
+                                    <td><label for="catalogType">Catalog Type</label></td>
+                                    <td class="setting-description">Specify the type of catalog to display. This helps in offering a consistent experience within the addon.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -627,19 +634,15 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 const installWeb = document.getElementById('install-web');
                 const playlistTableBody = document.querySelector('#playlist-table tbody');
                 const defaultPlaylists = [
-                    { type: 'YouTube', id: ':ytrec', name: 'Discover', channelType: 'auto' },
-                    { type: 'YouTube', id: ':ytsubs', name: 'Subscriptions', channelType: 'auto' },
-                    { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later', channelType: 'auto' },
-                    { type: 'YouTube', id: ':ythistory', name: 'History', channelType: 'auto' }
+                    { type: ${catalogType}, id: ':ytrec', name: 'Discover', channelType: 'auto' },
+                    { type: ${catalogType}, id: ':ytsubs', name: 'Subscriptions', channelType: 'auto' },
+                    { type: ${catalogType}, id: ':ytwatchlater', name: 'Watch Later', channelType: 'auto' },
+                    { type: ${catalogType}, id: ':ythistory', name: 'History', channelType: 'auto' }
                 ];
                 let playlists = ${JSON.stringify(userConfig.catalogs?.map(pl => ({
         ...pl,
         id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
     })) ?? [])};
-                ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
-                document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
-                document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
-                document.getElementById('showBrokenLinks').checked = ${userConfig.showBrokenLinks === true ? 'true' : 'false'};
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
@@ -738,7 +741,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     configChanged();
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
-                    playlists.push({ type: 'YouTube', id: '', name: '', channelType: 'auto' });
+                    playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
                 addDefaults.addEventListener('click', () => {
