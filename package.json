@@ -1,6 +1,6 @@
 {
   "name": "YouTubio",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Watch YouTube videos, subscriptions, watch later, and history in Stremio.",
   "main": "addon.js",
   "scripts": {
