@@ -421,7 +421,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                         ] : []), ...(video.channel_url ? [
                             {
                                 name: 'YT-DLP Channel',
-                                externalUrl: `${protocol}/discover/${manifestUrl}/movie/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                                externalUrl: `${protocol}/discover/${manifestUrl}/YouTube/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
                                 description: 'Click to open the channel as a Catalog'
                             }, {
                                 name: 'External Channel',
@@ -819,3 +819,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
