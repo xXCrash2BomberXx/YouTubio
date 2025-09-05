@@ -157,7 +157,7 @@ function decryptConfig(configParam, enableDecryption = true) {
             config.encrypted = undefined;
         }
     }
-    config.catalogs.forEach(c => c.channelType = channelTypeArray[c.channelType] ?? c.channelType);
+    config.catalogs?.forEach(c => c.channelType = channelTypeArray[c.channelType] ?? c.channelType);
     return config;
 }
 
@@ -632,10 +632,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     { type: 'YouTube', id: ':ytwatchlater', name: 'Watch Later', channelType: 'auto' },
                     { type: 'YouTube', id: ':ythistory', name: 'History', channelType: 'auto' }
                 ];
-                let playlists = ${userConfig.catalogs ? JSON.stringify(userConfig.catalogs.map(pl => ({
+                let playlists = ${JSON.stringify(userConfig.catalogs?.map(pl => ({
         ...pl,
         id: pl.id.startsWith(prefix) ? pl.id.slice(prefix.length) : pl.id
-    }))) : '[]'};
+    })) ?? [])};
                 ${userConfig.encrypted ? `cookies.value = ${JSON.stringify(userConfig.encrypted)}; cookies.disabled = true;` : ''}
                 document.getElementById('markWatchedOnLoad').checked = ${userConfig.markWatchedOnLoad === true ? 'true' : 'false'};
                 document.getElementById('search').checked = ${userConfig.search === false ? 'false' : 'true'};
