@@ -158,7 +158,7 @@ function decryptConfig(configParam, enableDecryption = true) {
             config.encrypted = undefined;
         }
     }
-    config.catalogs?.forEach(c => c.channelType = channelTypeArray[c.channelType] ?? c.channelType);
+    config.catalogs?.forEach(c => c.channelType = /[0-9]+/.test(c.channelType) ? channelTypeArray[c.channelType] : c.channelType);
     return config;
 }
 
@@ -208,13 +208,13 @@ app.get('/:config/manifest.json', (req, res) => {
                             [{ name: 'search', isRequired: true }] : [])
                     ]
                     // Add defaults if cookies were provided
-                })) ?? userConfig.encrypted ?  [
+                })) ?? (userConfig.encrypted ?  [
                         { id: ':ytrec', name: 'Discover' },
                         { id: ':ytsubs', name: 'Subscriptions' },
                         { id: ':ytwatchlater', name: 'Watch Later' },
                         { id: ':ythistory', name: 'History' }
                         // Add search unless explicitly disabled
-                    ] : []), ...(userConfig.search === false ? [] : [
+                    ] : [])), ...(!userConfig.search ? [] : [
                         { id: ':ytsearch', name: 'Video' },
                         { id: ':ytsearch:channel', name: 'Channel' }
                     ]).map(c => ({
@@ -590,7 +590,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" ${userConfig.search ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="search" name="search" ${userConfig.search === false ? '' : 'checked'}></td>
                                     <td><label for="search">Allow searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
                                 </tr>
