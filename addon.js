@@ -510,8 +510,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 .container { max-width: 50rem; margin: auto; background: white; padding: 2rem; border-radius: 1rem; }
                 h1 { color: #d92323; }
                 textarea { width: 100%; height: 15rem; padding: 1rem; border-radius: 1rem; border: 0.1rem solid #ccc; box-sizing: border-box; resize: vertical; }
-                #playlist-table th, #playlist-table td { border: 0.1rem solid #ccc; padding: 1rem; text-align: left; }
-                #playlist-table input { width: 100%; box-sizing: border-box; }
+                th, td { border: 0.1rem solid #ccc; padding: 1rem; text-align: left; }
+                input { width: 100%; box-sizing: border-box; }
                 .install-button { margin-top: 1rem; border-width: 0; display: inline-block; padding: 0.5rem; background-color: #5835b0; color: white; border-radius: 0.2rem; cursor: pointer; }
                 .install-button:hover { background-color: #4a2c93; }
                 .install-button:disabled { background-color: #ccc; cursor: not-allowed; }
@@ -524,12 +524,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 @media (prefers-color-scheme: dark) {
                     body { background: #121212; color: #e0e0e0; }
                     .container { background: #1e1e1e; }
-                    textarea, #playlist-table input, select { 
+                    textarea, input, select { 
                         background: #2a2a2a; 
                         color: #e0e0e0; 
                         border: 0.1rem solid #555; 
                     }
-                    #playlist-table th, #playlist-table td { border: 0.1rem solid #555; }
+                    th, td { border: 0.1rem solid #555; }
                     .install-button { background-color: #6a5acd; }
                     .install-button:hover { background-color: #5941a9; }
                     .install-button:disabled { background-color: #555; }
@@ -596,6 +596,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <th>Playlist ID / URL</th>
                                     <th>Name</th>
                                     <th>Search Type</th>
+                                    <th>Sort Order</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -692,36 +693,71 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 });
                 cookies.addEventListener('input', configChanged);
                 addonSettings.querySelectorAll("input, select").forEach(e => e.addEventListener('change', configChanged));
-                function renderPlaylists() {
-                    playlistTableBody.innerHTML = '';
-                    playlists.forEach((pl, index) => {
+                function makeActions(callback, tableBody, array, index) {
+                    const actionsCell = document.createElement('td');
+                    const upBtn = document.createElement('button');
+                    upBtn.textContent = '↑';
+                    upBtn.classList.add('install-button');
+                    upBtn.style.margin = '0.2rem';
+                    upBtn.addEventListener('click', () => {
+                        if (index > 0) {
+                            [array[index - 1], array[index]] = [array[index], array[index - 1]];
+                            callback(tableBody, array);
+                        }
+                    });
+                    const downBtn = document.createElement('button');
+                    downBtn.textContent = '↓';
+                    downBtn.classList.add('install-button');
+                    downBtn.style.margin = '0.2rem';
+                    downBtn.addEventListener('click', () => {
+                        if (index < array.length - 1) {
+                            [array[index + 1], array[index]] = [array[index], array[index + 1]];
+                            callback(tableBody, array);
+                        }
+                    });
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.classList.add('install-button');
+                    removeBtn.style.margin = '0.2rem';
+                    removeBtn.addEventListener('click', () => {
+                        array.splice(index, 1);
+                        callback(tableBody, array);
+                    });
+                    actionsCell.appendChild(upBtn);
+                    actionsCell.appendChild(downBtn);
+                    actionsCell.appendChild(removeBtn);
+                    return actionsCell;
+                }
+                function renderPlaylists(tableBody) {
+                    tableBody.innerHTML = '';
+                    playlists.forEach((playlist, index) => {
                         const row = document.createElement('tr');
                         // Type
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
-                        typeInput.defaultValue = pl.type;
+                        typeInput.defaultValue = playlist.type;
                         typeInput.addEventListener('input', () => {
-                            pl.type = typeInput.value.trim();
+                            playlist.type = typeInput.value.trim();
                             configChanged();
                         });
                         typeCell.appendChild(typeInput);
                         // ID
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
-                        idInput.value = pl.id;
+                        idInput.value = playlist.id;
                         idInput.required = true;
                         idInput.addEventListener('change', () => {
-                            pl.id = idInput.value;
+                            playlist.id = idInput.value;
                             configChanged();
                         });
                         idCell.appendChild(idInput);
                         // Name
                         const nameCell = document.createElement('td');
                         const nameInput = document.createElement('input');
-                        nameInput.value = pl.name;
+                        nameInput.value = playlist.name;
                         nameInput.required = true;
                         nameInput.addEventListener('input', () => {
-                            pl.name = nameInput.value.trim();
+                            playlist.name = nameInput.value.trim();
                             configChanged();
                         });
                         nameCell.appendChild(nameInput);
@@ -736,65 +772,140 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         });
                         channelTypeInput.defaultValue = 0;
                         channelTypeInput.addEventListener('change', () => {
-                            pl.channelType = channelTypeInput.value;
+                            playlist.channelType = channelTypeInput.value;
                             configChanged();
                         });
                         channelTypeCell.appendChild(channelTypeInput);
-                        // Actions
-                        const actionsCell = document.createElement('td');
-                        const upBtn = document.createElement('button');
-                        upBtn.textContent = '↑';
-                        upBtn.classList.add('install-button');
-                        upBtn.style.margin = '0.2rem';
-                        upBtn.addEventListener('click', () => {
-                            if (index > 0) {
-                                [playlists[index - 1], playlists[index]] = [playlists[index], playlists[index - 1]];
-                                renderPlaylists();
+                        // Sort Order
+                        playlist.sortOrder = playlist.sortOrder ?? [];
+                        const sortOrderCell = document.createElement('td');
+                        const sortOrderInput = document.createElement('button');
+                        sortOrderInput.textContent = 'Modify';
+                        sortOrderInput.addEventListener('click', () => {
+                            // if (!idInput.checkValidity() || !nameInput.checkValidity()) return;
+                            const sorts = JSON.parse(JSON.stringify(playlist.sortOrder));
+                            function renderSorts(tbody) {
+                                tbody.innerHTML = '';
+                                sorts.forEach((sort, index) => {
+                                    const row = document.createElement('tr');
+                                    const idCell = document.createElement('td');
+                                    const idInput = document.createElement('input');
+                                    idInput.required = true;
+                                    idInput.addEventListener('change', () => sort.id = idInput.value);
+                                    idInput.value = sort.id;
+                                    const nameCell = document.createElement('td');
+                                    const nameInput = document.createElement('input');
+                                    nameInput.required = true;
+                                    nameInput.addEventListener('change', () => sort.name = nameInput.value);
+                                    nameInput.value = sort.name;
+                                    idCell.appendChild(idInput);
+                                    row.appendChild(idCell);
+                                    nameCell.appendChild(nameInput);
+                                    row.appendChild(nameCell);
+                                    row.appendChild(makeActions(renderSorts, tbody, sorts, index));
+                                    tbody.appendChild(row);
+                                });
                             }
-                        });
-                        const downBtn = document.createElement('button');
-                        downBtn.textContent = '↓';
-                        downBtn.classList.add('install-button');
-                        downBtn.style.margin = '0.2rem';
-                        downBtn.addEventListener('click', () => {
-                            if (index < playlists.length - 1) {
-                                [playlists[index + 1], playlists[index]] = [playlists[index], playlists[index + 1]];
-                                renderPlaylists();
+                            const blur = document.createElement('div');
+                            blur.style.position = 'fixed';
+                            blur.style.top = 0;
+                            blur.style.left = 0;
+                            blur.style.right = 0;
+                            blur.style.bottom = 0;
+                            blur.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                            blur.addEventListener('click', e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            });
+                            const modal = document.createElement('div');
+                            modal.style.position = 'fixed';
+                            modal.style.top = '50%';
+                            modal.style.left = '50%';
+                            modal.style.transform = 'translate(-50%, -50%)';
+                            modal.classList.add('settings-section');
+                            function closeModal(save = false) {
+                                if (save) playlist.sortOrder = sorts;
+                                document.body.removeChild(blur);
+                                document.body.removeChild(modal);
                             }
+                            const title = document.createElement('h3');
+                            title.textContent = 'Modify Sort Order';
+                            const sortButtons = document.createElement('div');
+                            sortButtons.style.marginBottom = '1rem';
+                            const addSort = document.createElement('button');
+                            addSort.type = 'button';
+                            addSort.textContent = 'Add Sort';
+                            addSort.classList.add('install-button');
+                            addSort.addEventListener('click', () => {
+                                sorts.push({ id: '', name: '' });
+                                renderSorts(tbody);
+                            });
+                            const saveBtn = document.createElement('button');
+                            saveBtn.type = 'button';
+                            saveBtn.textContent = 'Save';
+                            saveBtn.classList.add('install-button');
+                            saveBtn.addEventListener('click', () => {
+                                closeModal(true);
+                                configChanged();
+                            });
+                            const cancelBtn = document.createElement('button');
+                            cancelBtn.type = 'button';
+                            cancelBtn.textContent = 'Cancel';
+                            cancelBtn.classList.add('install-button');
+                            cancelBtn.addEventListener('click', () => closeModal(false));
+                            const table = document.createElement('table');
+                            table.style.width = '100%';
+                            table.style.borderCollapse = 'collapse';
+                            const thead = document.createElement('thead');
+                            const headerRow = document.createElement('tr');
+                            const thID = document.createElement('th');
+                            thID.textContent = 'Sort ID';
+                            const thName = document.createElement('th');
+                            thName.textContent = 'Sort Name';
+                            const thActions = document.createElement('th');
+                            thActions.textContent = 'Actions';
+                            const tbody = document.createElement('tbody');
+                            renderSorts(tbody);
+                            document.body.appendChild(blur);
+                            headerRow.appendChild(thID);
+                            headerRow.appendChild(thName);
+                            headerRow.appendChild(thActions);
+                            modal.appendChild(title);
+                            modal.appendChild(document.createElement('hr'));
+                            sortButtons.appendChild(addSort);
+                            sortButtons.appendChild(saveBtn);
+                            sortButtons.appendChild(cancelBtn);
+                            modal.appendChild(sortButtons);
+                            thead.appendChild(headerRow);
+                            table.appendChild(thead);
+                            table.appendChild(tbody);
+                            modal.appendChild(table);
+                            document.body.appendChild(modal);
                         });
-                        const removeBtn = document.createElement('button');
-                        removeBtn.textContent = 'Remove';
-                        removeBtn.classList.add('install-button');
-                        removeBtn.style.margin = '0.2rem';
-                        removeBtn.addEventListener('click', () => {
-                            playlists.splice(index, 1);
-                            renderPlaylists();
-                        });
-                        actionsCell.appendChild(upBtn);
-                        actionsCell.appendChild(downBtn);
-                        actionsCell.appendChild(removeBtn);
+                        sortOrderCell.appendChild(sortOrderInput);
                         row.appendChild(typeCell);
                         row.appendChild(idCell);
                         row.appendChild(nameCell);
                         row.appendChild(channelTypeCell);
-                        row.appendChild(actionsCell);
-                        playlistTableBody.appendChild(row);
+                        row.appendChild(sortOrderCell);
+                        row.appendChild(makeActions(renderPlaylists, tableBody, playlists, index));
+                        tableBody.appendChild(row);
                     });
                     configChanged();
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
                     playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
-                    renderPlaylists();
+                    renderPlaylists(playlistTableBody);
                 });
                 addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
-                    renderPlaylists();
+                    renderPlaylists(playlistTableBody);
                 });
                 document.getElementById('remove-defaults').addEventListener('click', () => {
                     playlists = playlists.filter(pl => !defaultPlaylists.some(def => def.id === pl.id));
-                    renderPlaylists();
+                    renderPlaylists(playlistTableBody);
                 });
-                renderPlaylists();
+                renderPlaylists(playlistTableBody);
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
                     submitBtn.disabled = true;
