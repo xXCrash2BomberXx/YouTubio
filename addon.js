@@ -25,6 +25,8 @@ const channelTypeArray = [
     'channel'
 ];
 const defaultCatalogType = 'YouTube';
+const termKeyword = '{term}';
+const sortKeyword = '{sort}';
 
 /** @type {Buffer} */
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? Buffer.from(process.env.ENCRYPTION_KEY, 'base64') : crypto.randomBytes(32);
@@ -203,7 +205,7 @@ app.get('/:config/manifest.json', (req, res) => {
                     ...c, extra: [
                         ...(c.extra ?? []),
                         ...(c.channelType === 'auto' &&
-                            (c.id.includes('{term}') || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
+                            (c.id.includes(termKeyword) || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
                             [{ name: 'search', isRequired: true }] : [])
                     ]
                     // Add defaults if cookies were provided
@@ -287,8 +289,8 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if (catalogConfig?.id.includes('{term}'))
-        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll('{term}', encodeURIComponent(query.search ?? ''));
+    else if (catalogConfig?.id.includes(termKeyword))
+        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll(termKeyword, encodeURIComponent(query.search ?? ''));
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
@@ -579,8 +581,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </p>
                             <p>
                                 &#128712;
-                                You can use <b><code>{term}</code></b> in the <b>Playlist ID / URL</b> for custom search catalogs in places the encoded URI search component is used.
-                                ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query={term}</code>
+                                You can use <b><code>${termKeyword}</code></b> in the <b>Playlist ID / URL</b> for custom search catalogs in places the encoded URI search component is used.
+                                ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query=${termKeyword}</code>
                             </p>
                             <hr>
                         </details>
@@ -781,8 +783,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const sortOrderCell = document.createElement('td');
                         const sortOrderInput = document.createElement('button');
                         sortOrderInput.textContent = 'Modify';
+                        sortOrderInput.title = 'Requires Playlist ID / URL to contain \\'${sortKeyword}\\'';
+                        sortOrderInput.classList.add('install-button');
+                        sortOrderInput.type = 'button';
                         sortOrderInput.addEventListener('click', () => {
-                            // if (!idInput.checkValidity() || !nameInput.checkValidity()) return;
+                            if (!idInput.value?.includes(${JSON.stringify(sortKeyword)})) return;
                             const sorts = JSON.parse(JSON.stringify(playlist.sortOrder));
                             function renderSorts(tbody) {
                                 tbody.innerHTML = '';
@@ -817,7 +822,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                             });
-                            const modal = document.createElement('div');
+                            const modal = document.createElement('form');
                             modal.style.position = 'fixed';
                             modal.style.top = '50%';
                             modal.style.left = '50%';
@@ -841,15 +846,14 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 renderSorts(tbody);
                             });
                             const saveBtn = document.createElement('button');
-                            saveBtn.type = 'button';
+                            saveBtn.type = 'submit';
                             saveBtn.textContent = 'Save';
                             saveBtn.classList.add('install-button');
-                            saveBtn.addEventListener('click', () => {
+                            modal.addEventListener('submit', () => {
                                 closeModal(true);
                                 configChanged();
                             });
                             const cancelBtn = document.createElement('button');
-                            cancelBtn.type = 'button';
                             cancelBtn.textContent = 'Cancel';
                             cancelBtn.classList.add('install-button');
                             cancelBtn.addEventListener('click', () => closeModal(false));
