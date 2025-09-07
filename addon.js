@@ -236,10 +236,9 @@ app.get('/:config/manifest.json', (req, res) => {
                         isRequired: false,
                         options: [
                             '',
-                            ...((c.sortOrder?.map(s => s.name) ?? [])
-                                // Add YouTube sorting options
-                                .concat(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
-                            )
+                            ...(c.sortOrder?.map(s => s.name) ?? []),
+                            // Add YouTube sorting options
+                            ...(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
                         ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
                             .slice(1)  // Remove default sorting option
                     }, {
@@ -291,8 +290,10 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if (catalogConfig?.id.includes(termKeyword))
-        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id).replaceAll(termKeyword, encodeURIComponent(query.search ?? ''));
+    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword)))
+        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
+            .replaceAll(termKeyword, encodeURIComponent(videoId))
+            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '');
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
