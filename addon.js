@@ -276,6 +276,7 @@ function toYouTubeURL(userConfig, videoId, query) {
     if (videoId.startsWith(prefix)) videoId = videoId.slice(prefix.length);
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
+    const sortOrder = catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '';
     if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search ?? '')}&sp=${{
             'Relevance': 'CAASAhAB',
@@ -292,8 +293,8 @@ function toYouTubeURL(userConfig, videoId, query) {
         }[genre]}`;
     else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword)))
         return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
-            .replaceAll(termKeyword, encodeURIComponent(videoId))
-            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '');
+            .replaceAll(termKeyword, encodeURIComponent(query.search ?? ''))
+            .replaceAll(sortKeyword, sortOrder);
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
