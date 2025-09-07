@@ -236,8 +236,10 @@ app.get('/:config/manifest.json', (req, res) => {
                         isRequired: false,
                         options: [
                             '',
-                            // Add YouTube sorting options
-                            ...(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
+                            ...((c.sortOrder?.map(s => s.name) ?? [])
+                                // Add YouTube sorting options
+                                .concat(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
+                            )
                         ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
                             .slice(1)  // Remove default sorting option
                     }, {
