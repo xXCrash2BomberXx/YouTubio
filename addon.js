@@ -596,7 +596,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             <p>
                                 &#128712;
                                 You can use <b><code>${sortKeyword}</code></b> in the <b>Playlist ID / URL</b> for custom sort order in places the encoded URI sorting component is used.
-                                ex. <code>https://www.youtube.com/results?search_query=example+search&sp=EgIQAg%253D%253D</code> &rarr; <code>https://www.youtube.com/results?search_query=${termKeyword}${sortKeyword}</code> &amp; Sort ID: <code>&sp=EgIQAg%253D%253D</code>, Sort Name: <code>Channel</code>
+                                ex. <code>https://www.youtube.com/results?search_query=example+search&sp=CAASAhAC</code> &rarr; <code>https://www.youtube.com/results?search_query=${termKeyword}${sortKeyword}</code> &amp; Sort ID: <code>&sp=CAASAhAC</code>, Sort Name: <code>Channel</code>
                             </p>
                             <hr>
                         </details>
@@ -995,3 +995,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
