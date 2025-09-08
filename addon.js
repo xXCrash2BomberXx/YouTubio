@@ -276,7 +276,6 @@ function toYouTubeURL(userConfig, videoId, query) {
     if (videoId.startsWith(prefix)) videoId = videoId.slice(prefix.length);
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
-    const sortOrder = catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '';
     if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search ?? '')}&sp=${{
             'Relevance': 'CAASAhAB',
@@ -291,11 +290,13 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword)))
-        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
+    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword))) {
+        const r = (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
             .replaceAll(termKeyword, encodeURIComponent(query.search ?? ''))
-            .replaceAll(sortKeyword, sortOrder);
-    else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
+            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '');
+        if (process.env.DEV_LOGGING) console.log(r);
+        return r;
+    } else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
         return `https://www.youtube.com/${temp}/videos`;
@@ -986,3 +987,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
