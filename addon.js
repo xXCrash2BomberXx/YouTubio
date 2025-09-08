@@ -627,27 +627,27 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=false ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark watched on load</label></td>
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" data-default=true ${userConfig.search ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
                                     <td><label for="search">Allow searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=true ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
                                     <td><label for="showLiveInChannel">Show Livestream in Channel Search Items</label></td>
                                     <td class="setting-description">When enabled, live videos will be displayed within their respective channels.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=true ${userConfig.showVideosInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=1 ${userConfig.showVideosInChannel ?? true ? 'checked' : ''}></td>
                                     <td><label for="showVideosInChannel">Show Videos in Channel Search Items</label></td>
                                     <td class="setting-description">When enabled, videos will be displayed within their respective channels.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=false ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
                                     <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on videos without it enabled.</td>
                                 </tr>
@@ -945,8 +945,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     .map(x => {
                                         const checkbox = x.type === 'checkbox';
                                         const value = checkbox ? (x.checked ? 1 : 0) : x.value;
-                                        const defaultValue = checkbox ? (x.defaultChecked ? 1 : 0) : x.defaultValue;
-                                        return value !== defaultValue ? [x.name, value] : null;
+                                        return value !== x.dataset.default ? [x.name, value] : null;
                                     }).filter(x => x !== null)
                             )
                         }))}/\`;
@@ -991,6 +990,7 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
 
 
