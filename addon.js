@@ -290,13 +290,11 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword))) {
-        const r = (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
+    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword)))
+        return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
             .replaceAll(termKeyword, encodeURIComponent(query.search ?? ''))
-            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.value ?? '');
-        if (process.env.DEV_LOGGING) console.log(catalogConfig?.sortOrder, `Genre: '${genre}', URL: '${r}'`);
-        return r;
-    } else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
+            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.id ?? '');
+    else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
         return `https://www.youtube.com/${temp}/videos`;
@@ -993,5 +991,6 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
 
