@@ -236,9 +236,8 @@ app.get('/:config/manifest.json', (req, res) => {
                         isRequired: false,
                         options: [
                             '',
-                            ...(c.sortOrder?.map(s => s.name) ?? []),
-                            // Add YouTube sorting options
-                            ...(canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : [])
+                            // Add YouTube sorting options if none provided
+                            ...(c.sortOrder?.map(s => s.name) ?? canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : []),
                         ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
                             .slice(1)  // Remove default sorting option
                     }, {
@@ -944,7 +943,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         cookies.disabled = true;
                         const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
                             ...(cookies.value ? {encrypted: cookies.value} : {}),
-                            catalogs: playlists.map(pl => ({ ...pl, id: ${JSON.stringify(prefix)} + pl.id })),
+                            catalogs: playlists.map(pl => ({
+                                ...pl,
+                                id: ${JSON.stringify(prefix)} + pl.id,
+                                sortOrder: pl.sortOrder?.length ? pl.sortOrder : undefined
+                            })),
+                            // Non-Sensitive Settings
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => {
