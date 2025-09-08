@@ -290,7 +290,7 @@ function toYouTubeURL(userConfig, videoId, query) {
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if ([termKeyword, sortKeyword].some( keyword => catalogConfig?.id.includes(keyword)))
+    else if ([termKeyword, sortKeyword].some(keyword => catalogConfig?.id.includes(keyword)))
         return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
             .replaceAll(termKeyword, encodeURIComponent(query.search ?? ''))
             .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.id ?? '');
@@ -933,7 +933,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({ 
-                                    auth: cookies.value,
+                                    auth: cookies.value
                                 })
                             })).text();
                         cookies.disabled = true;
@@ -990,7 +990,3 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
-
-
-
-
