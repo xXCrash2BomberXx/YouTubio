@@ -81,3 +81,19 @@ node addon.js
 ```
 
 By default, the addon will be available at: `http://localhost:7000`
+
+## Example YouTube Search Catalog
+
+Playlist ID / URL: `https://www.youtube.com/results?search_query={term}{sort}`
+
+Name: `Search`
+
+Sort Order `(Sort Name: Sort ID)`:
+- Video Relevance: `&sp=CAASAhAB`
+- Video Upload Date: `&sp=CAISAhAB`
+- Video View Count: `&sp=CAMSAhAB`
+- Video Rating: `&sp=CAESAhAB`
+- Channel Relevance: `&sp=CAASAhAC`
+- Channel Upload Date: `&sp=CAISAhAC`
+- Channel View Count: `&sp=CAMSAhAC`
+- Channel Rating: `&sp=CAESAhAC`
