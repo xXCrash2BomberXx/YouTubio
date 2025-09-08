@@ -945,7 +945,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     .map(x => {
                                         const checkbox = x.type === 'checkbox';
                                         const value = checkbox ? (x.checked ? 1 : 0) : x.value;
-                                        return value !== x.dataset.default ? [x.name, value] : null;
+                                        return value != x.dataset.default ? [x.name, value] : null;
                                     }).filter(x => x !== null)
                             )
                         }))}/\`;
