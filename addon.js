@@ -593,6 +593,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 You can use <b><code>${termKeyword}</code></b> in the <b>Playlist ID / URL</b> for custom search catalogs in places the encoded URI search component is used.
                                 ex. <code>https://www.youtube.com/results?search_query=example+search</code> &rarr; <code>https://www.youtube.com/results?search_query=${termKeyword}</code>
                             </p>
+                            <p>
+                                &#128712;
+                                You can use <b><code>${sortKeyword}</code></b> in the <b>Playlist ID / URL</b> for custom sort order in places the encoded URI sorting component is used.
+                                ex. <code>https://www.youtube.com/results?search_query=example+search&sp=EgIQAg%253D%253D</code> &rarr; <code>https://www.youtube.com/results?search_query=${termKeyword}${sortKeyword}</code> &amp; Sort ID: <code>&sp=EgIQAg%253D%253D</code>, Sort Name: <code>Channel</code>
+                            </p>
                             <hr>
                         </details>
                         <div style="margin-bottom: 1rem;">
