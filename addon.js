@@ -377,6 +377,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
             description: src.format,
             subtitles: subtitles,
             behaviorHints: {
+                bingeGroup: `YT-DLP Player ${src.resolution}`,
                 ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
                 videoSize: src.filesize_approx,
                 filename: video.filename
@@ -385,7 +386,12 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
             {
                 name: 'Stremio Player',
                 ytId: video.id,
-                description: 'Click to watch using Stremio\'s built-in YouTube Player'
+                description: 'Click to watch using Stremio\'s built-in YouTube Player',
+                subtitles: subtitles,
+                behaviorHints: {
+                    bingeGroup: 'Stremio Player',
+                    filename: video.filename
+                }
             }, {
                 name: 'External Player',
                 externalUrl: video.webpage_url,
@@ -987,4 +993,5 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
