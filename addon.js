@@ -750,29 +750,29 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         // Type
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
-                        typeInput.defaultValue = playlist.type;
+                        typeInput.defaultValue = pl.type;
                         typeInput.addEventListener('input', () => {
-                            playlist.type = typeInput.value.trim();
+                            pl.type = typeInput.value.trim();
                             configChanged();
                         });
                         typeCell.appendChild(typeInput);
                         // ID
                         const idCell = document.createElement('td');
                         const idInput = document.createElement('input');
-                        idInput.value = playlist.id;
+                        idInput.value = pl.id;
                         idInput.required = true;
                         idInput.addEventListener('change', () => {
-                            playlist.id = idInput.value;
+                            pl.id = idInput.value;
                             configChanged();
                         });
                         idCell.appendChild(idInput);
                         // Name
                         const nameCell = document.createElement('td');
                         const nameInput = document.createElement('input');
-                        nameInput.value = playlist.name;
+                        nameInput.value = pl.name;
                         nameInput.required = true;
                         nameInput.addEventListener('input', () => {
-                            playlist.name = nameInput.value.trim();
+                            pl.name = nameInput.value.trim();
                             configChanged();
                         });
                         nameCell.appendChild(nameInput);
@@ -787,12 +787,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         });
                         channelTypeInput.defaultValue = 0;
                         channelTypeInput.addEventListener('change', () => {
-                            playlist.channelType = channelTypeInput.value;
+                            pl.channelType = channelTypeInput.value;
                             configChanged();
                         });
                         channelTypeCell.appendChild(channelTypeInput);
                         // Sort Order
-                        playlist.sortOrder = playlist.sortOrder ?? [];
+                        pl.sortOrder = pl.sortOrder ?? [];
                         const sortOrderCell = document.createElement('td');
                         const sortOrderInput = document.createElement('button');
                         sortOrderInput.textContent = 'Modify';
@@ -801,7 +801,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         sortOrderInput.type = 'button';
                         sortOrderInput.addEventListener('click', () => {
                             if (!idInput.value?.includes(${JSON.stringify(sortKeyword)})) return;
-                            const sorts = JSON.parse(JSON.stringify(playlist.sortOrder));
+                            const sorts = JSON.parse(JSON.stringify(pl.sortOrder));
                             function renderSorts(tbody) {
                                 tbody.innerHTML = '';
                                 sorts.forEach((sort, index) => {
@@ -842,7 +842,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             modal.style.transform = 'translate(-50%, -50%)';
                             modal.classList.add('settings-section');
                             function closeModal(save = false) {
-                                if (save) playlist.sortOrder = sorts;
+                                if (save) pl.sortOrder = sorts;
                                 document.body.removeChild(blur);
                                 document.body.removeChild(modal);
                             }
