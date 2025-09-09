@@ -708,7 +708,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 });
                 cookies.addEventListener('input', configChanged);
                 addonSettings.querySelectorAll("input, select").forEach(e => e.addEventListener('change', configChanged));
-                function makeActions(callback, tableBody, array, index) {
+                function makeActions(callback, array, index) {
                     const actionsCell = document.createElement('td');
                     const upBtn = document.createElement('button');
                     upBtn.textContent = '↑';
@@ -717,7 +717,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     upBtn.addEventListener('click', () => {
                         if (index > 0) {
                             [array[index - 1], array[index]] = [array[index], array[index - 1]];
-                            callback(tableBody, array);
+                            callback();
                         }
                     });
                     const downBtn = document.createElement('button');
@@ -727,7 +727,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     downBtn.addEventListener('click', () => {
                         if (index < array.length - 1) {
                             [array[index + 1], array[index]] = [array[index], array[index + 1]];
-                            callback(tableBody, array);
+                            callback();
                         }
                     });
                     const removeBtn = document.createElement('button');
@@ -736,16 +736,16 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     removeBtn.style.margin = '0.2rem';
                     removeBtn.addEventListener('click', () => {
                         array.splice(index, 1);
-                        callback(tableBody, array);
+                        callback();
                     });
                     actionsCell.appendChild(upBtn);
                     actionsCell.appendChild(downBtn);
                     actionsCell.appendChild(removeBtn);
                     return actionsCell;
                 }
-                function renderPlaylists(tableBody) {
-                    tableBody.innerHTML = '';
-                    playlists.forEach((playlist, index) => {
+                function renderPlaylists() {
+                    playlistTableBody.innerHTML = '';
+                    playlists.forEach((pl, index) => {
                         const row = document.createElement('tr');
                         // Type
                         const typeCell = document.createElement('td');
@@ -802,7 +802,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         sortOrderInput.addEventListener('click', () => {
                             if (!idInput.value?.includes(${JSON.stringify(sortKeyword)})) return;
                             const sorts = JSON.parse(JSON.stringify(pl.sortOrder));
-                            function renderSorts(tbody) {
+                            function renderSorts() {
                                 tbody.innerHTML = '';
                                 sorts.forEach((sort, index) => {
                                     const row = document.createElement('tr');
@@ -820,7 +820,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     row.appendChild(idCell);
                                     nameCell.appendChild(nameInput);
                                     row.appendChild(nameCell);
-                                    row.appendChild(makeActions(renderSorts, tbody, sorts, index));
+                                    row.appendChild(makeActions(renderSorts, sorts, index));
                                     tbody.appendChild(row);
                                 });
                             }
@@ -856,7 +856,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             addSort.classList.add('install-button');
                             addSort.addEventListener('click', () => {
                                 sorts.push({ id: '', name: '' });
-                                renderSorts(tbody);
+                                renderSorts();
                             });
                             const saveBtn = document.createElement('button');
                             saveBtn.type = 'submit';
@@ -882,7 +882,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             const thActions = document.createElement('th');
                             thActions.textContent = 'Actions';
                             const tbody = document.createElement('tbody');
-                            renderSorts(tbody);
+                            renderSorts();
                             document.body.appendChild(blur);
                             headerRow.appendChild(thID);
                             headerRow.appendChild(thName);
@@ -905,24 +905,24 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         row.appendChild(nameCell);
                         row.appendChild(channelTypeCell);
                         row.appendChild(sortOrderCell);
-                        row.appendChild(makeActions(renderPlaylists, tableBody, playlists, index));
-                        tableBody.appendChild(row);
+                        row.appendChild(makeActions(renderPlaylists, playlists, index));
+                        playlistTableBody.appendChild(row);
                     });
                     configChanged();
                 }
                 document.getElementById('add-playlist').addEventListener('click', () => {
                     playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
-                    renderPlaylists(playlistTableBody);
+                    renderPlaylists();
                 });
                 addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
-                    renderPlaylists(playlistTableBody);
+                    renderPlaylists();
                 });
                 document.getElementById('remove-defaults').addEventListener('click', () => {
                     playlists = playlists.filter(pl => !defaultPlaylists.some(def => def.id === pl.id));
-                    renderPlaylists(playlistTableBody);
+                    renderPlaylists();
                 });
-                renderPlaylists(playlistTableBody);
+                renderPlaylists();
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
                     submitBtn.disabled = true;
