@@ -564,7 +564,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     <div class="settings-section">
                         <details style="text-align: center;">
                             <summary>
-                                This addon supports FAR more than just YouTube with links!<br>
+                                This addon supports FAR more than just YouTube with URLs!<br>
                                 <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md" target="_blank" rel="noopener noreferrer">Read more here.</a>
                             </summary>
                             ${process.env.YTDLP_EXTRACTORS_EMBED ?? ""}
@@ -1005,3 +1005,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
