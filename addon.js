@@ -484,6 +484,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
 // Stremio Addon Stream Route
 app.get('/:config/stream/:type/:id.json', async (req, res) => {
     try {
+        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
@@ -1004,4 +1005,5 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
