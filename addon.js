@@ -804,18 +804,18 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             const sorts = JSON.parse(JSON.stringify(pl.sortOrder));
                             function renderSorts() {
                                 tbody.innerHTML = '';
-                                sorts.forEach((sort, index) => {
+                                sorts.forEach((s, index) => {
                                     const row = document.createElement('tr');
                                     const idCell = document.createElement('td');
                                     const idInput = document.createElement('input');
                                     idInput.required = true;
-                                    idInput.addEventListener('change', () => sort.id = idInput.value);
-                                    idInput.value = sort.id;
+                                    idInput.addEventListener('change', () => s.id = idInput.value);
+                                    idInput.value = s.id;
                                     const nameCell = document.createElement('td');
                                     const nameInput = document.createElement('input');
                                     nameInput.required = true;
-                                    nameInput.addEventListener('change', () => sort.name = nameInput.value);
-                                    nameInput.value = sort.name;
+                                    nameInput.addEventListener('change', () => s.name = nameInput.value);
+                                    nameInput.value = s.name;
                                     idCell.appendChild(idInput);
                                     row.appendChild(idCell);
                                     nameCell.appendChild(nameInput);
