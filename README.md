@@ -89,6 +89,8 @@ Playlist ID / URL: `https://www.youtube.com/results?search_query={term}{sort}`
 Name: `Search`
 
 Sort Order `(Sort Name: Sort ID)`:
+> [!NOTE]
+> By including the `&sp=` in the ID, we can ensure the catalog works without sorting parameters as well.
 - Video Relevance: `&sp=CAASAhAB`
 - Video Upload Date: `&sp=CAISAhAB`
 - Video View Count: `&sp=CAMSAhAB`
