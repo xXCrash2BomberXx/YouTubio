@@ -756,7 +756,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         // Type
                         const typeCell = document.createElement('td');
                         const typeInput = document.createElement('input');
-                        typeInput.defaultValue = pl.type;
+                        typeInput.value = pl.type;
                         typeInput.addEventListener('input', () => {
                             pl.type = typeInput.value.trim();
                             configChanged();
