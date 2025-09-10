@@ -198,7 +198,7 @@ app.get('/:config/manifest.json', (req, res) => {
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
-            types: [...new Set(userConfig.catalogs.map(c => c.type ?? null).concat([userConfig.catalogType ?? null]).filter(t => t !== null))],
+            types: [...new Set(userConfig.catalogs.map(c => c.type ?? userConfig.catalogType ?? defaultCatalogType))],
             idPrefixes: [prefix],
             catalogs: [
                 ...(userConfig.catalogs?.map(c => ({
@@ -332,7 +332,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 return (useID ? video.id : video.url) ? {
                     id: prefix + (useID ? video.id : video.url),
-                    type: req.params.type,
+                    type: req.params.type ?? defaultCatalogType,
                     name: video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
