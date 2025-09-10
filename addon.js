@@ -192,60 +192,61 @@ app.get('/:config/manifest.json', (req, res) => {
             if (id.startsWith('https://www.youtube.com/results?search_query=')) return true;
             return !isURL(id);
         }
+        const catalogs = [
+            ...(userConfig.catalogs?.map(c => ({
+                ...c, extra: [
+                    ...(c.extra ?? []),
+                    ...(c.channelType === 'auto' &&
+                        (c.id.includes(termKeyword) || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
+                        [{ name: 'search', isRequired: true }] : [])
+                ]
+                // Add defaults if cookies were provided
+            })) ?? (userConfig.encrypted ? [
+                { id: ':ytrec', name: 'Discover' },
+                { id: ':ytsubs', name: 'Subscriptions' },
+                { id: ':ytwatchlater', name: 'Watch Later' },
+                { id: ':ythistory', name: 'History' }
+                // Add search unless explicitly disabled
+            ] : [])), ...((userConfig.search ?? true) ? [
+                { id: ':ytsearch', name: 'Video' },
+                { id: ':ytsearch:channel', name: 'Channel' }
+            ] : []).map(c => ({
+                ...c, extra: [
+                    ...(c.extra ?? []),
+                    { name: 'search', isRequired: true },
+                ]
+            }))
+        ].map(c => ({
+            ...c,
+            id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
+            type: c.type ?? userConfig.catalogType ?? defaultCatalogType,
+            extra: [
+                ...(
+                    c.extra ?? []
+                ), {
+                    name: 'genre',
+                    isRequired: false,
+                    options: [
+                        '',
+                        // Add YouTube sorting options if none provided
+                        ...(c.sortOrder?.map(s => s.name) ?? (canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : []))
+                    ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
+                        .slice(1)  // Remove default sorting option
+                }, {
+                    name: 'skip',
+                    isRequired: false
+                }
+            ]
+        }));
         return res.json({
             id: 'youtubio.elfhosted.com',
             version: VERSION,
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
             resources: ['catalog', 'stream', 'meta'],
-            types: [...new Set(userConfig.catalogs.map(c => c.type ?? userConfig.catalogType ?? defaultCatalogType))],
+            types: [...new Set(catalogs.map(c => c.type))],
             idPrefixes: [prefix],
-            catalogs: [
-                ...(userConfig.catalogs?.map(c => ({
-                    ...c, extra: [
-                        ...(c.extra ?? []),
-                        ...(c.channelType === 'auto' &&
-                            (c.id.includes(termKeyword) || [':ytsearch', ':ytsearch:channel'].includes(c.id.startsWith(prefix) ? c.id.slice(prefix.length) : c.id)) ?
-                            [{ name: 'search', isRequired: true }] : [])
-                    ]
-                    // Add defaults if cookies were provided
-                })) ?? (userConfig.encrypted ? [
-                    { id: ':ytrec', name: 'Discover' },
-                    { id: ':ytsubs', name: 'Subscriptions' },
-                    { id: ':ytwatchlater', name: 'Watch Later' },
-                    { id: ':ythistory', name: 'History' }
-                    // Add search unless explicitly disabled
-                ] : [])), ...((userConfig.search ?? true) ? [
-                    { id: ':ytsearch', name: 'Video' },
-                    { id: ':ytsearch:channel', name: 'Channel' }
-                ] : []).map(c => ({
-                    ...c, extra: [
-                        ...(c.extra ?? []),
-                        { name: 'search', isRequired: true },
-                    ]
-                }))
-            ].map(c => ({
-                ...c,
-                id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
-                type: c.type ?? defaultCatalogType,
-                extra: [
-                    ...(
-                        c.extra ?? []
-                    ), {
-                        name: 'genre',
-                        isRequired: false,
-                        options: [
-                            '',
-                            // Add YouTube sorting options if none provided
-                            ...(c.sortOrder?.map(s => s.name) ?? (canGenre(c) ? ['Relevance', 'Upload Date', 'View Count', 'Rating'] : []))
-                        ].flatMap(x => [x, `${reversedPrefix} ${x}`.trim()])  // Create reversed of each option
-                            .slice(1)  // Remove default sorting option
-                    }, {
-                        name: 'skip',
-                        isRequired: false
-                    }
-                ]
-            })),
+            catalogs,
             logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true',
             behaviorHints: {
                 configurable: true
@@ -332,7 +333,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 return (useID ? video.id : video.url) ? {
                     id: prefix + (useID ? video.id : video.url),
-                    type: req.params.type ?? defaultCatalogType,
+                    type: req.params.type,
                     name: video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
@@ -372,7 +373,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
             name: `YT-DLP Player ${src.resolution}`,
             url: src.url,
             description: src.format,
-            subtitles: subtitles,
+            subtitles,
             behaviorHints: {
                 bingeGroup: `YT-DLP Player ${src.resolution}`,
                 ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
@@ -384,7 +385,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
                 name: 'Stremio Player',
                 ytId: video.id,
                 description: 'Click to watch using Stremio\'s built-in YouTube Player',
-                subtitles: subtitles,
+                subtitles,
                 behaviorHints: {
                     bingeGroup: 'Stremio Player',
                     filename: video.filename
@@ -449,15 +450,15 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
                 logo: thumbnail,
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
-                released: released,
+                released,
                 videos: [
                     ...[video, ...(live?.is_live ? [live] : [])].map(video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
                         title: episode === 1 ? 'Channel Options' : video2.title,
-                        released: released,
-                        thumbnail: thumbnail,
+                        released,
+                        thumbnail,
                         streams: parseStream(userConfig, video2, manifestUrl, protocol),
-                        episode: episode,
+                        episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
                     })), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map(x => ({
