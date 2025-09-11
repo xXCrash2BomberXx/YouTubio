@@ -7,12 +7,12 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 ---
 
 ## ✨ Features
-- **Watch YouTube Content in Stremio** – Browse and watch your favorite YouTube videos without leaving the Stremio app.  
-- **Personalized Feeds** – Access your Subscriptions, *Watch Later* list, and viewing history.  
-- **Powerful Search** – Search for YouTube videos and channels directly within Stremio.  
-- **Customizable Catalogs** – Use default catalogs or add your own custom playlists.  
-- **Secure Configuration** – User data (including cookies) is **encrypted** for security.  
-- **Easy Deployment** – Deploy with **Docker** or **Node.js**.  
+- **Watch YouTube Content in Stremio** – Browse and watch your favorite YouTube videos without leaving the Stremio app.
+- **Personalized Feeds** – Access your Subscriptions, *Watch Later* list, and viewing history.
+- **Powerful Search** – Search for YouTube videos and channels directly within Stremio.
+- **Customizable Catalogs** – Use default catalogs or add your own custom playlists.
+- **Secure Configuration** – User data (including cookies) is **encrypted** for security.
+- **Easy Deployment** – Deploy with **Docker** or **Node.js**.
 
 ---
 
