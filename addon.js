@@ -557,7 +557,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         </head>
         <body>
             <div class="container">
-                <div style="display: flex;justify-content: center;margin: 1rem;align-items: center;">
+                <div style="display: flex; justify-content: center; margin: 1rem; align-items: center;">
                     <img src="https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true" alt="YouTubio">
                     <h1 style="position: relative; top: 96px; left: -80px; font-size: 32px;">ElfHosted</h1>
                 </div>
@@ -1009,4 +1009,5 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
