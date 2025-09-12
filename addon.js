@@ -557,7 +557,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h1>YouTubio | ElfHosted</h1>
+                <div style="display: flex;justify-content: center;margin: 1rem;align-items: center;">
+                    <img src="https://github.com/xXCrash2BomberXx/YouTubio/blob/main/YouTubio.png?raw=true" alt="YouTubio">
+                    <h1 style="position: relative; top: 96px; left: -80px; font-size: 32px;">ElfHosted</h1>
+                </div>
                 <h3 style="color: #f5a623;">v${VERSION}</h3>
                 ${process.env.EMBED ?? ""}
                 For a quick setup guide, go to <a href="https://github.com/xXCrash2BomberXx/YouTubio#%EF%B8%8F-quick-setup-with-cookies" target="_blank" rel="noopener noreferrer">github.com/xXCrash2BomberXx/YouTubio</a>
@@ -1006,3 +1009,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
