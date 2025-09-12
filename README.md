@@ -1,4 +1,4 @@
-<img src="./YouTubio.png" /><br> 
+<img src="./icon.png" /><br> 
 
 # 📺 YouTubio: Stremio YouTube Addon
 
