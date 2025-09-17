@@ -2,7 +2,7 @@
 
 # 📺 YouTubio: Stremio YouTube Addon
 
-A **Stremio addon** that lets you watch YouTube videos and access your **subscriptions**, **Watch Later list**, and **history** directly inside Stremio.
+A **Stremio addon** that lets you watch YouTube videos and access your **subscriptions**, **watch later list**, and **history** directly inside Stremio.
 
 ---
 
