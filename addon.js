@@ -247,7 +247,7 @@ app.get('/:config/manifest.json', (req, res) => {
             types: [...new Set(catalogs.map(c => c.type))],
             idPrefixes: [prefix],
             catalogs,
-            logo: 'https://github.com/xXCrash2BomberXx/YouTubio/blob/main/icon.png?raw=true',
+            logo: `https://github.com/xXCrash2BomberXx/YouTubio/blob/${process.env.DEV_LOGGING ? 'main' : `v${VERSION}`}/icon.png?raw=true`,
             behaviorHints: {
                 configurable: true
             },
@@ -558,7 +558,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         <body>
             <div class="container">
                 <div style="display: flex; justify-content: center; margin: 1rem; align-items: center;">
-                    <img src="https://github.com/xXCrash2BomberXx/YouTubio/blob/main/icon.png?raw=true" alt="YouTubio">
+                    <img src="https://github.com/xXCrash2BomberXx/YouTubio/blob/${process.env.DEV_LOGGING ? 'main' : `v${VERSION}`}/icon.png?raw=true" alt="YouTubio">
                     <h1 style="position: relative; top: 96px; left: -80px; font-size: 32px;">ElfHosted</h1>
                 </div>
                 <h3 style="color: #f5a623;">v${VERSION}</h3>
