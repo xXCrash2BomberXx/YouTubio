@@ -955,7 +955,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         const modifiedPlaylists = playlists.map(pl => ({
                             ...pl,
                             id: ${JSON.stringify(prefix)} + pl.id,
-                            sortOrder: pl.sortOrder?.length ? pl.sortOrder : undefined
+                            ...(pl.sortOrder?.length ? { sortOrder: pl.sortOrder } : {})
                         }));
                         const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
                             ...(cookies.value ? {encrypted: cookies.value} : {}),
@@ -1011,3 +1011,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
