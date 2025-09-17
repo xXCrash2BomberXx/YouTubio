@@ -936,6 +936,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 document.getElementById('config-form').addEventListener('submit', async function(event) {
                     event.preventDefault();
                     submitBtn.disabled = true;
+                    const originalText = submitBtn.textContent
                     submitBtn.textContent = 'Encrypting...';
                     errorDiv.style.display = 'none';
                     try {
@@ -951,13 +952,14 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 })
                             })).text();
                         cookies.disabled = true;
+                        const modifiedPlaylists = playlists.map(pl => ({
+                            ...pl,
+                            id: ${JSON.stringify(prefix)} + pl.id,
+                            sortOrder: pl.sortOrder?.length ? pl.sortOrder : undefined
+                        }));
                         const configString = \`://${req.get('host')}/\${encodeURIComponent(JSON.stringify({
                             ...(cookies.value ? {encrypted: cookies.value} : {}),
-                            catalogs: playlists.map(pl => ({
-                                ...pl,
-                                id: ${JSON.stringify(prefix)} + pl.id,
-                                sortOrder: pl.sortOrder?.length ? pl.sortOrder : undefined
-                            })),
+                            ...(modifiedPlaylists.length ? { catalogs: modifiedPlaylists } : {}),
                             // Non-Sensitive Settings
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
@@ -980,7 +982,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         errorDiv.style.display = 'block';
                     } finally {
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Generate Install Link';
+                        submitBtn.textContent = originalText;
                     }
                 });
                 document.getElementById('copy-btn').addEventListener('click', async function() {
@@ -1009,3 +1011,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
