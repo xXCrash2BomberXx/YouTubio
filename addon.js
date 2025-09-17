@@ -272,28 +272,28 @@ app.get('/:config/manifest.json', (req, res) => {
 function toYouTubeURL(userConfig, videoId, query) {
     /** @type {RegExpMatchArray?} */
     let temp;
-    const catalogConfig = /** @type {Object[]} */ (userConfig.catalogs ?? []).find(cat => videoId === cat.id);
+    const catalogConfig = userConfig.catalogs?.find(cat => videoId === cat.id) ?? {};
     if (videoId.startsWith(prefix)) videoId = videoId.slice(prefix.length);
     /** @type {string} */
     const genre = (query.genre?.startsWith(reversedPrefix) ? query.genre.slice(reversedPrefix.length) : query.genre)?.trim() ?? 'Relevance';
-    if (catalogConfig?.channelType === 'video' || videoId === ':ytsearch')
+    if (catalogConfig.channelType === 'video' || videoId === ':ytsearch')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search ?? '')}&sp=${{
             'Relevance': 'CAASAhAB',
             'Upload Date': 'CAISAhAB',
             'View Count': 'CAMSAhAB',
             'Rating': 'CAESAhAB'
         }[genre]}`;
-    else if (catalogConfig?.channelType === 'channel' || videoId === ':ytsearch:channel')
+    else if (catalogConfig.channelType === 'channel' || videoId === ':ytsearch:channel')
         return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.search ?? '')}&sp=${{
             'Relevance': 'CAASAhAC',
             'Upload Date': 'CAISAhAC',
             'View Count': 'CAMSAhAC',
             'Rating': 'CAESAhAC'
         }[genre]}`;
-    else if ([termKeyword, sortKeyword].some(keyword => catalogConfig?.id.includes(keyword)))
+    else if ([termKeyword, sortKeyword].some(keyword => catalogConfig.id?.includes(keyword)))
         return (catalogConfig.id.startsWith(prefix) ? catalogConfig.id.slice(prefix.length) : catalogConfig.id)
             .replaceAll(termKeyword, encodeURIComponent(query.search ?? ''))
-            .replaceAll(sortKeyword, catalogConfig?.sortOrder?.find(s => s.name === genre)?.id ?? '');
+            .replaceAll(sortKeyword, catalogConfig.sortOrder?.find(s => s.name === genre)?.id ?? '');
     else if ([':ytfav', ':ytwatchlater', ':ytsubs', ':ythistory', ':ytrec', ':ytnotif'].includes(videoId))
         return videoId;
     else if ((temp = videoId.match(channelRegex)?.groups.id))
@@ -1011,4 +1011,5 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
 
