@@ -619,7 +619,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 <tr>
                                     <th>Type</th>
                                     <th>Playlist ID / URL</th>
-                                    <th>Name</th>
+                                    <th>Catalog Name</th>
                                     <th>Search Type</th>
                                     <th>Sort Order</th>
                                     <th>Actions</th>
@@ -642,12 +642,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             <tbody>
                                 <tr>
                                     <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
-                                    <td><label for="markWatchedOnLoad">Mark watched on load</label></td>
+                                    <td><label for="markWatchedOnLoad">Mark Watched on Load</label></td>
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
-                                    <td><label for="search">Allow searching</label></td>
+                                    <td><label for="search">YouTube Searching</label></td>
                                     <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
                                 </tr>
                                 <tr>
@@ -663,7 +663,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 <tr>
                                     <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
                                     <td><label for="showBrokenLinks">Show Broken Links</label></td>
-                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix some issues if you encounter crashes on videos without it enabled.</td>
+                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix issues if you encounter crashes on videos without it enabled.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="text" id="catalogType" name="catalogType" data-default=${JSON.stringify(defaultCatalogType)} value=${catalogType} style="width: 5rem;"></td>
@@ -1011,3 +1011,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
