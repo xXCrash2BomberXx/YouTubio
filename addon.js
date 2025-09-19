@@ -331,8 +331,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             metas: (videos._type === 'playlist' ? videos.entries : [videos]).map(video => {
                 const channel = video.ie_key === 'YoutubeTab';
                 const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
-                return (useID ? video.id : video.url) ? {
-                    id: prefix + (useID ? video.id : video.url),
+                const id = useID ? prefix + video.id : req.params.id;
+                return id ? {
+                    id,
                     type: req.params.type,
                     name: video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
