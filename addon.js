@@ -154,7 +154,7 @@ async function runDeArrow(videoID) {
  * @param {number} time 
  * @returns {string}
  */
-async function getDeArrowThumbnail(videoID, time) {
+function getDeArrowThumbnail(videoID, time) {
     return `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${videoID}&time=${time}`;
 }
 
