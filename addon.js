@@ -148,6 +148,16 @@ async function runDeArrow(videoID) {
     return await (await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID)).json();
 }
 
+/**
+ * Get DeArrow thumbnail URL
+ * @param {string} videoID 
+ * @param {number} time 
+ * @returns {string}
+ */
+async function getDeArrowThumbnail(videoID, time) {
+    return `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${videoID}&time=${time}`;
+}
+
 const app = express();
 app.set('trust proxy', true);
 
@@ -364,9 +374,11 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             metas: (playlist ? videos.entries : [videos]).map(async video => {
                 const channel = video.ie_key === 'YoutubeTab';
                 const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
-                const thumbnail = (deArrow?.thumbnails[0] ? 
-                        `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${video.id}&time=${deArrow.thumbnails[0].time}` : null) ??
-                        video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+                /** @type {string?} */
+                const thumbnail = (deArrow?.thumbnails[0] ?
+                    getDeArrowThumbnail(video.id, deArrow.thumbnails[0].time) :
+                    null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+                /** @type {string} */
                 const id = useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id;
                 return id ? {
                     id,
@@ -460,11 +472,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const channel = channelIDRegex.test(video.id);
         const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
-        const title = deArrow?.titles[0] ?? channel ? video.channel : video.title ?? 'Unknown Title';
+        const title = deArrow?.titles[0] ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
-        const thumbnail = (deArrow?.thumbnails[0] ? 
-                `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${video.id}&time=${deArrow.thumbnails[0].time}` : null) ??
-                video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+        const thumbnail = (deArrow?.thumbnails[0] ?
+            getDeArrowThumbnail(video.id, deArrow.thumbnails[0].time) :
+            null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
