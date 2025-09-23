@@ -468,7 +468,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const channel = channelIDRegex.test(video.id);
-        const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
+        const deArrow = video.webpage_url_domain === 'youtube.com' && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
         const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
@@ -1066,3 +1066,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
