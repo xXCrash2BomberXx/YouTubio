@@ -376,12 +376,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
                 /** @type {string?} */
                 const thumbnail = (deArrow?.thumbnails[0] ?
-                    getDeArrowThumbnail(video.id, deArrow.thumbnails[0].time) :
+                    getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
                     null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 return {
                     id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
                     type: req.params.type,
-                    name: deArrow?.titles[0] ?? video.title ?? 'Unknown Title',
+                    name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
                     description: video.description ?? video.title,
@@ -470,10 +470,10 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         const channel = channelIDRegex.test(video.id);
         const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
-        const title = deArrow?.titles[0] ?? video.title ?? 'Unknown Title';
+        const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
         const thumbnail = (deArrow?.thumbnails[0] ?
-            getDeArrowThumbnail(video.id, deArrow.thumbnails[0].time) :
+            getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
             null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
