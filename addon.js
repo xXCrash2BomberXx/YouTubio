@@ -371,7 +371,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const useID = videos.webpage_url_domain === 'youtube.com';
         const playlist = videos._type === 'playlist';
         return res.json({
-            metas: (playlist ? videos.entries : [videos]).map(async video => {
+            metas: await Promise.all((playlist ? videos.entries : [videos]).map(async video => {
                 const channel = video.ie_key === 'YoutubeTab';
                 const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
                 /** @type {string?} */
@@ -389,7 +389,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                     description: video.description ?? video.title,
                     releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
                 } : null;
-            }).filter(meta => meta !== null),
+            })).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
     } catch (error) {
