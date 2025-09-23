@@ -378,17 +378,15 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
                 const thumbnail = (deArrow?.thumbnails[0] ?
                     getDeArrowThumbnail(video.id, deArrow.thumbnails[0].time) :
                     null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
-                /** @type {string} */
-                const id = useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id;
-                return id ? {
-                    id,
+                return {
+                    id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
                     type: req.params.type,
                     name: deArrow?.titles[0] ?? video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
                     description: video.description ?? video.title,
                     releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
-                } : null;
+                };
             })).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
