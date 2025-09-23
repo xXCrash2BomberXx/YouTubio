@@ -82,7 +82,7 @@ let counter = 0;
  * Runs yt-dlp with authentication
  * @param {string} encryptedConfig 
  * @param {string[]} argsArray 
- * @returns {Object}
+ * @returns {Promise<Object>}
  */
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
     let filename = '';
@@ -114,6 +114,38 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             if (filename) await fs.unlink(filename);
         } catch (error) { }
     }
+}
+
+/**
+ * @typedef {{
+ * titles: Array<{
+ * title: string,
+ * original: boolean,
+ * votes: number,
+ * locked: boolean,
+ * UUID: string,
+ * userID: string
+ * }>,
+ * thumbnails: Array<{
+ * timestamp: number,
+ * original: boolean,
+ * votes: number,
+ * locked: boolean,
+ * UUID: string,
+ * userID: string
+ * }>,
+ * randomTime: number,
+ * videoDuration: number | null
+ * }} DeArrowResponse
+ */
+
+/**
+ * Get DeArrow branding data
+ * @param {string} videoID 
+ * @returns {Promise<DeArrowResponse>}
+ */
+async function runDeArrow(videoID) {
+    return await (await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID)).json();
 }
 
 const app = express();
@@ -329,14 +361,17 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         const useID = videos.webpage_url_domain === 'youtube.com';
         const playlist = videos._type === 'playlist';
         return res.json({
-            metas: (playlist ? videos.entries : [videos]).map(video => {
+            metas: (playlist ? videos.entries : [videos]).map(async video => {
                 const channel = video.ie_key === 'YoutubeTab';
-                const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+                const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
+                const thumbnail = (deArrow?.thumbnails[0] ? 
+                        `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${video.id}&time=${deArrow.thumbnails[0].time}` : null) ??
+                        video.thumbnail ?? video.thumbnails?.at(-1)?.url;
                 const id = useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id;
                 return id ? {
                     id,
                     type: req.params.type,
-                    name: video.title ?? 'Unknown Title',
+                    name: deArrow?.titles[0] ?? video.title ?? 'Unknown Title',
                     poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
                     posterShape: channel ? 'square' : 'landscape',
                     description: video.description ?? video.title,
@@ -423,10 +458,13 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const channel = channelIDRegex.test(video.id);
+        const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
-        const title = channel ? video.channel : video.title ?? 'Unknown Title';
+        const title = deArrow?.titles[0] ?? channel ? video.channel : video.title ?? 'Unknown Title';
         /** @type {string?} */
-        const thumbnail = video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+        const thumbnail = (deArrow?.thumbnails[0] ? 
+                `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${video.id}&time=${deArrow.thumbnails[0].time}` : null) ??
+                video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
@@ -646,6 +684,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark Watched on Load</label></td>
                                     <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="dearrow" name="dearrow" data-default=0 ${userConfig.dearrow ? 'checked' : ''}></td>
+                                    <td><label for="dearrow">DeArrow</label></td>
+                                    <td class="setting-description">When enabled, DeArrow will be used to fetch video thumbnails and Titles.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
