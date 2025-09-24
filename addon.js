@@ -170,16 +170,16 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS')
         return res.sendStatus(204);
-    next();
+    return next();
 });
 
 // Config Encryption Endpoint
-app.post('/encrypt', (req, res) => {
+app.post('/encrypt', (req, res, next) => {
     try {
         res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Encryption error:', error);
         res.status(500).send('Encryption failed');
+        return next(error);
     }
 });
 
@@ -219,7 +219,7 @@ function isURL(s) {
 }
 
 // Stremio Addon Manifest Route
-app.get('/:config/manifest.json', (req, res) => {
+app.get('/:config/manifest.json', (req, res, next) => {
     try {
         const userConfig = decryptConfig(req.params.config, false);
         const canGenre = /** @param {Object} c */ (c) => {
@@ -299,8 +299,8 @@ app.get('/:config/manifest.json', (req, res) => {
             }
         });
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Manifest handler: ' + error);
-        return res.json({});
+        res.json({});
+        return next(error);
     }
 });
 
@@ -357,7 +357,7 @@ function toYouTubeURL(userConfig, videoId, query) {
 }
 
 // Stremio Addon Catalog Route
-app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
+app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Catalog handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
@@ -391,8 +391,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
             behaviorHints: { cacheMaxAge: 0 }
         });
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Catalog handler: ' + error);
-        return res.json({ metas: [] });
+        res.json({ metas: [] });
+        return next(error);
     }
 });
 
@@ -457,7 +457,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
 }
 
 // Stremio Addon Meta Route
-app.get('/:config/meta/:type/:id.json', async (req, res) => {
+app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
@@ -528,13 +528,13 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             }
         });
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Meta handler: ' + error);
-        return res.json({ meta: {} });
+        res.json({ meta: {} });
+        return next(error);
     }
 });
 
 // Stremio Addon Stream Route
-app.get('/:config/stream/:type/:id.json', async (req, res) => {
+app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
@@ -551,8 +551,8 @@ app.get('/:config/stream/:type/:id.json', async (req, res) => {
             streams: parseStream(userConfig, video, manifestUrl, protocol)
         });
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Stream handler: ' + error);
-        return res.json({ streams: [] });
+        res.json({ streams: [] });
+        return next(error)
     }
 });
 
@@ -1054,8 +1054,9 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
-    if (process.env.DEV_LOGGING) console.error('Express error:', err);
-    res.status(500).json({ error: 'Internal server error', message: err.message });
+    if (process.env.DEV_LOGGING) console.error('Express error:', err.stack);
+    if (!res.headersSent)
+        res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 // Start the Server
