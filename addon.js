@@ -376,7 +376,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         const playlist = videos._type === 'playlist';
         return res.json({
             metas: (await Promise.all((playlist ? videos.entries : [videos]).map(async video => {
-                const channel = video.ie_key === 'YoutubeTab';
+                const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
                 const deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
                 /** @type {string?} */
                 const thumbnail = (deArrow?.thumbnails[0] ?
@@ -528,7 +528,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
                 language: video.language,
                 website: video.webpage_url,
-                ...(channel ? {} : { behaviorHints: { defaultVideoId: req.params.id + ':1:1' } })
+                ...(video._type === 'playlist' ? {} : { behaviorHints: { defaultVideoId: req.params.id + ':1:1' } })
             }
         });
     } catch (error) {
