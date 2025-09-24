@@ -373,7 +373,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res) => {
         return res.json({
             metas: (await Promise.all((playlist ? videos.entries : [videos]).map(async video => {
                 const channel = video.ie_key === 'YoutubeTab';
-                const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
+                const deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
                 /** @type {string?} */
                 const thumbnail = (deArrow?.thumbnails[0] ?
                     getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
@@ -427,7 +427,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
                 videoSize: src.filesize_approx,
                 filename: video.filename
             }
-        })), ...(useID && ((video.is_live ?? false) || !channelIDRegex.test(video.id)) ? [
+        })), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(vide.id)) || videoIDRegex.test(video.id)) ? [
             {
                 name: 'Stremio Player',
                 ytId: video.id,
@@ -468,8 +468,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
-        const channel = channelIDRegex.test(video.id);
-        const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
+        const channel = channelRegex.test(video.id) || channelIDRegex.test(video.id);
+        const deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
         const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
