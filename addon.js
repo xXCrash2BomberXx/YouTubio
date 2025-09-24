@@ -159,7 +159,26 @@ function getDeArrowThumbnail(videoID, time) {
     return `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${videoID}&time=${time}`;
 }
 
+/**
+ * @typedef {Array<{
+ * segment: [number, number],
+ * UUID: string,
+ * category: string,
+ * videoDuration: number,
+ * actionType: string,
+ * locked: number,
+ * votes: number,
+ * description: string
+ * }>} SponsorBlockSegment
+ */
+
+/**
+ * Get SponsorBlock segments for a video
+ * @param {string} videoID
+ * @returns {Promise<SponsorBlockSegment>}
+ */
 async function getSponsorBlockSegments(videoID) {
+    if (process.env.NO_SPONSORBLOCK) return [];
     return await (await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID)).json();
 }
 
