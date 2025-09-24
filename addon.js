@@ -729,11 +729,14 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 </tr>
                             </thead>
                             <tbody>
+                                ${process.env.NO_DEARROW ? '<!--' : ''}
                                 <tr>
                                     <td><input type="checkbox" id="dearrow" name="dearrow" data-default=0 ${userConfig.dearrow ? 'checked' : ''}></td>
                                     <td><label for="dearrow">DeArrow</label></td>
                                     <td class="setting-description">Use DeArrow to fetch video thumbnails and Titles.</td>
                                 </tr>
+                                ${process.env.NO_DEARROW ? '-->' : ''}
+                                ${process.env.NO_SPONSORBLOCK ? '<!--' : ''}
                                 <tr>
                                     <td>
                                         <select name="sponsorblock" id="sponsorblock" multiple>
@@ -750,6 +753,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td><label for="sponsorblock">SponsorBlock</label></td>
                                     <td class="setting-description">Use SponsorBlock to skip various video segments.</td>
                                 </tr>
+                                ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
                                     <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
                                     <td><label for="showLiveInChannel">Show Livestreams in Channel Page</label></td>
