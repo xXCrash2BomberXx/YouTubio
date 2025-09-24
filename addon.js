@@ -169,7 +169,7 @@ async function getSponsorBlockSegments(videoID) {
  * @param {boolean} overestimate - Remove partially overlapping segments if true
  */
 async function cutM3U8(url, ranges = [], overestimate = false) {
-    if (!ranges.length) return url;
+    if (!ranges.length || process.env.NO_SPONSOR_CUT) return url;
     let time = 0;
     return 'data:application/x-mpegURL;base64,' + Buffer.from((await (await fetch(url)).text()).split('\n').filter(line => {
         line = line.trim();
@@ -432,8 +432,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     }
 });
 
-async function parseStream(userConfig, video, manifestUrl, protocol, skip = ['sponsor']) {
-    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => skip.includes(s.category)).map(s => s.segment);
+async function parseStream(userConfig, video, manifestUrl, protocol) {
+    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock.includes(s.category)).map(s => s.segment);
     const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
@@ -732,6 +732,22 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td><input type="checkbox" id="dearrow" name="dearrow" data-default=0 ${userConfig.dearrow ? 'checked' : ''}></td>
                                     <td><label for="dearrow">DeArrow</label></td>
                                     <td class="setting-description">Use DeArrow to fetch video thumbnails and Titles.</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <select name="sponsorblock" id="sponsorblock" multiple>
+                                            <option value="sponsor" ${userConfig.sponsorblock?.includes('sponsor') ? 'selected' : ''}>Sponsor</option>
+                                            <option value="selfpromo" ${userConfig.sponsorblock?.includes('selfpromo') ? 'selected' : ''}>Self Promo</option>
+                                            <option value="interaction" ${userConfig.sponsorblock?.includes('interaction') ? 'selected' : ''}>Interaction</option>
+                                            <option value="intro" ${userConfig.sponsorblock?.includes('intro') ? 'selected' : ''}>Intro</option>
+                                            <option value="outro" ${userConfig.sponsorblock?.includes('outro') ? 'selected' : ''}>Outro</option>
+                                            <option value="preview" ${userConfig.sponsorblock?.includes('preview') ? 'selected' : ''}>Preview</option>
+                                            <option value="hook" ${userConfig.sponsorblock?.includes('hook') ? 'selected' : ''}>Hook</option>
+                                            <option value="filler" ${userConfig.sponsorblock?.includes('filler') ? 'selected' : ''}>Filler</option>
+                                        </select>
+                                    </td>
+                                    <td><label for="sponsorblock">SponsorBlock</label></td>
+                                    <td class="setting-description">Use SponsorBlock to skip various video segments.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
@@ -1057,8 +1073,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             ...Object.fromEntries(
                                 Array.from(addonSettings.querySelectorAll("input, select"))
                                     .map(x => {
-                                        const checkbox = x.type === 'checkbox';
-                                        const value = checkbox ? (x.checked ? 1 : 0) : x.value;
+                                        if (x.type === 'select-multiple') {
+                                            const value = Array.from(x.selectedOptions).map(o => o.value);
+                                            return value.length ? [x.name, value] : null;
+                                        }
+                                        const value = x.type === 'checkbox' ? (x.checked ? 1 : 0) : x.value;
                                         return value != x.dataset.default ? [x.name, value] : null;
                                     }).filter(x => x !== null)
                             )
