@@ -183,6 +183,10 @@ app.post('/encrypt', (req, res, next) => {
     }
 });
 
+function logError(error) {
+    if (process.env.DEV_LOGGING) console.error(error);
+}
+
 // Config Decryption
 /**
  * Parse a config parameter, decrypting if necessary
@@ -197,7 +201,7 @@ function decryptConfig(configParam, enableDecryption = true) {
         try {
             config.encrypted = JSON.parse(decrypt(config.encrypted));
         } catch (error) {
-            if (process.env.DEV_LOGGING) console.error('Decryption error:', error);
+            // logError(error);
             config.encrypted = undefined;
         }
     }
@@ -555,10 +559,6 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         return next(error)
     }
 });
-
-function logError(error) {
-    if (process.env.DEV_LOGGING) console.error(error);
-}
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
