@@ -190,24 +190,30 @@ async function getSponsorBlockSegments(videoID) {
  */
 async function cutM3U8(url, ranges = [], overestimate = false) {
     if (!ranges.length || process.env.NO_SPONSORBLOCK) return url;
+    const lines = (await (await fetch(url)).text()).split('\n');
     let time = 0;
-    return 'data:application/x-mpegURL;base64,' + Buffer.from((await (await fetch(url)).text()).split('\n').filter(line => {
-        line = line.trim();
+    const out = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         if (line.startsWith('#EXTINF:')) {
-            const duration = parseFloat(line.split(':')[1]);
             const segStart = time;
-            const segEnd = time + duration;
-            time += duration;
-
-            const skip = ranges.some(([start, end]) =>
-                overestimate ? !(segEnd <= start || segStart >= end) : segStart >= start && segEnd <= end
-            );
-            return !skip;
-        } else if (!line.startsWith('#'))
-            return true; // segment file name already filtered with #EXTINF
-        else
-            return true; // keep tags
-    }).join('\n')).toString('base64');
+            const segEnd = time + parseFloat(line.split(':')[1]);
+            time = segEnd;
+            if (!ranges.some(([start, end]) =>
+                overestimate
+                    ? !(segEnd <= start || segStart >= end)
+                    : segStart >= start && segEnd <= end
+            )) {
+                out.push(line);
+                out.push((lines[i + 1] || '').trim());
+            }
+            i++;  // skip URI line
+        } else if (line) out.push(line);
+    }
+    return (
+        'data:application/x-mpegURL;base64,' +
+        Buffer.from(out.join('\n')).toString('base64')
+    );
 }
 
 const app = express();
