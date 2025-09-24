@@ -427,7 +427,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
                 videoSize: src.filesize_approx,
                 filename: video.filename
             }
-        })), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(vide.id)) || videoIDRegex.test(video.id)) ? [
+        })), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
             {
                 name: 'Stremio Player',
                 ytId: video.id,
@@ -1067,3 +1067,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
