@@ -467,8 +467,9 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
+        const useID = video.webpage_url_domain === 'youtube.com';
         const channel = channelIDRegex.test(video.id);
-        const deArrow = video.webpage_url_domain === 'youtube.com' && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
+        const deArrow = useID && !channel && userConfig.dearrow ? await runDeArrow(video.id) : null;
         /** @type {string} */
         const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
@@ -481,7 +482,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res) => {
         /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
-        const live = (userConfig.showLiveInChannel ?? true) && channelIDRegex.test(video.id) ? await runYtDlpWithAuth(req.params.config, [
+        const live = (userConfig.showLiveInChannel ?? true) && useID && channel ? await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',
             '--no-playlist',
