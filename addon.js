@@ -176,7 +176,7 @@ app.use((req, res, next) => {
 // Config Encryption Endpoint
 app.post('/encrypt', (req, res, next) => {
     try {
-        res.send(encrypt(JSON.stringify(req.body)));
+        return res.send(encrypt(JSON.stringify(req.body)));
     } catch (error) {
         res.status(500).send('Encryption failed');
         return next(error);
@@ -1072,3 +1072,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
