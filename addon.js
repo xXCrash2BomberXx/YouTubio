@@ -454,7 +454,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol) {
     ).filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
-        ...await Promise.all((video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(async src => ({
+        ...await Promise.all((video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().map(async src => ({
             name: `YT-DLP Player ${src.resolution}`,
             url: src.protocol === 'm3u8_native' ? await cutM3U8(src.url, ranges) : src.url,
             description: src.format,
