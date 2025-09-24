@@ -142,9 +142,10 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
 /**
  * Get DeArrow branding data
  * @param {string} videoID 
- * @returns {Promise<DeArrowResponse>}
+ * @returns {Promise<DeArrowResponse?>}
  */
 async function runDeArrow(videoID) {
+    if (process.env.NO_DEARROW) return null;
     return await (await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID)).json();
 }
 
@@ -169,7 +170,7 @@ async function getSponsorBlockSegments(videoID) {
  * @param {boolean} overestimate - Remove partially overlapping segments if true
  */
 async function cutM3U8(url, ranges = [], overestimate = false) {
-    if (!ranges.length || process.env.NO_SPONSOR_CUT) return url;
+    if (!ranges.length || process.env.NO_SPONSORBLOCK) return url;
     let time = 0;
     return 'data:application/x-mpegURL;base64,' + Buffer.from((await (await fetch(url)).text()).split('\n').filter(line => {
         line = line.trim();
