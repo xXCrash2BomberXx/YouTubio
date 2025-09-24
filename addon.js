@@ -696,39 +696,39 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
-                                    <td><label for="markWatchedOnLoad">Mark Watched on Load</label></td>
-                                    <td class="setting-description">When enabled, videos will be automatically marked as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
-                                </tr>
-                                <tr>
                                     <td><input type="checkbox" id="dearrow" name="dearrow" data-default=0 ${userConfig.dearrow ? 'checked' : ''}></td>
                                     <td><label for="dearrow">DeArrow</label></td>
-                                    <td class="setting-description">When enabled, DeArrow will be used to fetch video thumbnails and Titles.</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
-                                    <td><label for="search">YouTube Searching</label></td>
-                                    <td class="setting-description">When enabled, Stremio's search feature will also return YouTube results.</td>
+                                    <td class="setting-description">Use DeArrow to fetch video thumbnails and Titles.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
-                                    <td><label for="showLiveInChannel">Show Livestream in Channel Search Items</label></td>
-                                    <td class="setting-description">When enabled, live videos will be displayed within their respective channels.</td>
+                                    <td><label for="showLiveInChannel">Show Livestreams in Channel Page</label></td>
+                                    <td class="setting-description">Display the channel live stream (if one is active) in the channel meta results.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=1 ${userConfig.showVideosInChannel ?? true ? 'checked' : ''}></td>
-                                    <td><label for="showVideosInChannel">Show Videos in Channel Search Items</label></td>
-                                    <td class="setting-description">When enabled, videos will be displayed within their respective channels.</td>
+                                    <td><label for="showVideosInChannel">Show Videos in Channel Page</label></td>
+                                    <td class="setting-description">Display the most recent 100 uploads in the channel meta results.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
+                                    <td><label for="markWatchedOnLoad">Mark Watched</label></td>
+                                    <td class="setting-description">Mark videos as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
-                                    <td><label for="showBrokenLinks">Show Broken Links</label></td>
-                                    <td class="setting-description">When enabled, all resolutions found by YT-DLP will be returned, not just ones supported by Stremio. This may fix issues if you encounter crashes on videos without it enabled.</td>
+                                    <td><label for="showBrokenLinks">Show Unsupported Streams</label></td>
+                                    <td class="setting-description">Return all streams found by YT-DLP, not just ones supported by Stremio.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
+                                    <td><label for="search">Add YouTube Search</label></td>
+                                    <td class="setting-description">Add a default YouTube search catalog for videos and channels.</td>
                                 </tr>
                                 <tr>
                                     <td><input type="text" id="catalogType" name="catalogType" data-default=${JSON.stringify(defaultCatalogType)} value=${catalogType} style="width: 5rem;"></td>
-                                    <td><label for="catalogType">Catalog Type</label></td>
-                                    <td class="setting-description">Specify the type of catalog to display. This helps in offering a consistent experience within the addon.</td>
+                                    <td><label for="catalogType">YouTube Search Type</label></td>
+                                    <td class="setting-description">Specify the fallback type name of catalogs.</td>
                                 </tr>
                             </tbody>
                         </table>
