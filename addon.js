@@ -556,6 +556,10 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
     }
 });
 
+function logError(error) {
+    if (process.env.DEV_LOGGING) console.error(error);
+}
+
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
     /** @type {Object?} */
@@ -563,7 +567,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
     try {
         userConfig = req.params.config ? decryptConfig(req.params.config, false) : {};
     } catch (error) {
-        if (process.env.DEV_LOGGING) console.error('Error in Config handler: ' + error);
+        logError(error)
         userConfig = {};
     }
     const catalogType = JSON.stringify(userConfig.catalogType ?? defaultCatalogType);
@@ -1054,7 +1058,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
-    if (process.env.DEV_LOGGING) console.error('Express error:', err.stack);
+    logError(err)
     if (!res.headersSent)
         res.status(500).json({ error: 'Internal server error', message: err.message });
 });
