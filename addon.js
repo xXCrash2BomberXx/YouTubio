@@ -158,6 +158,38 @@ function getDeArrowThumbnail(videoID, time) {
     return `https://dearrow-thumb.ajay.app/api/v1/getThumbnail?videoID=${videoID}&time=${time}`;
 }
 
+async function getSponsorBlockSegments(videoID) {
+    return await (await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID)).json();
+}
+
+/**
+ * Filters an m3u8 playlist by timestamp ranges
+ * @param {string} url - Playlist URL
+ * @param {Array<[number, number]>} ranges - [[start, end], ...]
+ * @param {boolean} overestimate - Remove partially overlapping segments if true
+ */
+async function cutM3U8(url, ranges = [], overestimate = false) {
+    if (!ranges.length) return url;
+    let time = 0;
+    return 'data:application/x-mpegURL;base64,' + Buffer.from((await (await fetch(url)).text()).split('\n').filter(line => {
+        line = line.trim();
+        if (line.startsWith('#EXTINF:')) {
+            const duration = parseFloat(line.split(':')[1]);
+            const segStart = time;
+            const segEnd = time + duration;
+            time += duration;
+
+            const skip = ranges.some(([start, end]) =>
+                overestimate ? !(segEnd <= start || segStart >= end) : segStart >= start && segEnd <= end
+            );
+            return !skip;
+        } else if (!line.startsWith('#'))
+            return true; // segment file name already filtered with #EXTINF
+        else
+            return true; // keep tags
+    }).join('\n')).toString('base64');
+}
+
 const app = express();
 app.set('trust proxy', true);
 
@@ -400,7 +432,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     }
 });
 
-function parseStream(userConfig, video, manifestUrl, protocol) {
+async function parseStream(userConfig, video, manifestUrl, protocol, skip = ['sponsor']) {
+    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => skip.includes(s.category)).map(s => s.segment);
     const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
@@ -420,9 +453,9 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
     ).filter(srt => srt !== null);
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
-        ...(video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(src => ({
+        ...await Promise.all((video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(async src => ({
             name: `YT-DLP Player ${src.resolution}`,
-            url: src.url,
+            url: src.protocol === 'm3u8_native' ? await cutM3U8(src.url, ranges) : src.url,
             description: src.format,
             subtitles,
             behaviorHints: {
@@ -431,7 +464,7 @@ function parseStream(userConfig, video, manifestUrl, protocol) {
                 videoSize: src.filesize_approx,
                 filename: video.filename
             }
-        })), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
+        }))), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
             {
                 name: 'Stremio Player',
                 ytId: video.id,
@@ -507,16 +540,16 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released,
                 videos: [
-                    ...[video, ...(live?.is_live ? [live] : [])].map(video2 => ({
+                    ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
                         title: episode === 1 ? 'Channel Options' : video2.title,
                         released,
                         thumbnail,
-                        streams: parseStream(userConfig, video2, manifestUrl, protocol),
+                        streams: await parseStream(userConfig, video2, manifestUrl, protocol),
                         episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
-                    })), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map(x => ({
+                    }))), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map(x => ({
                         id: prefix + x.id,
                         title: x.title,
                         released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
