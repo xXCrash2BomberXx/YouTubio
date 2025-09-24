@@ -435,7 +435,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 
 async function parseStream(userConfig, video, manifestUrl, protocol) {
     const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock.includes(s.category)).map(s => s.segment);
-    const subtitles = Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+    const subtitles = userConfig.subtitles ?? true ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
             id: srt.name,
@@ -451,7 +451,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol) {
                 lang: k
             } : null;
         })
-    ).filter(srt => srt !== null);
+    ).filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
         ...await Promise.all((video.formats ?? [video]).filter(src => userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')).filter(src => src.url).toReversed().map(async src => ({
@@ -754,6 +754,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td class="setting-description">Use SponsorBlock to skip various video segments.</td>
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
+                                <tr>
+                                    <td><input type="checkbox" id="subtitles" name="subtitles" data-default=1 ${userConfig.subtitles ?? true ? 'checked' : ''}></td>
+                                    <td><label for="subtitles">Subtitles</label></td>
+                                    <td class="setting-description">Enable subtitles for videos.</td>
+                                </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
                                     <td><label for="showLiveInChannel">Show Livestreams in Channel Page</label></td>
