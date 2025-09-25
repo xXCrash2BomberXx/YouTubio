@@ -187,10 +187,9 @@ async function getSponsorBlockSegments(videoID) {
  * @param {string} url - Playlist URL
  * @param {Array<[number, number]>} ranges - [[start, end], ...]
  * @param {boolean} overestimate - Remove partially overlapping segments if true
- * @returns {Promise<string>} Data URL of filtered playlist
+ * @returns {Promise<string>} Cut m3u8 content
  */
 async function cutM3U8(url, ranges = [], overestimate = false) {
-    if (!ranges.length || process.env.NO_SPONSORBLOCK) return url;
     const lines = (await (await fetch(url)).text()).split('\n');
     let time = 0;
     const out = [];
@@ -468,6 +467,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
     const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
+    const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
     const subtitles = userConfig.subtitles ?? true ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
@@ -489,7 +489,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
     return [
         ...await Promise.all((video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().map(async src => ({
             name: `YT-DLP Player ${src.resolution}`,
-            url: src.protocol === 'm3u8_native' ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${encodeURIComponent(JSON.stringify(ranges))}` : src.url,
+            url: src.protocol === 'm3u8_native' && rangesURI ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}` : src.url,
             description: src.format,
             subtitles,
             behaviorHints: {
