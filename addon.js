@@ -187,6 +187,7 @@ async function getSponsorBlockSegments(videoID) {
  * @param {string} url - Playlist URL
  * @param {Array<[number, number]>} ranges - [[start, end], ...]
  * @param {boolean} overestimate - Remove partially overlapping segments if true
+ * @returns {Promise<string>} Data URL of filtered playlist
  */
 async function cutM3U8(url, ranges = [], overestimate = false) {
     if (!ranges.length || process.env.NO_SPONSORBLOCK) return url;
@@ -229,6 +230,18 @@ app.use((req, res, next) => {
     if (req.method === 'OPTIONS')
         return res.sendStatus(204);
     return next();
+});
+
+app.get('/stream/:encoded', (req, res, next) => {
+    try {
+        const match = decodeURIComponent(req.params.encoded).match(/^data:(.+);base64,(.+)$/);
+        if (!match) throw new Error("Invalid data URL");
+        res.set('Content-Type', match[1]);
+        return res.send(Buffer.from(match[2], 'base64'));
+    } catch (err) {
+        res.status(500).send('Decoding stream failed');
+        return next(error);
+    }
 });
 
 // Config Encryption Endpoint
@@ -458,7 +471,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     }
 });
 
-async function parseStream(userConfig, video, manifestUrl, protocol) {
+async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
     const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock.includes(s.category)).map(s => s.segment);
     const subtitles = userConfig.subtitles ?? true ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
@@ -481,7 +494,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol) {
     return [
         ...await Promise.all((video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().map(async src => ({
             name: `YT-DLP Player ${src.resolution}`,
-            url: src.protocol === 'm3u8_native' ? await cutM3U8(src.url, ranges) : src.url,
+            url: src.protocol === 'm3u8_native' ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(await cutM3U8(src.url, ranges))}` : src.url,
             description: src.format,
             subtitles,
             behaviorHints: {
@@ -571,7 +584,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         title: episode === 1 ? 'Channel Options' : video2.title,
                         released,
                         thumbnail,
-                        streams: await parseStream(userConfig, video2, manifestUrl, protocol),
+                        streams: await parseStream(userConfig, video2, manifestUrl, protocol, req.protocol, req.get('host')),
                         episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
@@ -611,7 +624,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
-            streams: parseStream(userConfig, video, manifestUrl, protocol)
+            streams: parseStream(userConfig, video, manifestUrl, protocol, req.protocol, req.get('host'))
         });
     } catch (error) {
         res.json({ streams: [] });
