@@ -231,7 +231,7 @@ app.use((req, res, next) => {
 app.get('/stream/:url', async (req, res, next) => {
     try {
         res.set('Content-Type', 'application/x-mpegURL');
-        return res.send(await cutM3U8(req.params.url, JSON.parse(req.params.ranges ?? '[]')));
+        return res.send(await cutM3U8(req.params.url, JSON.parse(req.query.ranges ?? '[]')));
     } catch (err) {
         res.status(500).send('Cutting stream failed');
         return next(error);
