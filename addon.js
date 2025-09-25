@@ -38,7 +38,7 @@ const supportedWebsites = new Promise(async resolve =>
     resolve(`<ul style="list-style-type: none;">${(await extractors).map(extractor => '<li>' + extractor + '</li>').join('')}</ul>`)
 );
 
-/** Encrypts text using AES-256-GCM 
+/** Encrypts text using AES-256-GCM
  * @param {string} text
  * @returns {string}
 */
@@ -57,7 +57,7 @@ function encrypt(text) {
 
 /**
  * Decrypts text encrypted with AES-256-GCM
- * @param {string} encryptedData 
+ * @param {string} encryptedData
  * @returns {string}
  */
 function decrypt(encryptedData) {
@@ -80,8 +80,8 @@ function decrypt(encryptedData) {
 let counter = 0;
 /**
  * Runs yt-dlp with authentication
- * @param {string} encryptedConfig 
- * @param {string[]} argsArray 
+ * @param {string} encryptedConfig
+ * @param {string[]} argsArray
  * @returns {Promise<Object>}
  */
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
@@ -141,7 +141,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
 
 /**
  * Get DeArrow branding data
- * @param {string} videoID 
+ * @param {string} videoID
  * @returns {Promise<DeArrowResponse?>}
  */
 async function runDeArrow(videoID) {
@@ -151,8 +151,8 @@ async function runDeArrow(videoID) {
 
 /**
  * Get DeArrow thumbnail URL
- * @param {string} videoID 
- * @param {number} time 
+ * @param {string} videoID
+ * @param {number} time
  * @returns {string}
  */
 function getDeArrowThumbnail(videoID, time) {
@@ -255,8 +255,8 @@ function logError(error) {
 // Config Decryption
 /**
  * Parse a config parameter, decrypting if necessary
- * @param {string} configParam 
- * @param {boolean=true} enableDecryption 
+ * @param {string} configParam
+ * @param {boolean=true} enableDecryption
  * @returns {Object}
  */
 function decryptConfig(configParam, enableDecryption = true) {
@@ -276,7 +276,7 @@ function decryptConfig(configParam, enableDecryption = true) {
 
 /**
  * Tests whether a string is a valid URL
- * @param {string} s 
+ * @param {string} s
  * @returns {boolean}
  */
 function isURL(s) {
@@ -375,9 +375,9 @@ app.get('/:config/manifest.json', (req, res, next) => {
 
 /**
  * Converts a YouTube video ID and query parameters into a YouTube URL.
- * @param {Object} userConfig 
- * @param {string} videoId 
- * @param {Object} query 
+ * @param {Object} userConfig
+ * @param {string} videoId
+ * @param {Object} query
  * @returns {string}
  */
 function toYouTubeURL(userConfig, videoId, query) {
@@ -487,18 +487,29 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
     ).filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
-        ...await Promise.all((video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().map(async src => ({
-            name: `YT-DLP Player ${src.resolution}`,
-            url: src.protocol === 'm3u8_native' && rangesURI ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}` : src.url,
-            description: src.format,
-            subtitles,
-            behaviorHints: {
-                bingeGroup: `YT-DLP Player ${src.resolution}`,
-                ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
-                videoSize: src.filesize_approx,
-                filename: video.filename
-            }
-        }))), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
+        ...(video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().flatMap(src => {
+            const base = {
+                description: src.format,
+                subtitles,
+                behaviorHints: {
+                    bingeGroup: `YT-DLP Player ${src.resolution}`,
+                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
+                    videoSize: src.filesize_approx,
+                    filename: video.filename
+                }
+            };
+            return [
+                ...(src.protocol === 'm3u8_native' && rangesURI ? [{
+                    ...base,
+                    name: `SB Player ${src.resolution}`,
+                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}`
+                }] : []), {
+                    ...base,
+                    name: `YT-DLP Player ${src.resolution}`,
+                    url: src.url
+                }
+            ];
+        }), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
             {
                 name: 'Stremio Player',
                 ytId: video.id,
@@ -663,10 +674,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 @media (prefers-color-scheme: dark) {
                     body { background: #121212; color: #e0e0e0; }
                     .container { background: #1e1e1e; }
-                    textarea, input, select { 
-                        background: #2a2a2a; 
-                        color: #e0e0e0; 
-                        border: 0.1rem solid #555; 
+                    textarea, input, select {
+                        background: #2a2a2a;
+                        color: #e0e0e0;
+                        border: 0.1rem solid #555;
                     }
                     th, td { border: 0.1rem solid #555; }
                     .install-button { background-color: #6a5acd; }
@@ -1099,7 +1110,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 headers: {
                                     'Content-Type': 'application/json'
                                 },
-                                body: JSON.stringify({ 
+                                body: JSON.stringify({
                                     auth: cookies.value
                                 })
                             })).text();
