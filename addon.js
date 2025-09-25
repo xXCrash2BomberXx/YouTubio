@@ -472,7 +472,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 });
 
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
-    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock.includes(s.category)).map(s => s.segment);
+    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
     const subtitles = userConfig.subtitles ?? true ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
