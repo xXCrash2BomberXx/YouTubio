@@ -193,6 +193,7 @@ async function cutM3U8(url, ranges = [], overestimate = false) {
     const lines = (await (await fetch(url)).text()).split('\n');
     let time = 0;
     const out = [];
+    let discontinuity = false;
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line.startsWith('#EXTINF:')) {
@@ -204,9 +205,14 @@ async function cutM3U8(url, ranges = [], overestimate = false) {
                     ? !(segEnd <= start || segStart >= end)
                     : segStart >= start && segEnd <= end
             )) {
+                if (discontinuity) {
+                    out.push('#EXT-X-DISCONTINUITY');
+                    discontinuity = false;
+                }
                 out.push(line);
                 out.push((lines[i + 1] || '').trim());
-            }
+            } else
+                discontinuity = true;
             i++;  // skip URI line
         } else if (line) out.push(line);
     }
