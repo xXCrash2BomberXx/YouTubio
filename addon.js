@@ -211,10 +211,7 @@ async function cutM3U8(url, ranges = [], overestimate = false) {
             i++;  // skip URI line
         } else if (line) out.push(line);
     }
-    return (
-        'data:application/x-mpegURL;base64,' +
-        Buffer.from(out.join('\n')).toString('base64')
-    );
+    return out.join('\n');
 }
 
 const app = express();
@@ -232,14 +229,12 @@ app.use((req, res, next) => {
     return next();
 });
 
-app.get('/stream/:encoded', (req, res, next) => {
+app.get('/stream/:url', async (req, res, next) => {
     try {
-        const match = decodeURIComponent(req.params.encoded).match(/^data:(.+);base64,(.+)$/);
-        if (!match) throw new Error("Invalid data URL");
-        res.set('Content-Type', match[1]);
-        return res.send(Buffer.from(match[2], 'base64'));
+        res.set('Content-Type', 'application/x-mpegURL');
+        return res.send(await cutM3U8(req.params.url, JSON.parse(req.params.ranges ?? '[]')));
     } catch (err) {
-        res.status(500).send('Decoding stream failed');
+        res.status(500).send('Cutting stream failed');
         return next(error);
     }
 });
@@ -494,7 +489,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
     return [
         ...await Promise.all((video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().map(async src => ({
             name: `YT-DLP Player ${src.resolution}`,
-            url: src.protocol === 'm3u8_native' ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(await cutM3U8(src.url, ranges))}` : src.url,
+            url: src.protocol === 'm3u8_native' ? `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${encodeURIComponent(JSON.stringify(ranges))}` : src.url,
             description: src.format,
             subtitles,
             behaviorHints: {
