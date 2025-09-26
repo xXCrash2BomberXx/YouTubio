@@ -250,7 +250,12 @@ app.get('/stream/:url', async (req, res, next) => {
         res.set('Content-Type', header);
         return res.send(content);
     } catch (error) {
-        res.status(500).send('Cutting stream failed');
+        if (req.query.fallback) {
+            const fallback = await fetch(req.params.url);
+            res.set('Content-Type', fallback.headers.get('content-type'));
+            fallback.body.pipe(res);
+        } else
+            res.status(500).send('Cutting stream failed');
         return next(error);
     }
 });
