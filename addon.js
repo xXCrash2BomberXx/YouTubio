@@ -248,7 +248,7 @@ app.get('/stream/:url', async (req, res, next) => {
         }
         res.set('Content-Type', header);
         return res.send(content);
-    } catch (err) {
+    } catch (error) {
         res.status(500).send('Cutting stream failed');
         return next(error);
     }
