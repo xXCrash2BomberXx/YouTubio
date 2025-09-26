@@ -155,7 +155,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
  * @returns {Promise<DeArrowResponse?>}
  */
 async function runDeArrow(videoID) {
-    if (process.env.NO_DEARROW) return null;
+    if (process.env.NO_DEARROW) throw new Error('DeArrow Error: NO_DEARROW');
     const res = await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID);
     if (!res.ok) throw new Error(`DeArrow Error: ${res.status} ${res.statusText}`);
     return res.json();
@@ -190,7 +190,7 @@ function getDeArrowThumbnail(videoID, time) {
  * @returns {Promise<SponsorBlockSegment>}
  */
 async function getSponsorBlockSegments(videoID) {
-    if (process.env.NO_SPONSORBLOCK) return [];
+    if (process.env.NO_SPONSORBLOCK) throw new Error('SponsorBlock Error: NO_SPONSORBLOCK');
     const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
     if (!res.ok) throw new Error(`SponsorBlock Error: ${res.status} ${res.statusText}`);
     return res.json();
@@ -305,7 +305,7 @@ function decryptConfig(configParam, enableDecryption = true) {
             config.encrypted = JSON.parse(decrypt(config.encrypted));
         } catch (error) {
             // logError(error);
-            config.encrypted = undefined;
+            delete config.encrypted;
         }
     }
     config.catalogs?.forEach(c => c.channelType = /[0-9]+/.test(c.channelType) ? channelTypeArray[c.channelType] : c.channelType);
@@ -482,7 +482,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
                 const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
                 let deArrow = null;
                 try {
-                    deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+                    if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
+                        deArrow = await runDeArrow(video.id);
                 } catch (error) {
                     logError(error);
                 }
@@ -511,7 +512,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
     let ranges = [];
     try {
-        ranges = videoIDRegex.test(video.id) ? (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment) : [];
+        if (videoIDRegex.test(video.id))
+            ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
     } catch (error)  {
         logError(error);
     }
@@ -613,7 +615,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
         let deArrow = null;
         try {
-            deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+            if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
+                deArrow = await runDeArrow(video.id);
         } catch (error) {
             logError(error);
         }
