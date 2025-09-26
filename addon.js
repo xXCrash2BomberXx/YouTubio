@@ -524,7 +524,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 ...(src.protocol === 'm3u8_native' && rangesURI ? [{
                     ...base,
                     name: `SB Player ${src.resolution}`,
-                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}`
+                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${userConfig.fallback ?? true ? '&fallback' : ''}`
                 }] : []), {
                     ...base,
                     name: `YT-DLP Player ${src.resolution}`,
@@ -818,6 +818,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     </td>
                                     <td><label for="sponsorblock">SponsorBlock</label></td>
                                     <td class="setting-description">Use SponsorBlock to skip various video segments. (Hold Ctrl/Cmd to select multiple segment types.)</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="fallback" name="fallback" data-default=1 ${userConfig.fallback ?? true ? 'checked' : ''}></td>
+                                    <td><label for="fallback">Auto SponsorBlock Fallback</label></td>
+                                    <td class="setting-description">Fallback to the untrimmed video if trimming results in an error.</td>
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
