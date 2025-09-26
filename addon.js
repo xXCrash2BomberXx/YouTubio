@@ -184,13 +184,13 @@ async function getSponsorBlockSegments(videoID) {
 
 /**
  * Filters an m3u8 playlist by timestamp ranges
- * @param {string} url - Playlist URL
+ * @param {string} body - m3u8 content
  * @param {Array<[number, number]>} ranges - [[start, end], ...]
  * @param {boolean} overestimate - Remove partially overlapping segments if true
- * @returns {Promise<string>} Cut m3u8 content
+ * @returns {string} Cut m3u8 content
  */
-async function cutM3U8(url, ranges = [], overestimate = false) {
-    const lines = (await (await fetch(url)).text()).split('\n');
+function cutM3U8(body, ranges = [], overestimate = false) {
+    const lines = body.split('\n');
     let time = 0;
     const out = [];
     let discontinuity = false;
@@ -236,9 +236,19 @@ app.use((req, res, next) => {
 
 app.get('/stream/:url', async (req, res, next) => {
     try {
-        const trimmed = await cutM3U8(req.params.url, JSON.parse(req.query.ranges ?? '[]'));
-        res.set('Content-Type', 'application/x-mpegURL');
-        return res.send(trimmed);
+        const header = (await fetch(req.params.url, { method: 'HEAD' })).headers.get('content-type');
+        const ranges = JSON.parse(req.query.ranges ?? '[]');
+        const body = await (await fetch(req.params.url)).text();
+        let content;
+        switch (header) {
+        case 'application/vnd.apple.mpegurl':
+        case 'application/x-mpegURL':
+            content = cutM3U8(body, ranges);
+        default:
+            throw new Error(`Unknown header type: "${header}"`)
+        }
+        res.set('Content-Type', header);
+        return res.send(content);
     } catch (err) {
         res.status(500).send('Cutting stream failed');
         return next(error);
