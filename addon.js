@@ -237,13 +237,12 @@ app.use((req, res, next) => {
 app.get('/stream/:url', async (req, res, next) => {
     try {
         const header = (await fetch(req.params.url, { method: 'HEAD' })).headers.get('content-type');
-        const ranges = JSON.parse(req.query.ranges ?? '[]');
         const body = await (await fetch(req.params.url)).text();
         let content;
         switch (header) {
         case 'application/vnd.apple.mpegurl':
         case 'application/x-mpegURL':
-            content = cutM3U8(body, ranges);
+            content = cutM3U8(body, JSON.parse(req.query.ranges ?? '[]'));
         default:
             throw new Error(`Unknown header type: "${header}"`)
         }
