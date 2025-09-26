@@ -243,6 +243,7 @@ app.get('/stream/:url', async (req, res, next) => {
         case 'application/vnd.apple.mpegurl':
         case 'application/x-mpegURL':
             content = cutM3U8(await (await fetch(req.params.url)).text(), JSON.parse(req.query.ranges ?? '[]'));
+            break;
         default:
             throw new Error(`Unknown header type: "${header}"`)
         }
