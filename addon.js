@@ -190,6 +190,7 @@ async function getSponsorBlockSegments(videoID) {
  * @returns {string} Cut m3u8 content
  */
 function cutM3U8(body, ranges = [], overestimate = false) {
+    if (!ranges?.length) return body;
     const lines = body.split('\n');
     let time = 0;
     const out = [];
