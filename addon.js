@@ -152,7 +152,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
 /**
  * Get DeArrow branding data
  * @param {string} videoID
- * @returns {Promise<DeArrowResponse?>}
+ * @returns {Promise<DeArrowResponse>}
  */
 async function runDeArrow(videoID) {
     if (process.env.NO_DEARROW) throw new Error('DeArrow Error: NO_DEARROW');
