@@ -189,7 +189,9 @@ function getDeArrowThumbnail(videoID, time) {
  */
 async function getSponsorBlockSegments(videoID) {
     if (process.env.NO_SPONSORBLOCK) return [];
-    return await (await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID)).json();
+    const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
+    if (!res.ok) return [];
+    return res.json();
 }
 
 /**
