@@ -849,7 +849,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td class="setting-description">Fallback to the untrimmed video if trimming results in an error.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="overestimate" name="overestimate" data-default=1 ${userConfig.overestimate ?? defaultConfig.overestimate ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="overestimate" name="overestimate" data-default=0 ${userConfig.overestimate ?? defaultConfig.overestimate ? 'checked' : ''}></td>
                                     <td><label for="overestimate">Overestimate SponsorBlock Segments</label></td>
                                     <td class="setting-description">Overestimate trimming of SponsorBlock segments.</td>
                                 </tr>
