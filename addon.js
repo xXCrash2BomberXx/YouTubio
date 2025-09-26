@@ -254,7 +254,7 @@ app.get('/stream/:url', async (req, res, next) => {
         case 'application/x-mpegURL':
             content = cutM3U8(await (await fetch(req.params.url)).text(),
                 JSON.parse(req.query.ranges ?? '[]'),
-                JSON.parse(req.query.overestimate ?? false));
+                JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
             break;
         default:
             throw new Error(`Unknown header type: "${header}"`)
@@ -262,7 +262,7 @@ app.get('/stream/:url', async (req, res, next) => {
         res.set('Content-Type', header);
         return res.send(content);
     } catch (error) {
-        if (JSON.parse(req.query.fallback ?? true)) {
+        if (JSON.parse(req.query.fallback ?? defaultConfig.fallback)) {
             const fallback = await fetch(req.params.url);
             res.set('Content-Type', fallback.headers.get('content-type'));
             fallback.body.pipe(res);
