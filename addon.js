@@ -845,7 +845,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="fallback" name="fallback" data-default=1 ${userConfig.fallback ?? defaultConfig.fallback ? 'checked' : ''}></td>
-                                    <td><label for="fallback">Auto SponsorBlock Fallback</label></td>
+                                    <td><label for="fallback">SponsorBlock Fallback</label></td>
                                     <td class="setting-description">Fallback to the untrimmed video if trimming results in an error.</td>
                                 </tr>
                                 <tr>
