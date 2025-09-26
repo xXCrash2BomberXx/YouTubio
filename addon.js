@@ -157,10 +157,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
 async function runDeArrow(videoID) {
     if (process.env.NO_DEARROW) return null;
     const res = await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID);
-    if (!res.ok) {
-        logError(`DeArrow Error: ${res.status} ${res.statusText}`);
-        return null;
-    }
+    if (!res.ok) throw new Error(`DeArrow Error: ${res.status} ${res.statusText}`);
     return res.json();
 }
 
@@ -195,10 +192,7 @@ function getDeArrowThumbnail(videoID, time) {
 async function getSponsorBlockSegments(videoID) {
     if (process.env.NO_SPONSORBLOCK) return [];
     const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
-    if (!res.ok) {
-        logError(`SponsorBlock Error: ${res.status} ${res.statusText}`);
-        return [];
-    }
+    if (!res.ok) throw new Error(`SponsorBlock Error: ${res.status} ${res.statusText}`);
     return res.json();
 }
 
@@ -486,7 +480,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         return res.json({
             metas: (await Promise.all((playlist ? videos.entries : [videos]).map(async video => {
                 const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
-                const deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+                let deArrow = null;
+                try {
+                    deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+                } catch (error) {
+                    logError(error);
+                }
                 /** @type {string?} */
                 const thumbnail = (deArrow?.thumbnails[0] ?
                     getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
@@ -510,7 +509,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 });
 
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
-    const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
+    let ranges = [];
+    try {
+        ranges = videoIDRegex.test(video.id) ? (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment) : [];
+    } catch (error)  {
+        logError(error);
+    }
     const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
     const subtitles = userConfig.subtitles ?? defaultConfig.subtitles ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
@@ -607,7 +611,12 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
         const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
-        const deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+        let deArrow = null;
+        try {
+            deArrow = useID && videoIDRegex.test(video.id) && userConfig.dearrow ? await runDeArrow(video.id) : null;
+        } catch (error) {
+            logError(error);
+        }
         /** @type {string} */
         const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
         /** @type {string?} */
@@ -697,12 +706,11 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
     /** @type {Object?} */
-    let userConfig;
+    let userConfig = {};
     try {
         userConfig = req.params.config ? decryptConfig(req.params.config, false) : {};
     } catch (error) {
         logError(error)
-        userConfig = {};
     }
     const catalogType = JSON.stringify(userConfig.catalogType ?? defaultConfig.catalogType);
     res.send(`
