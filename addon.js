@@ -811,7 +811,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                         </select>
                                     </td>
                                     <td><label for="sponsorblock">SponsorBlock</label></td>
-                                    <td class="setting-description">Use SponsorBlock to skip various video segments.</td>
+                                    <td class="setting-description">Use SponsorBlock to skip various video segments. (Hold Ctrl/Cmd to select multiple segment types.)</td>
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
