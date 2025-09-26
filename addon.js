@@ -662,14 +662,25 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
-                    }))), ...(((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(x => ({
-                        id: prefix + x.id,
-                        title: x.title,
-                        released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
-                        thumbnail: x.thumbnail ?? x.thumbnails?.at(-1)?.url,
-                        episode: ++episode,
-                        season: 1
-                    })) ?? [])
+                    }))), ...(((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(x => {
+                        let deArrow = null;
+                        try {
+                            if (useID && videoIDRegex.test(x.id) && userConfig.dearrow)
+                                deArrow = await runDeArrow(x.id);
+                        } catch (error) {
+                            logError(error);
+                        }
+                        return {
+                            id: prefix + x.id,
+                            title: deArrow?.titles[0]?.title ?? x.title ?? 'Unknown Title',
+                            released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
+                            thumbnail: (deArrow?.thumbnails[0] ?
+                                getDeArrowThumbnail(x.id, deArrow.thumbnails[0].timestamp) :
+                                null) ?? x.thumbnail ?? x.thumbnails?.at(-1)?.url,
+                            episode: ++episode,
+                            season: 1
+                        };
+                    }) ?? [])
                 ],
                 runtime: `${Math.floor((video.duration ?? 0) / 60)} min`,
                 language: video.language,
