@@ -24,7 +24,17 @@ const channelTypeArray = [
     'video',
     'channel'
 ];
-const defaultCatalogType = 'YouTube';
+const defaultConfig = {
+    fallback: true,
+    overestimate: false,
+    subtitles: true,
+    showLiveInChannel: true,
+    showVideosInChannel: true,
+    markWatchedOnLoad: false,
+    showBrokenLinks: false,
+    search: true,
+    catalogType: 'YouTube'
+};
 const termKeyword = '{term}';
 const sortKeyword = '{sort}';
 
@@ -342,7 +352,7 @@ app.get('/:config/manifest.json', (req, res, next) => {
                 { id: ':ytwatchlater', name: 'Watch Later' },
                 { id: ':ythistory', name: 'History' }
                 // Add search unless explicitly disabled
-            ] : [])), ...((userConfig.search ?? true) ? [
+            ] : [])), ...((userConfig.search ?? defaultConfig.search) ? [
                 { id: ':ytsearch', name: 'Video' },
                 { id: ':ytsearch:channel', name: 'Channel' }
             ] : []).map(c => ({
@@ -354,7 +364,7 @@ app.get('/:config/manifest.json', (req, res, next) => {
         ].map(c => ({
             ...c,
             id: c.id?.startsWith(prefix) ? c.id : prefix + (c.id ?? ''),
-            type: c.type ?? userConfig.catalogType ?? defaultCatalogType,
+            type: c.type ?? userConfig.catalogType ?? defaultConfig.catalogType,
             extra: [
                 ...(
                     c.extra ?? []
@@ -492,7 +502,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
     const ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
     const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
-    const subtitles = userConfig.subtitles ?? true ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+    const subtitles = userConfig.subtitles ?? defaultConfig.subtitles ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
         const srt = v.find(x => x.ext == 'srt') ?? v[0];
         return srt ? {
             id: srt.name,
@@ -511,7 +521,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
     ).filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
-        ...(video.formats ?? [video]).filter(src => (userConfig.showBrokenLinks || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().flatMap(src => {
+        ...(video.formats ?? [video]).filter(src => ((userConfig.showBrokenLinks ?? defaultConfig.showBrokenLinks) || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().flatMap(src => {
             const base = {
                 description: src.format,
                 subtitles,
@@ -527,9 +537,9 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                     ...base,
                     name: `SB Player ${src.resolution}`,
                     url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${
-                        userConfig.fallback ?? true ? '&fallback=1' : ''
+                        userConfig.fallback ?? defaultConfig.fallback ? '&fallback=1' : ''
                     }${
-                        userConfig.overestimate ?? false ? '&overestimate=1' : ''
+                        userConfig.overestimate ?? defaultConfig.overestimate ? '&overestimate=1' : ''
                     }`
                 }] : []), {
                     ...base,
@@ -555,7 +565,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
         ] : []), ...(video.channel_url ? [
             {
                 name: 'YT-DLP Channel',
-                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultCatalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
+                externalUrl: `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultConfig.catalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`,
                 description: 'Click to open the channel as a Catalog'
             }, {
                 name: 'External Channel',
@@ -572,8 +582,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
-            userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '-I', userConfig.showVideosInChannel ?? true ? ':100' : ':1',
+            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            '-I', userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel ? ':100' : ':1',
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
@@ -592,8 +602,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
-        const live = (userConfig.showLiveInChannel ?? true) && channel ? await runYtDlpWithAuth(req.params.config, [
-            userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+        const live = (userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel) && channel ? await runYtDlpWithAuth(req.params.config, [
+            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',
             '--no-playlist',
             `https://www.youtube.com/channel/${video.id}/live`
@@ -622,7 +632,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
-                    }))), ...(((userConfig.showVideosInChannel ?? true) ? video.entries : [])?.map(x => ({
+                    }))), ...(((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(x => ({
                         id: prefix + x.id,
                         title: x.title,
                         released: new Date(x.release_timestamp ? x.release_timestamp * 1000 : x.upload_date ? `${x.upload_date.substring(0, 4)}-${x.upload_date.substring(4, 6)}-${x.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
@@ -649,7 +659,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
-            userConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
@@ -676,7 +686,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
         logError(error)
         userConfig = {};
     }
-    const catalogType = JSON.stringify(userConfig.catalogType ?? defaultCatalogType);
+    const catalogType = JSON.stringify(userConfig.catalogType ?? defaultConfig.catalogType);
     res.send(`
         <!DOCTYPE html>
         <html>
@@ -826,48 +836,48 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td class="setting-description">Use SponsorBlock to skip various video segments. (Hold Ctrl/Cmd to select multiple segment types.)</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="fallback" name="fallback" data-default=1 ${userConfig.fallback ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="fallback" name="fallback" data-default=1 ${userConfig.fallback ?? defaultConfig.fallback ? 'checked' : ''}></td>
                                     <td><label for="fallback">Auto SponsorBlock Fallback</label></td>
                                     <td class="setting-description">Fallback to the untrimmed video if trimming results in an error.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="overestimate" name="overestimate" data-default=1 ${userConfig.overestimate ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="overestimate" name="overestimate" data-default=1 ${userConfig.overestimate ?? defaultConfig.overestimate ? 'checked' : ''}></td>
                                     <td><label for="overestimate">Overestimate SponsorBlock Segments</label></td>
                                     <td class="setting-description">Overestimate trimming of SponsorBlock segments.</td>
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
-                                    <td><input type="checkbox" id="subtitles" name="subtitles" data-default=1 ${userConfig.subtitles ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="subtitles" name="subtitles" data-default=1 ${userConfig.subtitles ?? defaultConfig.subtitles ? 'checked' : ''}></td>
                                     <td><label for="subtitles">Subtitles</label></td>
                                     <td class="setting-description">Enable subtitles for videos.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel ? 'checked' : ''}></td>
                                     <td><label for="showLiveInChannel">Show Livestreams in Channel Page</label></td>
                                     <td class="setting-description">Display the channel live stream (if one is active) in the channel meta results.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=1 ${userConfig.showVideosInChannel ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=1 ${userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel ? 'checked' : ''}></td>
                                     <td><label for="showVideosInChannel">Show Videos in Channel Page</label></td>
                                     <td class="setting-description">Display the most recent 100 uploads in the channel meta results.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark Watched</label></td>
                                     <td class="setting-description">Mark videos as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ?? defaultConfig.showBrokenLinks ? 'checked' : ''}></td>
                                     <td><label for="showBrokenLinks">Show Unsupported Streams</label></td>
                                     <td class="setting-description">Return all streams found by YT-DLP, not just ones supported by Stremio.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? true ? 'checked' : ''}></td>
+                                    <td><input type="checkbox" id="search" name="search" data-default=1 ${userConfig.search ?? defaultConfig.search ? 'checked' : ''}></td>
                                     <td><label for="search">Add YouTube Search</label></td>
                                     <td class="setting-description">Add a default YouTube search catalog for videos and channels.</td>
                                 </tr>
                                 <tr>
-                                    <td><input type="text" id="catalogType" name="catalogType" data-default=${JSON.stringify(defaultCatalogType)} value=${catalogType} style="width: 5rem;"></td>
+                                    <td><input type="text" id="catalogType" name="catalogType" data-default=${JSON.stringify(defaultConfig.catalogType)} value=${catalogType} style="width: 5rem;"></td>
                                     <td><label for="catalogType">YouTube Search Type</label></td>
                                     <td class="setting-description">Specify the fallback type name of catalogs.</td>
                                 </tr>
