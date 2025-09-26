@@ -157,7 +157,10 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
 async function runDeArrow(videoID) {
     if (process.env.NO_DEARROW) return null;
     const res = await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID);
-    if (!res.ok) return null;
+    if (!res.ok) {
+        logError(`DeArrow Error: ${res.status} ${res.statusText}`);
+        return null;
+    }
     return res.json();
 }
 
@@ -192,7 +195,10 @@ function getDeArrowThumbnail(videoID, time) {
 async function getSponsorBlockSegments(videoID) {
     if (process.env.NO_SPONSORBLOCK) return [];
     const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
-    if (!res.ok) return [];
+    if (!res.ok) {
+        logError(`SponsorBlock Error: ${res.status} ${res.statusText}`);
+        return [];
+    }
     return res.json();
 }
 
