@@ -242,7 +242,9 @@ app.get('/stream/:url', async (req, res, next) => {
         switch (header) {
         case 'application/vnd.apple.mpegurl':
         case 'application/x-mpegURL':
-            content = cutM3U8(await (await fetch(req.params.url)).text(), JSON.parse(req.query.ranges ?? '[]'));
+            content = cutM3U8(await (await fetch(req.params.url)).text(),
+                JSON.parse(req.query.ranges ?? '[]'),
+                JSON.parse(req.query.overestimate ?? false));
             break;
         default:
             throw new Error(`Unknown header type: "${header}"`)
@@ -250,7 +252,7 @@ app.get('/stream/:url', async (req, res, next) => {
         res.set('Content-Type', header);
         return res.send(content);
     } catch (error) {
-        if (req.query.fallback) {
+        if (JSON.parse(req.query.fallback ?? true)) {
             const fallback = await fetch(req.params.url);
             res.set('Content-Type', fallback.headers.get('content-type'));
             fallback.body.pipe(res);
@@ -524,7 +526,11 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 ...(src.protocol === 'm3u8_native' && rangesURI ? [{
                     ...base,
                     name: `SB Player ${src.resolution}`,
-                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${userConfig.fallback ?? true ? '&fallback' : ''}`
+                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${
+                        userConfig.fallback ?? true ? '&fallback=1' : ''
+                    }${
+                        userConfig.overestimate ?? false ? '&overestimate=1' : ''
+                    }`
                 }] : []), {
                     ...base,
                     name: `YT-DLP Player ${src.resolution}`,
@@ -823,6 +829,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td><input type="checkbox" id="fallback" name="fallback" data-default=1 ${userConfig.fallback ?? true ? 'checked' : ''}></td>
                                     <td><label for="fallback">Auto SponsorBlock Fallback</label></td>
                                     <td class="setting-description">Fallback to the untrimmed video if trimming results in an error.</td>
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" id="overestimate" name="overestimate" data-default=1 ${userConfig.overestimate ? 'checked' : ''}></td>
+                                    <td><label for="overestimate">Overestimate SponsorBlock Segments</label></td>
+                                    <td class="setting-description">Overestimate trimming of SponsorBlock segments.</td>
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
