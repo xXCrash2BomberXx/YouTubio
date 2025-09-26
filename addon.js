@@ -526,8 +526,6 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 description: src.format,
                 subtitles,
                 behaviorHints: {
-                    bingeGroup: `YT-DLP Player ${src.resolution}`,
-                    ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {}),
                     videoSize: src.filesize_approx,
                     filename: video.filename
                 }
@@ -540,11 +538,21 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                         userConfig.fallback ?? defaultConfig.fallback ? '&fallback=1' : ''
                     }${
                         userConfig.overestimate ?? defaultConfig.overestimate ? '&overestimate=1' : ''
-                    }`
+                    }`,
+                    behaviorHints: {
+                        ...base.behaviorHints,
+                        bingeGroup: `SB Player ${src.resolution}`,
+                        notWebReady: true
+                    }
                 }] : []), {
                     ...base,
                     name: `YT-DLP Player ${src.resolution}`,
-                    url: src.url
+                    url: src.url,
+                    behaviorHints: {
+                        ...base.behaviorHints,
+                        bingeGroup: `YT-DLP Player ${src.resolution}`,
+                        ...(src.protocol !== 'https' || src.video_ext !== 'mp4' ? { notWebReady: true } : {})
+                    }
                 }
             ];
         }), ...(useID && (((video.is_live ?? false) && channelIDRegex.test(video.id)) || videoIDRegex.test(video.id)) ? [
