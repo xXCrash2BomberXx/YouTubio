@@ -156,7 +156,9 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
  */
 async function runDeArrow(videoID) {
     if (process.env.NO_DEARROW) return null;
-    return await (await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID)).json();
+    const res = await fetch('https://sponsor.ajay.app/api/branding?videoID=' + videoID);
+    if (!res.ok) return null;
+    return res.json();
 }
 
 /**
