@@ -262,9 +262,14 @@ app.get('/stream/:url', async (req, res, next) => {
         switch (header) {
         case 'application/vnd.apple.mpegurl':
         case 'application/x-mpegURL':
-            content = cutM3U8(await (await fetch(req.params.url)).text(),
-                JSON.parse(req.query.ranges ?? '[]'),
-                JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
+            content = await (await fetch(req.params.url)).text();
+            try {
+                content = cutM3U8(content,
+                    JSON.parse(req.query.ranges ?? '[]'),
+                    JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
+            } catch (error) {
+                if (!JSON.parse(req.query.fallback ?? defaultConfig.fallback)) throw error;
+            }
             break;
         default:
             throw new Error(`Unknown header type: "${header}"`)
@@ -272,12 +277,7 @@ app.get('/stream/:url', async (req, res, next) => {
         res.set('Content-Type', header);
         return res.send(content);
     } catch (error) {
-        if (JSON.parse(req.query.fallback ?? defaultConfig.fallback)) {
-            const fallback = await fetch(req.params.url);
-            res.set('Content-Type', fallback.headers.get('content-type'));
-            fallback.body.pipe(res);
-        } else
-            res.status(500).send('Cutting stream failed');
+        res.status(500).send('Cutting stream failed');
         return next(error);
     }
 });
