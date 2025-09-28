@@ -172,7 +172,7 @@ function getDeArrowThumbnail(videoID, time) {
 }
 
 /**
- * @typedef {Array<{
+ * @typedef {{
  * segment: [number, number],
  * UUID: string,
  * category: string,
@@ -181,13 +181,13 @@ function getDeArrowThumbnail(videoID, time) {
  * locked: number,
  * votes: number,
  * description: string
- * }>} SponsorBlockSegment
+ * }} SponsorBlockSegment
  */
 
 /**
  * Get SponsorBlock segments for a video
  * @param {string} videoID
- * @returns {Promise<SponsorBlockSegment>}
+ * @returns {Promise<Array<SponsorBlockSegment>>}
  */
 async function getSponsorBlockSegments(videoID) {
     if (process.env.NO_SPONSORBLOCK) throw new Error('SponsorBlock Error: NO_SPONSORBLOCK');
