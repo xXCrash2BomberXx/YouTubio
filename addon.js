@@ -289,6 +289,11 @@ app.post('/encrypt', (req, res, next) => {
     }
 });
 
+/**
+ * Logs an error if DEV_LOGGING is enabled
+ * @param {Error} error
+ * @returns {void}
+ */
 function logError(error) {
     if (process.env.DEV_LOGGING) console.error(error);
 }
@@ -512,6 +517,16 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     }
 });
 
+/**
+ * Parse a YT-DLP video object into Stremio streams
+ * @param {Object} userConfig
+ * @param {Object} video
+ * @param {string} manifestUrl
+ * @param {string} protocol
+ * @param {string} reqProtocol
+ * @param {string} reqHost
+ * @returns {Promise<Array<Object>>}
+ */
 async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol, reqHost) {
     let ranges = [];
     try {
