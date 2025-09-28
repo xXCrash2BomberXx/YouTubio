@@ -192,7 +192,10 @@ function getDeArrowThumbnail(videoID, time) {
 async function getSponsorBlockSegments(videoID) {
     if (process.env.NO_SPONSORBLOCK) throw new Error('SponsorBlock Error: NO_SPONSORBLOCK');
     const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
-    if (!res.ok) throw new Error(`SponsorBlock Error: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+        if (res.status !== 404) throw new Error(`SponsorBlock Error: ${res.status} ${res.statusText}`);
+        return [];
+    }
     return res.json();
 }
 
@@ -701,6 +704,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(req.params.config, [
             userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            '-I', ':1',
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
@@ -709,7 +713,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
-            streams: parseStream(userConfig, video, manifestUrl, protocol, req.protocol, req.get('host'))
+            streams: await parseStream(userConfig, video, manifestUrl, protocol, req.protocol, req.get('host'))
         });
     } catch (error) {
         res.json({ streams: [] });
