@@ -974,7 +974,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             </div>
             <script>
                 const cookies = document.getElementById('cookie-data');
-                const addAccounts = ocument.getElementById('add-accounts')
+                const addAccounts = document.getElementById('add-accounts')
                 const addDefaults = document.getElementById('add-defaults');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
@@ -1315,3 +1315,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
