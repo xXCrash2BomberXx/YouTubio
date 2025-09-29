@@ -858,7 +858,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         <div style="margin-bottom: 1rem;">
                             <button type="button" id="add-defaults" class="install-button">Add Defaults</button>
                             <button type="button" id="remove-defaults" class="install-button">Remove Defaults</button>
-                            <button type="button" id="add-account" class="install-button">Load from YouTube</button>
+                            <button type="button" id="add-accounts" class="install-button">Load from YouTube</button>
                             <button type="button" id="add-playlist" class="install-button">Add Playlist</button>
                         </div>
                         <table id="playlist-table" style="width:100%;border-collapse:collapse;">
@@ -974,6 +974,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             </div>
             <script>
                 const cookies = document.getElementById('cookie-data');
+                const addAccounts = ocument.getElementById('add-accounts')
                 const addDefaults = document.getElementById('add-defaults');
                 const addonSettings = document.getElementById('addon-settings');
                 const submitBtn = document.getElementById('submit-btn');
@@ -982,6 +983,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 function configChanged() {
                     resultsDiv.style.display = 'none';
                     addDefaults.disabled = cookies.value.length <= 0;
+                    addAccounts.disabled = addDefaults.disabled;
                 }
                 const installStremio = document.getElementById('install-stremio');
                 const installWeb = document.getElementById('install-web');
@@ -1211,13 +1213,16 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
-                document.getElementById('add-account').addEventListener('click', async () => {
+                addAccounts.addEventListener('click', async e => {
+                    const originalDisabled = e.target.disabled;
+                    e.target.disabled = true;
                     if (reload.href.endsWith('configure')) {
                         (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
                             playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
                         );
                         renderPlaylists();
                     }
+                    e.target.disabled = originalDisabled;
                 });
                 addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
