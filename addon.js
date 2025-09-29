@@ -292,13 +292,13 @@ app.post('/encrypt', (req, res, next) => {
 // Get YouTube Playlists Endpoint
 app.get('/:config/playlists', async (req, res, next) => {
     try {
-        return (await runYtDlpWithAuth(req.params.config, [
+        return res.json((await runYtDlpWithAuth(req.params.config, [
             '--yes-playlist',
             'https://www.youtube.com/feed/playlists'
         ])).entries.map(x => ({
             url: x.url,
             name: x.title
-        }));
+        })));
     } catch (error) {
         res.status(500).send('Fetching playlists failed');
         return next(error);
