@@ -1212,7 +1212,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     renderPlaylists();
                 });
                 document.getElementById('add-account').addEventListener('click', async () => {
-                    (await (await fetch(document.getElementById('config-form').submit() + 'playlists')).json()).forEach(p =>
+                    (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
                         playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
                     );
                     renderPlaylists();
@@ -1273,7 +1273,6 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         installUrlInput.value = protocol + manifestString;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         resultsDiv.style.display = 'block';
-                        return protocol + configString;
                     } catch (error) {
                         errorDiv.textContent = error.message;
                         errorDiv.style.display = 'block';
@@ -1309,4 +1308,3 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
-
