@@ -1212,10 +1212,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     renderPlaylists();
                 });
                 document.getElementById('add-account').addEventListener('click', async () => {
-                    (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
-                        playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
-                    );
-                    renderPlaylists();
+                    if (reload.href.endsWith('configure')) {
+                        (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
+                            playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
+                        );
+                        renderPlaylists();
+                    }
                 });
                 addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
