@@ -296,7 +296,7 @@ app.get('/:config/playlists', async (req, res, next) => {
             '--yes-playlist',
             'https://www.youtube.com/feed/playlists'
         ])).entries.map(x => ({
-            url: x.url,
+            id: x.url,
             name: x.title
         })));
     } catch (error) {
@@ -858,6 +858,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         <div style="margin-bottom: 1rem;">
                             <button type="button" id="add-defaults" class="install-button">Add Defaults</button>
                             <button type="button" id="remove-defaults" class="install-button">Remove Defaults</button>
+                            <button type="button" id="add-account" class="install-button">Load from YouTube</button>
                             <button type="button" id="add-playlist" class="install-button">Add Playlist</button>
                         </div>
                         <table id="playlist-table" style="width:100%;border-collapse:collapse;">
@@ -1210,6 +1211,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
+                document.getElementById('add-account).addEventListener('click', async () => {
+                    (await (await fetch(document.getElementById('config-form').submit() + 'playlists')).json()).forEach(p =>
+                        playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
+                    );
+                    renderPlaylists();
+                });
                 addDefaults.addEventListener('click', () => {
                     playlists = [...playlists, ...defaultPlaylists];
                     renderPlaylists();
@@ -1266,6 +1273,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         installUrlInput.value = protocol + manifestString;
                         installWeb.href = \`https://web.stremio.com/#/addons?addon=\${encodeURIComponent(installUrlInput.value)}\`;
                         resultsDiv.style.display = 'block';
+                        return protocol + configString;
                     } catch (error) {
                         errorDiv.textContent = error.message;
                         errorDiv.style.display = 'block';
