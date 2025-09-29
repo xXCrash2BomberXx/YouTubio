@@ -1211,7 +1211,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     playlists.push({ type: ${catalogType}, id: '', name: '', channelType: 'auto' });
                     renderPlaylists();
                 });
-                document.getElementById('add-account).addEventListener('click', async () => {
+                document.getElementById('add-account').addEventListener('click', async () => {
                     (await (await fetch(document.getElementById('config-form').submit() + 'playlists')).json()).forEach(p =>
                         playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
                     );
@@ -1309,3 +1309,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
