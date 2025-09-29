@@ -1218,7 +1218,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     e.target.disabled = true;
                     if (reload.href.endsWith('configure')) {
                         (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
-                            playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' });
+                            playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' })
                         );
                         renderPlaylists();
                     }
