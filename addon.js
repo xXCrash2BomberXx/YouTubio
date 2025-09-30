@@ -1233,7 +1233,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     renderPlaylists();
                 });
                 renderPlaylists();
-                document.getElementById('config-form').addEventListener('submit', async function populateInstall(event) {
+                async function populateInstall(event) {
                     event?.preventDefault();
                     submitBtn.disabled = true;
                     const originalText = submitBtn.textContent
@@ -1287,7 +1287,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         submitBtn.disabled = false;
                         submitBtn.textContent = originalText;
                     }
-                });
+                }
+                document.getElementById('config-form').addEventListener('submit', populateInstall);
                 document.getElementById('copy-btn').addEventListener('click', async function() {
                     await navigator.clipboard.writeText(installUrlInput.value);
                     this.textContent = 'Copied!';
