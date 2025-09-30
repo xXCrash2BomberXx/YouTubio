@@ -1216,12 +1216,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 addAccounts.addEventListener('click', async e => {
                     const originalDisabled = e.target.disabled;
                     e.target.disabled = true;
-                    if (reload.href.endsWith('configure')) {
-                        (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
-                            playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' })
-                        );
-                        renderPlaylists();
-                    }
+                    if (!reload.href.endsWith('configure'))
+                        await populateInstall();
+                    (await (await fetch(reload.href.replace(/configure$/, 'playlists'))).json()).forEach(p =>
+                        playlists.push({ type: ${catalogType}, id: p.id, name: p.name, channelType: 'auto' })
+                    );
+                    renderPlaylists();
                     e.target.disabled = originalDisabled;
                 });
                 addDefaults.addEventListener('click', () => {
@@ -1233,8 +1233,8 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     renderPlaylists();
                 });
                 renderPlaylists();
-                document.getElementById('config-form').addEventListener('submit', async function(event) {
-                    event.preventDefault();
+                document.getElementById('config-form').addEventListener('submit', async function populateInstall(event) {
+                    event?.preventDefault();
                     submitBtn.disabled = true;
                     const originalText = submitBtn.textContent
                     submitBtn.textContent = 'Encrypting...';
