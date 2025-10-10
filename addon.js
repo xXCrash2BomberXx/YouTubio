@@ -107,7 +107,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         return JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
-            '--js-runtimes', 'node',
+            // '--js-runtimes', 'node',
             '-i',
             '--no-plugin-dirs',
             '--flat-playlist',
