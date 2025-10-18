@@ -694,6 +694,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         released,
                         thumbnail,
                         streams: await parseStream(userConfig, video2, manifestUrl, protocol, req.protocol, req.get('host')),
+                        available: true,
                         episode,
                         season: 1,
                         overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
@@ -712,6 +713,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                             thumbnail: (deArrow?.thumbnails[0] ?
                                 getDeArrowThumbnail(video2.id, deArrow.thumbnails[0].timestamp) :
                                 null) ?? video2.thumbnail ?? video2.thumbnails?.at(-1)?.url,
+                            available: true,
                             episode: ++episode,
                             season: 1
                         };
