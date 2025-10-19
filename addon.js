@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 /** @type {number} */
-const PORT = process.env.PORT || 7000;
+const PORT = process.env.PORT ?? 7000;
 const prefix = 'yt_id:';
 const reversedPrefix = 'Reversed';
 const channelRegex = /^(https:\/\/(www\.)?youtube\.com\/)?(?<id>@[a-zA-Z0-9][a-zA-Z0-9\._-]{1,28}[a-zA-Z0-9])/;
