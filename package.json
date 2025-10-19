@@ -4,10 +4,15 @@
   "description": "A Stremio addon that lets you watch YouTube videos and access your subscriptions, watch later list, and history directly inside Stremio.",
   "main": "addon.js",
   "scripts": {
-    "start": "node addon.js"
+    "start": "node addon.js",
+    "local": "concurrently \"node addon.js\" \"npx ngrok http 7000\""
   },
   "dependencies": {
     "express": "^4.18.2",
     "yt-dlp-wrap": "^2.3.12"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "ngrok": "^5.0.0-beta.2"
   }
 }
