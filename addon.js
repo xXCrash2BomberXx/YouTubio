@@ -33,7 +33,8 @@ const defaultConfig = {
     markWatchedOnLoad: false,
     showBrokenLinks: false,
     search: true,
-    catalogType: 'YouTube'
+    catalogType: 'YouTube',
+    geminiModel: 'gemini-2.5-pro'
 };
 const termKeyword = '{term}';
 const sortKeyword = '{sort}';
@@ -90,7 +91,7 @@ function decrypt(encryptedData) {
 let counter = 0;
 /**
  * Runs yt-dlp with authentication
- * @param {string} encryptedConfig
+ * @param {string | Object} encryptedConfig
  * @param {string[]} argsArray
  * @returns {Promise<Object>}
  */
@@ -186,16 +187,99 @@ function getDeArrowThumbnail(videoID, time) {
  */
 
 /**
- * Get SponsorBlock segments for a video
- * @param {string} videoID
+ * 
+ * @param {string | Object} encryptedConfig 
+ * @param {string} URL 
  * @returns {Promise<Array<SponsorBlockSegment>>}
  */
-async function getSponsorBlockSegments(videoID) {
+async function getGeminiSegments(encryptedConfig, URL) {
+    const userConfig = decryptConfig(encryptedConfig);
+    const geminiModel = userConfig.geminiModel ?? defaultConfig.geminiModel;
+    const geminiKey = userConfig.encrypted?.gemini;
+    if (geminiModel && geminiKey)
+        return JSON.parse((await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`, {
+            method: "POST",
+            body: JSON.stringify({
+                system_instruction: {
+                    parts: {
+                        text: 'Analyze the video contents and provide SponsorBlock-like metadata for video segments a user may not want to see where segment is an (int, int) with the values respectively being start and end time in seconds and the description being additional category acting as a section subtitle. There should be an empty Array response if no such sponsor segments exist within the video',
+                    },
+                },
+                contents: [{
+                    parts: [
+                        {
+                            file_data: {
+                                file_uri: URL
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    response_mime_type: "application/json",
+                    response_schema: {
+                        type: "object",
+                        properties: {
+                            segments: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        segment: {
+                                            type: "array",
+                                            items: {
+                                                type: "number"
+                                            }
+                                        },
+                                        category: {
+                                            type: "string",
+                                            enum: [
+                                                "sponsor",
+                                                "selfpromo",
+                                                "interaction",
+                                                "intro",
+                                                "outro",
+                                                "preview",
+                                                "hook",
+                                                "filler"
+                                            ]
+                                        },
+                                        description: {
+                                            type: "string"
+                                        }
+                                    },
+                                    propertyOrdering: [
+                                        "segment",
+                                        "category",
+                                        "description"
+                                    ],
+                                    required: [
+                                        "description"
+                                    ]
+                                }
+                            }
+                        },
+                        "propertyOrdering": [
+                            "segments"
+                        ]
+                    },
+                },
+            }),
+        })).json()).candidates?.[0].content?.parts[0].text ?? '[]').segments;
+    return [];
+}
+
+/**
+ * Get SponsorBlock segments for a video
+ * @param {string} videoID
+ * @param {string | Object} encryptedConfig
+ * @returns {Promise<Array<SponsorBlockSegment>>}
+ */
+async function getSponsorBlockSegments(videoID, encryptedConfig) {
     if (process.env.NO_SPONSORBLOCK) throw new Error('SponsorBlock Error: NO_SPONSORBLOCK');
     const res = await fetch('https://sponsor.ajay.app/api/skipSegments?videoID=' + videoID);
     if (!res.ok) {
         if (res.status !== 404) throw new Error(`SponsorBlock Error: ${res.status} ${res.statusText}`);
-        return [];
+        return getGeminiSegments(encryptedConfig, toYouTubeURL({}, videoID, {}));
     }
     return res.json();
 }
@@ -203,8 +287,8 @@ async function getSponsorBlockSegments(videoID) {
 /**
  * Filters an m3u8 playlist by timestamp ranges
  * @param {string} body - m3u8 content
- * @param {Array<[number, number]>} ranges - [[start, end], ...]
- * @param {boolean} overestimate - Remove partially overlapping segments if true
+ * @param {Array<[number, number]>=} ranges - [[start, end], ...]
+ * @param {boolean=} overestimate - Remove partially overlapping segments if true
  * @returns {string} Cut m3u8 content
  */
 function cutM3U8(body, ranges = [], overestimate = false) {
@@ -258,19 +342,19 @@ app.get('/stream/:url', async (req, res, next) => {
         const header = (await fetch(req.params.url, { method: 'HEAD' })).headers.get('content-type');
         let content;
         switch (header) {
-        case 'application/vnd.apple.mpegurl':
-        case 'application/x-mpegURL':
-            content = await (await fetch(req.params.url)).text();
-            try {
-                content = cutM3U8(content,
-                    JSON.parse(req.query.ranges ?? '[]'),
-                    JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
-            } catch (error) {
-                if (!JSON.parse(req.query.fallback ?? defaultConfig.fallback)) throw error;
-            }
-            break;
-        default:
-            throw new Error(`Unknown header type: "${header}"`)
+            case 'application/vnd.apple.mpegurl':
+            case 'application/x-mpegURL':
+                content = await (await fetch(req.params.url)).text();
+                try {
+                    content = cutM3U8(content,
+                        JSON.parse(req.query.ranges ?? '[]'),
+                        JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
+                } catch (error) {
+                    if (!JSON.parse(req.query.fallback ?? defaultConfig.fallback)) throw error;
+                }
+                break;
+            default:
+                throw new Error(`Unknown header type: "${header}"`)
         }
         res.set('Content-Type', header);
         return res.send(content);
@@ -318,14 +402,14 @@ function logError(error) {
 // Config Decryption
 /**
  * Parse a config parameter, decrypting if necessary
- * @param {string} configParam
- * @param {boolean=true} enableDecryption
+ * @param {string | Object} encryptedConfig
+ * @param {boolean=} enableDecryption
  * @returns {Object}
  */
-function decryptConfig(configParam, enableDecryption = true) {
+function decryptConfig(encryptedConfig, enableDecryption = true) {
     /** @type {Object} */
-    const config = JSON.parse(configParam);
-    if (enableDecryption && config.encrypted) {
+    const config = typeof encryptedConfig === 'string' ? JSON.parse(encryptedConfig) : encryptedConfig;
+    if (enableDecryption && config.encrypted && typeof config.encrypted === 'string') {
         try {
             config.encrypted = JSON.parse(decrypt(config.encrypted));
         } catch (error) {
@@ -333,7 +417,8 @@ function decryptConfig(configParam, enableDecryption = true) {
             delete config.encrypted;
         }
     }
-    config.catalogs?.forEach(c => c.channelType = /[0-9]+/.test(c.channelType) ? channelTypeArray[c.channelType] : c.channelType);
+    if (typeof encryptedConfig === 'string')
+        config.catalogs?.forEach(c => c.channelType = /[0-9]+/.test(c.channelType) ? channelTypeArray[c.channelType] : c.channelType);
     return config;
 }
 
@@ -548,8 +633,8 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
     let ranges = [];
     try {
         if (videoIDRegex.test(video.id))
-            ranges = (await getSponsorBlockSegments(video.id)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
-    } catch (error)  {
+            ranges = (await getSponsorBlockSegments(video.id, userConfig)).filter(s => userConfig.sponsorblock?.includes(s.category)).map(s => s.segment);
+    } catch (error) {
         logError(error);
     }
     const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
@@ -585,11 +670,9 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 ...(src.protocol === 'm3u8_native' && rangesURI ? [{
                     ...base,
                     name: `SB Player ${src.resolution}`,
-                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${
-                        userConfig.fallback ?? defaultConfig.fallback ? '&fallback=1' : ''
-                    }${
-                        userConfig.overestimate ?? defaultConfig.overestimate ? '&overestimate=1' : ''
-                    }`,
+                    url: `${reqProtocol}://${reqHost}/stream/${encodeURIComponent(src.url)}?ranges=${rangesURI}${userConfig.fallback ?? defaultConfig.fallback ? '&fallback=1' : ''
+                        }${userConfig.overestimate ?? defaultConfig.overestimate ? '&overestimate=1' : ''
+                        }`,
                     behaviorHints: {
                         ...base.behaviorHints,
                         bingeGroup: `SB Player ${src.resolution}`,
@@ -833,6 +916,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         <button type="button" class="install-button" id="clear-cookies">Clear</button>
                     </div>
                     <div class="settings-section">
+                        <h3>Gemini API Key</h3>
+                        <hr>
+                        <input type="text" id="gemini" name="gemini" placeholder="Enter your Gemini API key here..."${userConfig.encrypted ? ' disabled' : ''}>
+                    </div>
+                    <div class="settings-section">
                         <h3>Playlists</h3>
                         <hr>
                         <details>
@@ -960,6 +1048,11 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                     <td><label for="catalogType">YouTube Search Type</label></td>
                                     <td class="setting-description">Specify the fallback type name of catalogs.</td>
                                 </tr>
+                                <tr>
+                                    <td><input type="text" id="geminiModel" name="geminiModel" data-default=${JSON.stringify(defaultConfig.geminiModel)} value=${JSON.stringify(userConfig.geminiModel ?? defaultConfig.geminiModel)} style="width: 5rem;"></td>
+                                    <td><label for="geminiModel">Gemini Model</label></td>
+                                    <td class="setting-description">Specify the Gemini model to use for AI features.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -977,6 +1070,7 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
             </div>
             <script>
                 const cookies = document.getElementById('cookie-data');
+                const gemini = document.getElementById('gemini');
                 const addAccounts = document.getElementById('add-accounts')
                 const addDefaults = document.getElementById('add-defaults');
                 const addonSettings = document.getElementById('addon-settings');
@@ -1006,9 +1100,12 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                 document.getElementById('clear-cookies').addEventListener('click', () => {
                     cookies.value = "";
                     cookies.disabled = false;
+                    gemini.value = "";
+                    gemini.disabled = false;
                     configChanged();
                 });
                 cookies.addEventListener('input', configChanged);
+                gemini.addEventListener('input', configChanged);
                 addonSettings.querySelectorAll("input, select").forEach(e => e.addEventListener('change', configChanged));
                 function makeActions(callback, array, index) {
                     const actionsCell = document.createElement('td');
@@ -1244,17 +1341,19 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                     errorDiv.style.display = 'none';
                     try {
                         // Encrypt the sensitive data
-                        if (cookies.value && !cookies.disabled)
+                        if ((cookies.value && !cookies.disabled) || (gemini.value && !gemini.disabled))
                             cookies.value = await (await fetch('/encrypt', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({
-                                    auth: cookies.value
+                                    auth: cookies.value,
+                                    gemini: gemini.value
                                 })
                             })).text();
                         cookies.disabled = true;
+                        gemini.disabled = true;
                         const modifiedPlaylists = playlists.map(pl => ({
                             ...pl,
                             id: ${JSON.stringify(prefix)} + pl.id,
