@@ -198,7 +198,7 @@ async function getGeminiSegments(encryptedConfig, URL) {
     const geminiKey = userConfig.encrypted?.gemini;
     if (geminiModel && geminiKey)
         return JSON.parse((await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`, {
-            method: "POST",
+            method: 'POST',
             body: JSON.stringify({
                 system_instruction: {
                     parts: {
@@ -215,51 +215,51 @@ async function getGeminiSegments(encryptedConfig, URL) {
                     ]
                 }],
                 generationConfig: {
-                    response_mime_type: "application/json",
+                    response_mime_type: 'application/json',
                     response_schema: {
-                        type: "object",
+                        type: 'object',
                         properties: {
                             segments: {
-                                type: "array",
+                                type: 'array',
                                 items: {
-                                    type: "object",
+                                    type: 'object',
                                     properties: {
                                         segment: {
-                                            type: "array",
+                                            type: 'array',
                                             items: {
-                                                type: "number"
+                                                type: 'number'
                                             }
                                         },
                                         category: {
-                                            type: "string",
+                                            type: 'string',
                                             enum: [
-                                                "sponsor",
-                                                "selfpromo",
-                                                "interaction",
-                                                "intro",
-                                                "outro",
-                                                "preview",
-                                                "hook",
-                                                "filler"
+                                                'sponsor',
+                                                'selfpromo',
+                                                'interaction',
+                                                'intro',
+                                                'outro',
+                                                'preview',
+                                                'hook',
+                                                'filler'
                                             ]
                                         },
                                         description: {
-                                            type: "string"
+                                            type: 'string'
                                         }
                                     },
                                     propertyOrdering: [
-                                        "segment",
-                                        "category",
-                                        "description"
+                                        'segment',
+                                        'category',
+                                        'description'
                                     ],
                                     required: [
-                                        "description"
+                                        'description'
                                     ]
                                 }
                             }
                         },
-                        "propertyOrdering": [
-                            "segments"
+                        propertyOrdering: [
+                            'segments'
                         ]
                     },
                 },
