@@ -342,19 +342,19 @@ app.get('/stream/:url', async (req, res, next) => {
         const header = (await fetch(req.params.url, { method: 'HEAD' })).headers.get('content-type');
         let content;
         switch (header) {
-            case 'application/vnd.apple.mpegurl':
-            case 'application/x-mpegURL':
-                content = await (await fetch(req.params.url)).text();
-                try {
-                    content = cutM3U8(content,
-                        JSON.parse(req.query.ranges ?? '[]'),
-                        JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
-                } catch (error) {
-                    if (!JSON.parse(req.query.fallback ?? defaultConfig.fallback)) throw error;
-                }
-                break;
-            default:
-                throw new Error(`Unknown header type: "${header}"`)
+        case 'application/vnd.apple.mpegurl':
+        case 'application/x-mpegURL':
+            content = await (await fetch(req.params.url)).text();
+            try {
+                content = cutM3U8(content,
+                    JSON.parse(req.query.ranges ?? '[]'),
+                    JSON.parse(req.query.overestimate ?? defaultConfig.overestimate));
+            } catch (error) {
+                if (!JSON.parse(req.query.fallback ?? defaultConfig.fallback)) throw error;
+            }
+            break;
+        default:
+            throw new Error(`Unknown header type: "${header}"`)
         }
         res.set('Content-Type', header);
         return res.send(content);
