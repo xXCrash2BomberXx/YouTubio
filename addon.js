@@ -913,12 +913,10 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                         <h3>Cookies</h3>
                         <hr>
                         <textarea id="cookie-data" placeholder="Paste the content of your cookies.txt file here..."${userConfig.encrypted ? ` disabled>${userConfig.encrypted ?? ''}` : '>'}</textarea>
-                        <button type="button" class="install-button" id="clear-cookies">Clear</button>
-                    </div>
-                    <div class="settings-section">
                         <h3>Gemini API Key</h3>
                         <hr>
                         <input type="text" id="gemini" name="gemini" placeholder="Enter your Gemini API key here..."${userConfig.encrypted ? ' disabled' : ''}>
+                        <button type="button" class="install-button" id="clear-cookies">Clear</button>
                     </div>
                     <div class="settings-section">
                         <h3>Playlists</h3>
