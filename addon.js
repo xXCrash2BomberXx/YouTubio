@@ -766,7 +766,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 poster: thumbnail,
                 posterShape: channel ? 'square' : 'landscape',
                 background: thumbnail,
-                logo: thumbnail,
+                // logo: thumbnail,
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released,
