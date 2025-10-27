@@ -759,6 +759,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
+        const playlist = videos._type === 'playlist';
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
@@ -772,7 +773,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
         let episode = 0;
-        const meta = await parseMeta(userConfig, video, protocol, useID, false, req.params.type);
+        const meta = await parseMeta(userConfig, video, protocol, useID, playlist, req.params.type);
         return res.json({
             meta: {
                 ...meta,
@@ -781,14 +782,14 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 videos: [
                     ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
-                        title: episode === 1 ? 'Channel Options' : video2.title,
+                        title: playlist && episode === 1 ? 'Channel Options' : video2.title,
                         released,
                         thumbnail,
                         streams: await parseStream(userConfig, video2, manifestUrl, protocol, req.protocol, req.get('host')),
                         available: true,
                         episode,
                         season: 1,
-                        overview: episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
+                        overview: playlist && episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
                     }))), ...await Promise.all((((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(async video2 => {
                         let deArrow = null;
                         try {
