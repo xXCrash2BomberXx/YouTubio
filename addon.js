@@ -769,11 +769,17 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released,
-                links: video.tags.map(genre => ({
-                    name: genre,
-                    category: 'Genres',
-                    url: `${protocol}/search?search=${genre}`
-                })),
+                links: [
+                    ...(useID ? [{
+                        name: 'Channel Name',
+                        category: 'Directors',
+                        url: `${protocol}/search?search=${encodeURIComponent('Channel Name')}`
+                    }] : []), ...video.tags.map(genre => ({
+                        name: genre,
+                        category: 'Genres',
+                        url: `${protocol}/search?search=${encodeURIComponent(genre)}`
+                    }))
+                ],
                 videos: [
                     ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
