@@ -773,25 +773,25 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             '--no-playlist',
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
-        let episode = 0;
         const meta = await parseMeta(userConfig, video, protocol, useID, playlist, req.params.type);
+        const videos = [video, ...(live?.is_live ? [live] : [])];
         return res.json({
             meta: {
                 ...meta,
                 background: meta.poster,
                 released,
                 videos: [
-                    ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
-                        id: `${req.params.id}:1:${++episode}`,
-                        title: playlist && episode === 1 ? 'Channel Options' : video2.title,
+                    ...await Promise.all(videos.map(async (video2, episode) => ({
+                        id: `${req.params.id}:1:${episode + 1}`,
+                        title: playlist && episode === 0 ? 'Channel Options' : video2.title,
                         released,
                         thumbnail: meta.poster,
                         streams: await parseStream(userConfig, video2, manifestUrl, protocol, req.protocol, req.get('host')),
                         available: true,
-                        episode,
+                        episode: episode + 1,
                         season: 1,
-                        overview: playlist && episode === 1 ? 'Open the channel as a catalog' : video2.description ?? video2.title
-                    }))), ...await Promise.all((((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(async video2 => {
+                        overview: playlist && episode === 0 ? 'Open the channel as a catalog' : video2.description ?? video2.title
+                    }))), ...await Promise.all((((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(async (video2, episode) => {
                         let deArrow = null;
                         try {
                             if (useID && videoIDRegex.test(video2.id) && userConfig.dearrow)
@@ -807,7 +807,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                                 getDeArrowThumbnail(video2.id, deArrow.thumbnails[0].timestamp) :
                                 null) ?? video2.thumbnail ?? video2.thumbnails?.at(-1)?.url,
                             available: true,
-                            episode: ++episode,
+                            episode: episode + videos.length + 1,
                             season: 1
                         };
                     }) ?? []))
