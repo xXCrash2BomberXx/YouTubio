@@ -667,15 +667,15 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
         logError(error);
     }
     const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
-    const subtitles = userConfig.subtitles ?? defaultConfig.subtitles ? Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-        const srt = v.find(x => x.ext == 'srt') ?? v[0];
-        return srt ? {
-            id: srt.name,
-            url: srt.url,
-            lang: k
-        } : null;
-    }).concat(
-        Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+    const subtitles = userConfig.subtitles ?? defaultConfig.subtitles ? [
+        ...Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+            const srt = v.find(x => x.ext == 'srt') ?? v[0];
+            return srt ? {
+                id: srt.name,
+                url: srt.url,
+                lang: k
+            } : null;
+        }), ...Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
             const srt = v.find(x => x.ext == 'srt') ?? v[0];
             return srt ? {
                 id: `Auto ${srt.name}`,
@@ -683,7 +683,7 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 lang: k
             } : null;
         })
-    ).filter(srt => srt !== null) : undefined;
+    ].filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
         ...(video.formats ?? [video]).filter(src => ((userConfig.showBrokenLinks ?? defaultConfig.showBrokenLinks) || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().flatMap(src => {
