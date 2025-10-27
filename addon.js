@@ -600,7 +600,7 @@ async function parseMeta(userConfig, video, protocol, useID, playlist, type) {
         id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
         type,
         name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
-        poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
+        poster: thumbnail ? (thumbnail.startsWith('//') ? 'https:' : '') + thumbnail : undefined,  // Handle YouTube Channel List Relative Thumbnails
         posterShape: channel ? 'square' : 'landscape',
         releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)) || undefined,
         links: [
@@ -759,7 +759,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
-        const playlist = videos._type === 'playlist';
+        const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
+        const playlist = video._type === 'playlist';
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
@@ -784,7 +785,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         id: `${req.params.id}:1:${++episode}`,
                         title: playlist && episode === 1 ? 'Channel Options' : video2.title,
                         released,
-                        thumbnail,
+                        thumbnail: meta.poster,
                         streams: await parseStream(userConfig, video2, manifestUrl, protocol, req.protocol, req.get('host')),
                         available: true,
                         episode,
