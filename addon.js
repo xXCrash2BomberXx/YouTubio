@@ -573,6 +573,51 @@ function toYouTubeURL(userConfig, videoId, query) {
     }[genre]}`;
 }
 
+/**
+ * Parse a YT-DLP video object into Stremio meta
+ * @param {Object} userConfig
+ * @param {Object} video
+ * @param {string} protocol
+ * @param {boolean} useID
+ * @param {boolean} playlist
+ * @param {string} type
+ * @returns {Promise<Object>}
+ */
+async function parseMeta(userConfig, video, protocol, useID, playlist, type) {
+    const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
+    let deArrow = null;
+    try {
+        if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
+            deArrow = await runDeArrow(video.id);
+    } catch (error) {
+        logError(error);
+    }
+    /** @type {string?} */
+    const thumbnail = (deArrow?.thumbnails[0] ?
+        getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
+        null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
+    return {
+        id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
+        type,
+        name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
+        poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
+        posterShape: channel ? 'square' : 'landscape',
+        releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)) || undefined,
+        links: [
+            ...(video.channel ? [{
+                name: video.channel,
+                category: 'Directors',
+                url: `${protocol}/search?search=${encodeURIComponent(video.channel)}`
+            }] : []), ...[...(video.categories ?? []), ...(video.tags ?? [])].map(genre => ({
+                name: genre,
+                category: 'Genres',
+                url: `${protocol}/search?search=${encodeURIComponent(genre)}`
+            }))
+        ],
+        description: video.description ?? video.title
+    };
+}
+
 // Stremio Addon Catalog Route
 app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
     try {
@@ -587,30 +632,14 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         ]);
         const useID = videos.webpage_url_domain === 'youtube.com';
         const playlist = videos._type === 'playlist';
+        /** @type {string?} */
+        const ref = req.get('Referrer');
+        const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
-            metas: (await Promise.all((playlist ? videos.entries : [videos]).map(async video => {
-                const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
-                let deArrow = null;
-                try {
-                    if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
-                        deArrow = await runDeArrow(video.id);
-                } catch (error) {
-                    logError(error);
-                }
-                /** @type {string?} */
-                const thumbnail = (deArrow?.thumbnails[0] ?
-                    getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
-                    null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
-                return {
-                    id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
-                    type: req.params.type,
-                    name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
-                    poster: thumbnail ? (channel ? 'https:' : '') + thumbnail : undefined,
-                    posterShape: channel ? 'square' : 'landscape',
-                    description: video.description ?? video.title,
-                    releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4))
-                };
-            }))).filter(meta => meta !== null),
+            metas: (await Promise.all(
+                (playlist ? videos.entries : [videos])
+                    .map(video => parseMeta(userConfig, video, protocol, useID, playlist, req.params.type))
+            )).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
     } catch (error) {
@@ -730,20 +759,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
-        const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
-        let deArrow = null;
-        try {
-            if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
-                deArrow = await runDeArrow(video.id);
-        } catch (error) {
-            logError(error);
-        }
-        /** @type {string} */
-        const title = deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title';
-        /** @type {string?} */
-        const thumbnail = (deArrow?.thumbnails[0] ?
-            getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
-            null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
@@ -757,29 +772,12 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
         let episode = 0;
+        const meta = await parseMeta(userConfig, video, protocol, useID, false, req.params.type);
         return res.json({
             meta: {
-                id: req.params.id,
-                type: req.params.type,
-                name: title,
-                poster: thumbnail,
-                posterShape: channel ? 'square' : 'landscape',
-                background: thumbnail,
-                // logo: thumbnail,
-                description: video.description ?? title,
-                releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
+                ...meta,
+                background: meta.poster,
                 released,
-                links: [
-                    ...(useID ? [{
-                        name: 'Channel Name',
-                        category: 'Directors',
-                        url: `${protocol}/search?search=${encodeURIComponent('Channel Name')}`
-                    }] : []), ...video.tags.map(genre => ({
-                        name: genre,
-                        category: 'Genres',
-                        url: `${protocol}/search?search=${encodeURIComponent(genre)}`
-                    }))
-                ],
                 videos: [
                     ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
