@@ -808,7 +808,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                                 null) ?? video2.thumbnail ?? video2.thumbnails?.at(-1)?.url,
                             available: true,
                             episode: episode + videos.length + 1,
-                            season: 1
+                            season: 1,
+                            overview: video2.description ?? video2.title
                         };
                     }) ?? []))
                 ],
