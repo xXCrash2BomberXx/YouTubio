@@ -187,9 +187,9 @@ function getDeArrowThumbnail(videoID, time) {
  */
 
 /**
- * 
- * @param {string | Object} encryptedConfig 
- * @param {string} URL 
+ *
+ * @param {string | Object} encryptedConfig
+ * @param {string} URL
  * @returns {Promise<Array<SponsorBlockSegment>>}
  */
 async function getGeminiSegments(encryptedConfig, URL) {
@@ -762,7 +762,6 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 id: req.params.id,
                 type: req.params.type,
                 name: title,
-                genres: video.tags,
                 poster: thumbnail,
                 posterShape: channel ? 'square' : 'landscape',
                 background: thumbnail,
@@ -770,6 +769,11 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 description: video.description ?? title,
                 releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)),
                 released,
+                links: video.tags.map(genre => ({
+                    name: genre,
+                    category: 'Genres',
+                    url: `${protocol}/search?search=${genre}`
+                })),
                 videos: [
                     ...await Promise.all([video, ...(live?.is_live ? [live] : [])].map(async video2 => ({
                         id: `${req.params.id}:1:${++episode}`,
