@@ -8,7 +8,6 @@ const path = require('path');
 const crypto = require('crypto');
 // const util = require('util');
 
-/** @type {string} */
 const tmpdir = require('os').tmpdir();
 const ytDlpWrap = new YTDlpWrap();
 /** @type {number} */
@@ -102,7 +101,6 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
         // Implement better auth system
         const cookies = auth;
-        /** @type {string} */
         filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
         counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
@@ -655,13 +653,12 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         ]);
         const useID = videos.webpage_url_domain === 'youtube.com';
         const playlist = videos._type === 'playlist';
-        /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
             metas: (await Promise.all(
                 (playlist ? videos.entries : [videos])
-                    .map(video => parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type))
+                    .map(video => parseMeta(userConfig, video, toManifestURL(req), protocol, useID, playlist, req.params.type))
             )).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
@@ -784,10 +781,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const useID = video.webpage_url_domain === 'youtube.com';
         const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
         const playlist = video._type === 'playlist';
-        /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
         const manifestUrl = toManifestURL(req);
-        /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         const live = (userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel) && channel ? await runYtDlpWithAuth(req.params.config, [
@@ -859,8 +854,6 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
-        const manifestUrl = toManifestURL(req);
-        /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
@@ -874,7 +867,7 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
 
 // Configuration Page
 app.get(['/', '/:config?/configure'], async (req, res) => {
-    /** @type {Object?} */
+    /** @type {Object} */
     let userConfig = {};
     try {
         userConfig = req.params.config ? decryptConfig(req.params.config, false) : {};
