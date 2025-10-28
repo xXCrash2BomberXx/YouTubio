@@ -573,10 +573,24 @@ function toYouTubeURL(userConfig, videoId, query) {
     }[genre]}`;
 }
 
+/**
+ * Parse a request into a manifest URL
+ * @param {import('express').Request} req
+ * @returns {string}
+ */
 function toManifestURL(req) {
     return encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
 }
 
+/**
+ * Parse a YT-DLP video object into a link to a video's channel
+ * @param {Object} userConfig
+ * @param {Object} video
+ * @param {string} manifestUrl
+ * @param {string} protocol
+ * @param {boolean} useID
+ * @returns {string}
+ */
 function toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID) {
     return `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultConfig.catalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`;
 }
@@ -585,6 +599,7 @@ function toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID) {
  * Parse a YT-DLP video object into Stremio meta
  * @param {Object} userConfig
  * @param {Object} video
+ * @param {string} manifestUrl
  * @param {string} protocol
  * @param {boolean} useID
  * @param {boolean} playlist
