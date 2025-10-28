@@ -573,6 +573,14 @@ function toYouTubeURL(userConfig, videoId, query) {
     }[genre]}`;
 }
 
+function toManifestURL(req) {
+    return encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+}
+
+function toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID) {
+    return `${protocol}/discover/${manifestUrl}/${userConfig.catalogType ?? defaultConfig.catalogType}/${encodeURIComponent(prefix + (useID ? video.channel_id : video.channel_url))}`;
+}
+
 /**
  * Parse a YT-DLP video object into Stremio meta
  * @param {Object} userConfig
@@ -583,7 +591,7 @@ function toYouTubeURL(userConfig, videoId, query) {
  * @param {string} type
  * @returns {Promise<Object>}
  */
-async function parseMeta(userConfig, video, protocol, useID, playlist, type) {
+async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, type) {
     const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
     let deArrow = null;
     try {
@@ -607,7 +615,7 @@ async function parseMeta(userConfig, video, protocol, useID, playlist, type) {
             ...(video.channel ? [{
                 name: video.channel,
                 category: 'Directors',
-                url: `${protocol}/search?search=${encodeURIComponent(video.channel)}`
+                url: toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID)
             }] : []), ...[...(video.categories ?? []), ...(video.tags ?? [])].map(genre => ({
                 name: genre,
                 category: 'Genres',
@@ -638,7 +646,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         return res.json({
             metas: (await Promise.all(
                 (playlist ? videos.entries : [videos])
-                    .map(video => parseMeta(userConfig, video, protocol, useID, playlist, req.params.type))
+                    .map(video => parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type))
             )).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: 0 }
         });
@@ -763,7 +771,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const playlist = video._type === 'playlist';
         /** @type {string} */
         const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
-        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+        const manifestUrl = toManifestURL(req);
         /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
@@ -773,7 +781,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             '--no-playlist',
             `https://www.youtube.com/channel/${video.id}/live`
         ]) : undefined;
-        const meta = await parseMeta(userConfig, video, protocol, useID, playlist, req.params.type);
+        const meta = await parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type);
         const videos = [video, ...(live?.is_live ? [live] : [])];
         return res.json({
             meta: {
@@ -836,12 +844,12 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
             '--no-playlist',
             toYouTubeURL(userConfig, req.params.id, {})
         ]);
-        const manifestUrl = encodeURIComponent(`${req.protocol}://${req.get('host')}/${encodeURIComponent(req.params.config)}/manifest.json`);
+        const manifestUrl = toManifestURL(req);
         /** @type {string?} */
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
         return res.json({
-            streams: await parseStream(userConfig, video, manifestUrl, protocol, req.protocol, req.get('host'))
+            streams: await parseStream(userConfig, video, toManifestURL(req), protocol, req.protocol, req.get('host'))
         });
     } catch (error) {
         res.json({ streams: [] });
