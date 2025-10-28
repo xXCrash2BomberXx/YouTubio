@@ -606,6 +606,7 @@ function toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID) {
  */
 async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, type) {
     const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
+    /** @type {DeArrowResponse?} */
     let deArrow = null;
     try {
         if (useID && videoIDRegex.test(video.id) && userConfig.dearrow)
@@ -635,7 +636,7 @@ async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playli
                 url: `${protocol}/search?search=${encodeURIComponent(genre)}`
             }))
         ],
-        description: video.description ?? video.title
+        description: video.description ?? undefined,
     };
 }
 
