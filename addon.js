@@ -636,7 +636,7 @@ async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playli
                 url: `${protocol}/search?search=${encodeURIComponent(genre)}`
             }))
         ],
-        description: video.description ?? undefined,
+        description: video.description,
     };
 }
 
