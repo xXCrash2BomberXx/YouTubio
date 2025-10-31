@@ -809,7 +809,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         available: true,
                         episode: episode + 1,
                         season: 1,
-                        overview: playlist && episode === 0 ? 'Open the channel as a catalog' : video2.description ?? video2.title
+                        overview: playlist && episode === 0 ? 'Open the channel as a catalog' : video2.description
                     }))), ...await Promise.all((((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(async (video2, episode) => {
                         let deArrow = null;
                         try {
@@ -828,7 +828,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                             available: true,
                             episode: episode + videos.length + 1,
                             season: 1,
-                            overview: video2.description ?? video2.title
+                            overview: video2.description
                         };
                     }) ?? []))
                 ],
