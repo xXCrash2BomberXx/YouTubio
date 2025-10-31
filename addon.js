@@ -91,14 +91,16 @@ function decrypt(encryptedData) {
 let counter = 0;
 /**
  * Runs yt-dlp with authentication
+ * @param {string} url
  * @param {string | Object} encryptedConfig
  * @param {string[]} argsArray
  * @returns {Promise<Object>}
  */
-async function runYtDlpWithAuth(encryptedConfig, argsArray) {
+async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
     let filename = '';
-    const cacheKey = JSON.stringify(argsArray);
-    if (cached = cache.get(cacheKey)) return cached;
+    const canCache = [channelRegex, channelIDRegex, playlistIDRegex, videoIDRegex].map(r => r.test(url)).some(Boolean);
+    const cacheKey = url + JSON.stringify(argsArray);
+    if (canCache && (cached = cache.get(cacheKey))) return cached;
     try {
         /** @type {Object?} */
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
@@ -109,6 +111,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         const r = JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
+            url,
             // '--js-runtimes', 'node',
             '-i',
             '--no-plugin-dirs',
@@ -122,7 +125,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '--compat-options', 'no-youtube-channel-redirect',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
-        cache.set(cacheKey, r);
+        if (canCache) cache.set(cacheKey, r);
         return r;
     } finally {
         try {
@@ -380,13 +383,11 @@ app.post('/encrypt', (req, res, next) => {
 // Get YouTube Playlists Endpoint
 app.get('/:config/playlists', async (req, res, next) => {
     try {
-        return res.json((await runYtDlpWithAuth(req.params.config, [
-            '--yes-playlist',
-            'https://www.youtube.com/feed/playlists'
-        ])).entries.map(x => ({
-            id: x.url,
-            name: x.title
-        })));
+        return res.json((await runYtDlpWithAuth('https://www.youtube.com/feed/playlists', req.params.config, ['--yes-playlist']))
+            .entries.map(x => ({
+                id: x.url,
+                name: x.title
+            })));
     } catch (error) {
         res.status(500).send('Fetching playlists failed');
         return next(error);
@@ -652,10 +653,9 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         const userConfig = decryptConfig(req.params.config, false);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query.skip ?? 0);
-        const videos = await runYtDlpWithAuth(req.params.config, [
+        const videos = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, query), req.params.config, [
             '-I', query.genre?.startsWith(reversedPrefix) ? `${-(skip + 1)}:${-(skip + 100)}:-1` : `${skip + 1}:${skip + 100}:1`,
-            '--yes-playlist',
-            toYouTubeURL(userConfig, req.params.id, query)
+            '--yes-playlist'
         ]);
         const useID = videos.webpage_url_domain === 'youtube.com';
         const playlist = videos._type === 'playlist';
@@ -778,11 +778,10 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
-        const video = await runYtDlpWithAuth(req.params.config, [
+        const video = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, {}), req.params.config, [
             userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel ? ':100' : ':1',
-            '--no-playlist',
-            toYouTubeURL(userConfig, req.params.id, {})
+            '--no-playlist'
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
         const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
@@ -791,12 +790,12 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const manifestUrl = toManifestURL(req);
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
-        const live = (userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel) && channel ? await runYtDlpWithAuth(req.params.config, [
-            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '-I', ':1',
-            '--no-playlist',
-            `https://www.youtube.com/channel/${video.id}/live`
-        ]) : undefined;
+        const live = (userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel) && channel ?
+            await runYtDlpWithAuth(`https://www.youtube.com/channel/${video.id}/live`, req.params.config, [
+                userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+                '-I', ':1',
+                '--no-playlist'
+            ]) : undefined;
         const meta = await parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type);
         const videos = [video, ...(live?.is_live ? [live] : [])];
         return res.json({
@@ -854,11 +853,10 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
     try {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
-        const video = await runYtDlpWithAuth(req.params.config, [
+        const video = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, {}), req.params.config, [
             userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',
-            '--no-playlist',
-            toYouTubeURL(userConfig, req.params.id, {})
+            '--no-playlist'
         ]);
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
