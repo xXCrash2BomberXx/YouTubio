@@ -6,6 +6,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const cache = new (require('node-cache'))({ stdTTL: 3600, useClones: false });  // Cache for 1 hour
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
@@ -96,6 +97,8 @@ let counter = 0;
  */
 async function runYtDlpWithAuth(encryptedConfig, argsArray) {
     let filename = '';
+    const cacheKey = JSON.stringify(argsArray);
+    if (cached = cache.get(cacheKey)) return cached;
     try {
         /** @type {Object?} */
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
@@ -104,7 +107,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
         filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
         counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
-        return JSON.parse(await ytDlpWrap.execPromise([
+        const r = JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
             // '--js-runtimes', 'node',
             '-i',
@@ -119,6 +122,8 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '--compat-options', 'no-youtube-channel-redirect',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
+        cache.set(cacheKey, r);
+        return r;
     } finally {
         try {
             if (filename) await fs.unlink(filename);
