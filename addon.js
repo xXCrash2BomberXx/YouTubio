@@ -110,7 +110,7 @@ async function runYtDlpWithAuth(encryptedConfig, argsArray) {
             '-i',
             '--no-plugin-dirs',
             '--flat-playlist',
-            '--no-cache-dir',
+            '--cache-dir', process.env.YTDLP_CACHE_DIR ?? '.',
             '--no-warnings',
             '--ignore-no-formats-error',
             '-J',
