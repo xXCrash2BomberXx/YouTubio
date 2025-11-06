@@ -94,16 +94,16 @@ let counter = 0;
  * @returns {Promise<Object>}
  */
 async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
-    let filename = '';
     const canCache = [channelRegex, channelIDRegex, playlistIDRegex, videoIDRegex].map(r => r.test(url)).some(Boolean);
     const cacheKey = url + JSON.stringify(argsArray);
-    if (canCache && !(encryptedConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad) && (cached = cache.get(cacheKey))) return cached;
+    const userConfig = decryptConfig(encryptedConfig);
+    if (canCache && !(userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad) && (cached = cache.get(cacheKey))) return cached;
+    /** @type {string?} */
+    const cookies = userConfig.encrypted?.auth;
+    /** @type {string?} */
+    let filename;
     try {
-        /** @type {Object?} */
-        const auth = decryptConfig(encryptedConfig).encrypted?.auth;
-        // Implement better auth system
-        const cookies = auth;
-        filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : '';
+        filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : null;
         counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
         const r = JSON.parse(await ytDlpWrap.execPromise([
