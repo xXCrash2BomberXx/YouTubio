@@ -27,9 +27,6 @@ const channelTypeArray = [
 const defaultConfig = {
     fallback: true,
     overestimate: false,
-    subtitles: true,
-    showLiveInChannel: true,
-    showVideosInChannel: true,
     markWatchedOnLoad: false,
     showBrokenLinks: false,
     search: true,
@@ -100,7 +97,7 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
     let filename = '';
     const canCache = [channelRegex, channelIDRegex, playlistIDRegex, videoIDRegex].map(r => r.test(url)).some(Boolean);
     const cacheKey = url + JSON.stringify(argsArray);
-    if (canCache && (cached = cache.get(cacheKey))) return cached;
+    if (canCache && !(encryptedConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad) && (cached = cache.get(cacheKey))) return cached;
     try {
         /** @type {Object?} */
         const auth = decryptConfig(encryptedConfig).encrypted?.auth;
@@ -111,6 +108,7 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         const r = JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
+            encryptedConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             url,
             // '--js-runtimes', 'node',
             '-i',
@@ -506,7 +504,7 @@ app.get('/:config/manifest.json', (req, res, next) => {
             version: VERSION,
             name: 'YouTubio | ElfHosted',
             description: 'Watch YouTube videos, subscriptions, watch later, and history in Stremio.',
-            resources: ['catalog', 'stream', 'meta'],
+            resources: ['catalog', 'stream', 'meta', 'subtitles'],
             types: [...new Set(catalogs.map(c => c.type))],
             idPrefixes: [prefix],
             catalogs,
@@ -693,29 +691,11 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
         logError(error);
     }
     const rangesURI = ranges.length ? encodeURIComponent(JSON.stringify(ranges)) : null;
-    const subtitles = userConfig.subtitles ?? defaultConfig.subtitles ? [
-        ...Object.entries(video.subtitles ?? {}).map(([k, v]) => {
-            const srt = v.find(x => x.ext == 'srt') ?? v[0];
-            return srt ? {
-                id: srt.name,
-                url: srt.url,
-                lang: k
-            } : null;
-        }), ...Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
-            const srt = v.find(x => x.ext == 'srt') ?? v[0];
-            return srt ? {
-                id: `Auto ${srt.name}`,
-                url: srt.url,
-                lang: k
-            } : null;
-        })
-    ].filter(srt => srt !== null) : undefined;
     const useID = video.webpage_url_domain === 'youtube.com';
     return [
         ...(video.formats ?? [video]).filter(src => ((userConfig.showBrokenLinks ?? defaultConfig.showBrokenLinks) || (!src.format_id?.startsWith('sb') && src.acodec !== 'none' && src.vcodec !== 'none')) && src.url).toReversed().flatMap(src => {
             const base = {
                 description: src.format,
-                subtitles,
                 behaviorHints: {
                     videoSize: src.filesize_approx,
                     filename: video.filename
@@ -749,7 +729,6 @@ async function parseStream(userConfig, video, manifestUrl, protocol, reqProtocol
                 name: 'Stremio Player',
                 ytId: video.id,
                 description: 'Click to watch using Stremio\'s built-in YouTube Player',
-                subtitles,
                 behaviorHints: {
                     bingeGroup: 'Stremio Player',
                     filename: video.filename
@@ -779,8 +758,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Meta handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, {}), req.params.config, [
-            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
-            '-I', userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel ? ':100' : ':1',
+            '-I', ':100',
             '--no-playlist'
         ]);
         const useID = video.webpage_url_domain === 'youtube.com';
@@ -790,9 +768,8 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const manifestUrl = toManifestURL(req);
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
-        const live = (userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel) && channel ?
+        const live = channel ?
             await runYtDlpWithAuth(`https://www.youtube.com/channel/${video.id}/live`, req.params.config, [
-                userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
                 '-I', ':1',
                 '--no-playlist'
             ]) : undefined;
@@ -814,7 +791,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         episode: episode + 1,
                         season: 1,
                         overview: playlist && episode === 0 ? 'Open the channel as a catalog' : video2.description
-                    }))), ...await Promise.all((((userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel) ? video.entries : [])?.map(async (video2, episode) => {
+                    }))), ...await Promise.all((video.entries?.map(async (video2, episode) => {
                         let deArrow = null;
                         try {
                             if (useID && videoIDRegex.test(video2.id) && userConfig.dearrow)
@@ -854,7 +831,6 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Stream handler: "${req.params.id}"`);
         const userConfig = decryptConfig(req.params.config, false);
         const video = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, {}), req.params.config, [
-            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             '-I', ':1',
             '--no-playlist'
         ]);
@@ -865,6 +841,40 @@ app.get('/:config/stream/:type/:id.json', async (req, res, next) => {
         });
     } catch (error) {
         res.json({ streams: [] });
+        return next(error)
+    }
+});
+
+// Stremio Addon Subtitles Route
+app.get('/:config/subtitles/:type/:id.json', async (req, res, next) => {
+    try {
+        if (!req.params.id?.startsWith(prefix)) throw new Error(`Unknown ID in Subtitles handler: "${req.params.id}"`);
+        const userConfig = decryptConfig(req.params.config, false);
+        const video = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, {}), req.params.config, [
+            '-I', ':1',
+            '--no-playlist'
+        ]);
+        return res.json({
+            subtitles: [
+                ...Object.entries(video.subtitles ?? {}).map(([k, v]) => {
+                    const srt = v.find(x => x.ext == 'srt') ?? v[0];
+                    return srt ? {
+                        id: srt.name,
+                        url: srt.url,
+                        lang: k
+                    } : null;
+                }), ...Object.entries(video.automatic_captions ?? {}).map(([k, v]) => {
+                    const srt = v.find(x => x.ext == 'srt') ?? v[0];
+                    return srt ? {
+                        id: `Auto ${srt.name}`,
+                        url: srt.url,
+                        lang: k
+                    } : null;
+                })
+            ].filter(srt => srt !== null)
+        });
+    } catch (error) {
+        res.json({ subtitles: [] });
         return next(error)
     }
 });
@@ -1044,24 +1054,9 @@ app.get(['/', '/:config?/configure'], async (req, res) => {
                                 </tr>
                                 ${process.env.NO_SPONSORBLOCK ? '-->' : ''}
                                 <tr>
-                                    <td><input type="checkbox" id="subtitles" name="subtitles" data-default=1 ${userConfig.subtitles ?? defaultConfig.subtitles ? 'checked' : ''}></td>
-                                    <td><label for="subtitles">Subtitles</label></td>
-                                    <td class="setting-description">Enable subtitles for videos.</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" id="showLiveInChannel" name="showLiveInChannel" data-default=1 ${userConfig.showLiveInChannel ?? defaultConfig.showLiveInChannel ? 'checked' : ''}></td>
-                                    <td><label for="showLiveInChannel">Show Livestreams in Channel Page</label></td>
-                                    <td class="setting-description">Display the channel live stream (if one is active) in the channel meta results.</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" id="showVideosInChannel" name="showVideosInChannel" data-default=1 ${userConfig.showVideosInChannel ?? defaultConfig.showVideosInChannel ? 'checked' : ''}></td>
-                                    <td><label for="showVideosInChannel">Show Videos in Channel Page</label></td>
-                                    <td class="setting-description">Display the most recent 100 uploads in the channel meta results.</td>
-                                </tr>
-                                <tr>
                                     <td><input type="checkbox" id="markWatchedOnLoad" name="markWatchedOnLoad" data-default=0 ${userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? 'checked' : ''}></td>
                                     <td><label for="markWatchedOnLoad">Mark Watched</label></td>
-                                    <td class="setting-description">Mark videos as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized.</td>
+                                    <td class="setting-description">Mark videos as watched in your YouTube history when you open them in Stremio. This helps keep your YouTube watch history synchronized. (This disables caching.)</td>
                                 </tr>
                                 <tr>
                                     <td><input type="checkbox" id="showBrokenLinks" name="showBrokenLinks" data-default=0 ${userConfig.showBrokenLinks ?? defaultConfig.showBrokenLinks ? 'checked' : ''}></td>
