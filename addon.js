@@ -101,10 +101,9 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
     /** @type {string?} */
     const cookies = userConfig.encrypted?.auth;
     /** @type {string?} */
-    let filename;
+    const filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : null;
+    counter %= Number.MAX_SAFE_INTEGER;
     try {
-        filename = cookies ? path.join(tmpdir, `cookies-${Date.now()}-${counter++}.txt`) : null;
-        counter %= Number.MAX_SAFE_INTEGER;
         if (filename) await fs.writeFile(filename, cookies);
         const r = JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
@@ -772,7 +771,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
             await runYtDlpWithAuth(`https://www.youtube.com/channel/${video.id}/live`, req.params.config, [
                 '-I', ':1',
                 '--no-playlist'
-            ]) : undefined;
+            ]) : null;
         const meta = await parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type);
         const videos = [video, ...(live?.is_live ? [live] : [])];
         return res.json({
