@@ -108,7 +108,7 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
         if (filename) await fs.writeFile(filename, cookies);
         const r = JSON.parse(await ytDlpWrap.execPromise([
             ...argsArray,
-            encryptedConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
+            userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             url,
             // '--js-runtimes', 'node',
             '-i',
