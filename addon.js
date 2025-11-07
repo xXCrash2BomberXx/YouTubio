@@ -6,7 +6,7 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
-const cache = new (require('node-cache'))({ stdTTL: 3600, useClones: false });  // Cache for 1 hour
+const cache = new (require('node-cache'))({ stdTTL: process.env.TTL ?? 3600, useClones: false });  // Cache for 1 hour
 // const util = require('util');
 
 const tmpdir = require('os').tmpdir();
