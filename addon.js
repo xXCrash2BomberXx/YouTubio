@@ -650,7 +650,8 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         const userConfig = decryptConfig(req.params.config, false);
         const query = Object.fromEntries(new URLSearchParams(req.params.extra ?? ''));
         const skip = parseInt(query.skip ?? 0);
-        const videos = await runYtDlpWithAuth(toYouTubeURL(userConfig, req.params.id, query), req.params.config, [
+        const url = toYouTubeURL(userConfig, req.params.id, query);
+        const videos = await runYtDlpWithAuth(url, req.params.config, [
             '-I', query.genre?.startsWith(reversedPrefix) ? `${-(skip + 1)}:${-(skip + 100)}:-1` : `${skip + 1}:${skip + 100}:1`,
             '--yes-playlist'
         ]);
@@ -658,12 +659,13 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         const playlist = videos._type === 'playlist';
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
+        const canCache = [channelRegex, channelIDRegex, playlistIDRegex, videoIDRegex].map(r => r.test(url)).some(Boolean);
         return res.json({
             metas: (await Promise.all(
                 (playlist ? videos.entries : [videos])
                     .map(video => parseMeta(userConfig, video, toManifestURL(req), protocol, useID, playlist, req.params.type))
             )).filter(meta => meta !== null),
-            behaviorHints: { cacheMaxAge: 0 }
+            behaviorHints: { cacheMaxAge: canCache ? process.env.TTL ?? 3600 : 0 }
         });
     } catch (error) {
         res.json({ metas: [] });
@@ -1442,3 +1444,4 @@ app.listen(PORT, () => {
     }
     console.log(`Access the configuration page at: ${process.env.SPACE_HOST ? 'https://' + process.env.SPACE_HOST : 'http://localhost:' + PORT}`);
 });
+
