@@ -34,7 +34,7 @@ Enable `Allow in InPrivate`<br>
 <img width="1366" height="768" alt="Open the `Settings` Menu" src="https://github.com/user-attachments/assets/4c7aa6b9-a83b-47d2-82fc-c96d391a3614" /><br>
 <img width="406" height="635" alt="Click to open a `New InPrivate window`" src="https://github.com/user-attachments/assets/4f6ed1d0-3daa-4c4c-bdf5-d3035b558c10" /><br>
 
-4. Go to [youtube.com](https://www.youtube.com) and sign in if you want personalized content<br>
+4. Go to [youtube.com](https://www.youtube.com) and sign in<br>
 
 5. Extract the `cookies.txt`<br>
 <img width="1366" height="768" alt="Open the `Extensions` Menu in the Toolbar" src="https://github.com/user-attachments/assets/b8720843-77f5-4e2f-90c3-2ff8f2a600be" /><br>
