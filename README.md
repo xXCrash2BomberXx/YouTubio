@@ -58,7 +58,7 @@ Enable `Allow in InPrivate`<br>
 ### 🐳 Docker Deployment
 
 #### ✅ Prerequisites
-- **Docker** installed on your system  
+- **Docker** installed  
 
 #### ⚡ Steps
 ```bash
@@ -69,9 +69,28 @@ docker build -t youtubio .
 ### 🟢 Node.js Deployment
 
 #### ✅ Prerequisites
-- **Node.js** installed (v16+ recommended)
+- **Node.js** installed
 - **npm** package manager
 - **[YT-DLP](https://github.com/yt-dlp/yt-dlp/releases/latest)** installed
+
+#### ⚡ Steps
+```bash
+# Install dependencies
+npm install --omit=dev
+
+# Start the addon
+npm start
+```
+
+By default, the addon will be available at: `http://localhost:7000`
+
+### ⚙️ ngrok Deployment
+
+#### ✅ Prerequisites
+- **Node.js** installed
+- **npm** package manager
+- **[YT-DLP](https://github.com/yt-dlp/yt-dlp/releases/latest)** installed
+- ngrok account
 
 #### ⚡ Steps
 ```bash
@@ -79,7 +98,7 @@ docker build -t youtubio .
 npm install
 
 # Start the addon
-node addon.js
+npm run local
 ```
 
 By default, the addon will be available at: `http://localhost:7000`
