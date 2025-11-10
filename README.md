@@ -71,6 +71,7 @@ docker build -t youtubio .
 #### ✅ Prerequisites
 - **Node.js** installed (v16+ recommended)
 - **npm** package manager
+- **[YT-DLP](https://github.com/yt-dlp/yt-dlp/releases/latest)** installed
 
 #### ⚡ Steps
 ```bash
