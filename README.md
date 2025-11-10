@@ -11,9 +11,9 @@ A **Stremio addon** that lets you watch YouTube videos and access your **subscri
 - **Personalized Feeds** – Access your Subscriptions, *Watch Later* list, and viewing history.
 - **Powerful Search** – Search for YouTube videos and channels directly within Stremio.
 - **Customizable Catalogs** – Use default catalogs or add your own custom playlists.
-- **Ad- and Click-Bait-Free** - Use SponsorBlock (with configurable Gemini fallback support) and/or DeArrow across all of YouTube.
+- **Ad- and Click-Bait-Free** - Use **SponsorBlock** (with configurable Gemini fallback support) and/or **DeArrow** across all of YouTube.
 - **Secure Configuration** – User data (including cookies) is **encrypted** for security.
-- **Easy Deployment** – Deploy with **Docker** or **Node.js**.
+- **Easy Deployment** – Deploy with **Docker**, **Node.js**, or **ngrok**.
 
 ---
 
