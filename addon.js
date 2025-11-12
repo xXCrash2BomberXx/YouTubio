@@ -109,7 +109,7 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
             ...argsArray,
             userConfig.markWatchedOnLoad ?? defaultConfig.markWatchedOnLoad ? '--mark-watched' : '--no-mark-watched',
             url,
-            // '--js-runtimes', 'node',
+            '--js-runtimes', 'node',
             '-i',
             '--no-plugin-dirs',
             '--flat-playlist',
