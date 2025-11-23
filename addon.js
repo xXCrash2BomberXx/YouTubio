@@ -627,7 +627,7 @@ async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playli
         name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
         poster: thumbnail ? (thumbnail.startsWith('//') ? 'https:' : '') + thumbnail : undefined,  // Handle YouTube Channel List Relative Thumbnails
         posterShape: channel ? 'square' : 'landscape',
-        releaseInfo: parseInt(video.release_year ?? video.upload_date?.substring(0, 4)) || undefined,
+        releaseInfo: parseInt(video.release_year ?? (video.release_date ?? video.upload_date)?.substring(0, 4) ?? new Date((video.release_timestamp ?? video.timestamp) * 1000).getFullYear()) || undefined,
         links: [
             ...(video.channel ? [{
                 name: video.channel,
@@ -767,10 +767,10 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const playlist = video._type === 'playlist';
         const parseDate = video => {
             let r = 0;
-            if (t = video.release_timestamp ?? video.timestamp)
-                r = t * 1000;
             if (d = video.release_date ?? video.upload_date)
                 r = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}T00:00:00Z`;
+            if (t = video.release_timestamp ?? video.timestamp)
+                r = t * 1000;
             return new Date(r).toISOString();
         };
         const released = parseDate(video);
