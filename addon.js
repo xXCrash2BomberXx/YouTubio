@@ -765,7 +765,15 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
         const useID = video.webpage_url_domain === 'youtube.com';
         const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
         const playlist = video._type === 'playlist';
-        const released = new Date(video.release_timestamp ? video.release_timestamp * 1000 : video.upload_date ? `${video.upload_date.substring(0, 4)}-${video.upload_date.substring(4, 6)}-${video.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString();
+        const parseDate = video => {
+            let r = 0;
+            if (t = video.release_timestamp ?? video.timestamp)
+                r = t * 1000;
+            if (d = video.release_date ?? video.upload_date)
+                r = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}T00:00:00Z`;
+            return new Date(r).toISOString();
+        };
+        const released = parseDate(video);
         const manifestUrl = toManifestURL(req);
         const ref = req.get('Referrer');
         const protocol = ref ? ref + '#' : 'stremio://';
@@ -803,7 +811,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                         return {
                             id: prefix + video2.id,
                             title: deArrow?.titles[0]?.title ?? video2.title ?? 'Unknown Title',
-                            released: new Date(video2.release_timestamp ? video2.release_timestamp * 1000 : video2.upload_date ? `${video2.upload_date.substring(0, 4)}-${video2.upload_date.substring(4, 6)}-${video2.upload_date.substring(6, 8)}T00:00:00Z` : 0).toISOString(),
+                            released: parseDate(video2),
                             thumbnail: (deArrow?.thumbnails[0] ?
                                 getDeArrowThumbnail(video2.id, deArrow.thumbnails[0].timestamp) :
                                 null) ?? video2.thumbnail ?? video2.thumbnails?.at(-1)?.url,
