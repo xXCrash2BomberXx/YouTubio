@@ -119,6 +119,7 @@ async function runYtDlpWithAuth(url, encryptedConfig, argsArray) {
             '-J',
             '--ies', process.env.YTDLP_EXTRACTORS ?? 'all',
             '--extractor-args', 'generic:impersonate',
+            '--extractor-args', 'youtube:player_client=default,-web_safari'
             '--compat-options', 'no-youtube-channel-redirect',
             ...(cookies ? ['--cookies', filename] : [])
         ]));
