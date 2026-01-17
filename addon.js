@@ -603,11 +603,12 @@ function toChannelManifestURL(userConfig, video, manifestUrl, protocol, useID) {
  * @param {string} manifestUrl
  * @param {string} protocol
  * @param {boolean} useID
+ * @param {string} videoID
  * @param {boolean} playlist
  * @param {string} type
  * @returns {Promise<Object>}
  */
-async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, type) {
+async function parseMeta(userConfig, video, manifestUrl, protocol, useID, videoID, playlist, type) {
     const channel = useID && (channelRegex.test(video.id) || channelIDRegex.test(video.id));
     /** @type {DeArrowResponse?} */
     let deArrow = null;
@@ -622,7 +623,7 @@ async function parseMeta(userConfig, video, manifestUrl, protocol, useID, playli
         getDeArrowThumbnail(video.id, deArrow.thumbnails[0].timestamp) :
         null) ?? video.thumbnail ?? video.thumbnails?.at(-1)?.url;
     return {
-        id: useID ? prefix + video.id : playlist ? prefix + video.url : req.params.id,
+        id: useID ? prefix + video.id : playlist ? prefix + video.url : videoID,
         type,
         name: deArrow?.titles[0]?.title ?? video.title ?? 'Unknown Title',
         poster: thumbnail ? (thumbnail.startsWith('//') ? 'https:' : '') + thumbnail : undefined,  // Handle YouTube Channel List Relative Thumbnails
@@ -663,7 +664,7 @@ app.get('/:config/catalog/:type/:id/:extra?.json', async (req, res, next) => {
         return res.json({
             metas: (await Promise.all(
                 (playlist ? videos.entries : [videos])
-                    .map(video => parseMeta(userConfig, video, toManifestURL(req), protocol, useID, playlist, req.params.type))
+                    .map(video => parseMeta(userConfig, video, toManifestURL(req), protocol, useID, req.params.id, playlist, req.params.type))
             )).filter(meta => meta !== null),
             behaviorHints: { cacheMaxAge: canCache ? process.env.TTL ?? 3600 : 0 }
         });
@@ -782,7 +783,7 @@ app.get('/:config/meta/:type/:id.json', async (req, res, next) => {
                 '-I', ':1',
                 '--no-playlist'
             ]) : null;
-        const meta = await parseMeta(userConfig, video, manifestUrl, protocol, useID, playlist, req.params.type);
+        const meta = await parseMeta(userConfig, video, manifestUrl, protocol, useID, req.params.id, playlist, req.params.type);
         const videos = [video, ...(live?.is_live ? [live] : [])];
         return res.json({
             meta: {
